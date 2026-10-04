@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import AOS from "aos";
 import "aos/dist/aos.css";
-import { ThreeBackground } from "./ThreeBackground";
+import SoftAurora from "./SoftAurora";
 
 interface LandingPageProps {
   onOpenLogin: () => void;
@@ -306,7 +306,25 @@ export function LandingPage({
     <div className="w-full relative bg-[#F7F7F2] text-[#111111] font-secondary selection:bg-[#A2E4B8] selection:text-[#0A504A] overflow-x-clip min-h-screen">
       {/* 1. BACKGROUND LAYERS */}
       <div className="fixed inset-0 z-0 technical-grid pointer-events-none" />
-      <ThreeBackground />
+      <div className="fixed inset-0 z-0 pointer-events-none opacity-85 overflow-hidden">
+        <SoftAurora
+          speed={0.6}
+          scale={1.5}
+          brightness={1.6}
+          color1="#00A86B"
+          color2="#0A504A"
+          noiseFrequency={2.5}
+          noiseAmplitude={1.0}
+          bandHeight={0.45}
+          bandSpread={1.0}
+          octaveDecay={0.1}
+          layerOffset={0}
+          colorSpeed={1.0}
+          enableMouseInteraction={true}
+          mouseInfluence={0.25}
+          lightMode={true}
+        />
+      </div>
 
       {/* 2. FIXED HEADER WITH PROGRESSIVE BLUR */}
       <header className="fixed top-0 left-0 right-0 z-50 w-full transition-all duration-300">
