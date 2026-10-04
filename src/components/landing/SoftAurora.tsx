@@ -210,7 +210,9 @@ export default function SoftAurora({
     const container = containerRef.current;
     if (!container) return;
 
-    const renderer = new Renderer({ alpha: true, premultipliedAlpha: false });
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    const dpr = isMobile ? 1 : Math.min(typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1, 1.5);
+    const renderer = new Renderer({ alpha: true, premultipliedAlpha: false, dpr });
     const gl = renderer.gl;
     gl.clearColor(0, 0, 0, 0);
 
@@ -282,9 +284,24 @@ export default function SoftAurora({
     }
 
     let animationFrameId: number;
+    let isVisible = true;
+    function handleVisibility() {
+      isVisible = !document.hidden;
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    let lastTime = 0;
+    const targetFps = isMobile ? 30 : 60;
+    const frameInterval = 1000 / targetFps;
 
     function update(time: number) {
       animationFrameId = requestAnimationFrame(update);
+      if (!isVisible) return;
+
+      const elapsed = time - lastTime;
+      if (elapsed < frameInterval) return;
+      lastTime = time - (elapsed % frameInterval);
+
       program.uniforms.uTime.value = time * 0.001;
 
       if (enableMouseInteraction) {
@@ -304,6 +321,7 @@ export default function SoftAurora({
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener("resize", resize);
+      document.removeEventListener("visibilitychange", handleVisibility);
       if (enableMouseInteraction) {
         window.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseleave", handleMouseLeave);

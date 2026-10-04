@@ -133,27 +133,23 @@ export function LandingPage({
   // 1. LENIS SMOOTH SCROLL & MESSAGE LIFECYCLE CONTROLLER
   useEffect(() => {
     const lenis = new Lenis({
-      duration: 1.2,
+      duration: 1.0,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       orientation: "vertical",
       gestureOrientation: "vertical",
       smoothWheel: true,
-      wheelMultiplier: 1.0,
-      touchMultiplier: 1.5,
+      syncTouch: false,
     });
     lenisRef.current = lenis;
     (window as any).lenis = lenis;
 
-    // Initialize AOS Animate On Scroll
+    // Initialize AOS Animate On Scroll (disabled on mobile to ensure buttery 60-120fps native touch scrolling)
     AOS.init({
-      duration: 800,
+      duration: 600,
       easing: "ease-out-cubic",
       once: true,
-      offset: 50,
-    });
-
-    lenis.on("scroll", () => {
-      AOS.refresh();
+      offset: 30,
+      disable: "mobile",
     });
 
     let rafId: number;
@@ -178,55 +174,62 @@ export function LandingPage({
       { start: 0.83, end: 1.01 },
     ];
 
+    let isLifecycleTicking = false;
     function updateLifecycle() {
       if (!section || !line) return;
-      const rect = section.getBoundingClientRect();
-      const windowH = window.innerHeight;
-      const travel = rect.height - windowH;
-      if (travel <= 0) return;
+      if (isLifecycleTicking) return;
+      isLifecycleTicking = true;
 
-      const scrolled = -rect.top;
-      let progress = scrolled / travel;
-      progress = Math.max(0, Math.min(1, progress));
+      requestAnimationFrame(() => {
+        isLifecycleTicking = false;
+        if (!section || !line) return;
+        const rect = section.getBoundingClientRect();
+        const windowH = window.innerHeight;
+        const travel = rect.height - windowH;
+        if (travel <= 0) return;
 
-      // Line fill
-      line.style.height = `${progress * 100}%`;
+        const scrolled = -rect.top;
+        let progress = scrolled / travel;
+        progress = Math.max(0, Math.min(1, progress));
 
-      // Step Active / Past Classes
-      steps?.forEach((step, idx) => {
-        const t = thresholds[idx];
-        if (!t) return;
-        const pill = pills?.[idx];
+        // Line fill
+        line.style.height = `${progress * 100}%`;
 
-        if (progress >= t.start && progress < t.end) {
-          step.classList.add("active");
-          step.classList.remove("past");
-          if (pill) {
-            pill.classList.add("bg-[#00A86B]", "text-white", "shadow-xs");
-            pill.classList.remove("text-slate-500", "text-[#00A86B]");
+        // Step Active / Past Classes
+        steps?.forEach((step, idx) => {
+          const t = thresholds[idx];
+          if (!t) return;
+          const pill = pills?.[idx];
+
+          if (progress >= t.start && progress < t.end) {
+            step.classList.add("active");
+            step.classList.remove("past");
+            if (pill) {
+              pill.classList.add("bg-[#00A86B]", "text-white", "shadow-xs");
+              pill.classList.remove("text-slate-500", "text-[#00A86B]");
+            }
+          } else if (progress >= t.end) {
+            step.classList.remove("active");
+            step.classList.add("past");
+            if (pill) {
+              pill.classList.remove("bg-[#00A86B]", "text-white", "shadow-xs");
+              pill.classList.add("text-[#00A86B]");
+            }
+          } else {
+            step.classList.remove("active");
+            step.classList.remove("past");
+            if (pill) {
+              pill.classList.remove("bg-[#00A86B]", "text-white", "shadow-xs", "text-[#00A86B]");
+              pill.classList.add("text-slate-500");
+            }
           }
-        } else if (progress >= t.end) {
-          step.classList.remove("active");
-          step.classList.add("past");
-          if (pill) {
-            pill.classList.remove("bg-[#00A86B]", "text-white", "shadow-xs");
-            pill.classList.add("text-[#00A86B]");
-          }
-        } else {
-          step.classList.remove("active");
-          step.classList.remove("past");
-          if (pill) {
-            pill.classList.remove("bg-[#00A86B]", "text-white", "shadow-xs", "text-[#00A86B]");
-            pill.classList.add("text-slate-500");
-          }
-        }
+        });
       });
     }
 
-    // Attach to Lenis scroll AND native window scroll
+    // Attach to Lenis scroll and resize
     lenis.on("scroll", updateLifecycle);
-    window.addEventListener("scroll", updateLifecycle, { passive: true });
-    window.addEventListener("resize", updateLifecycle);
+    window.addEventListener("resize", updateLifecycle, { passive: true });
     updateLifecycle();
 
     // Smooth navigation anchor interception
@@ -246,7 +249,6 @@ export function LandingPage({
     return () => {
       cancelAnimationFrame(rafId);
       lenis.off("scroll", updateLifecycle);
-      window.removeEventListener("scroll", updateLifecycle);
       window.removeEventListener("resize", updateLifecycle);
       document.removeEventListener("click", handleAnchorClick);
       lenis.destroy();
