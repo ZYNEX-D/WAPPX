@@ -13,7 +13,7 @@ export function ThreeBackground() {
     let animationFrameId: number;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0xF7F7F2, 0.035);
+    scene.fog = new THREE.FogExp2(0xF7F7F2, 0.032);
 
     const camera = new THREE.PerspectiveCamera(
       45,
@@ -32,20 +32,154 @@ export function ThreeBackground() {
     scene.add(objectGroup);
 
     // =========================================================================
-    // 3D ISOMETRIC PARTICLE CUBE (Original design from design.example)
+    // 1. 3D WHATSAPP SPEECH BUBBLE GEOMETRY
     // =========================================================================
-    const geometry = new THREE.BoxGeometry(9, 9, 9, 38, 38, 38);
+    const bubbleShape = new THREE.Shape();
+    const bubbleRadius = 4.0;
+    // Circular arc from 255 deg (4.45 rad) clockwise to 215 deg (3.75 rad)
+    bubbleShape.absarc(0, 0, bubbleRadius, 4.45, 3.75, false);
+    // WhatsApp tail pointing to the bottom-left
+    bubbleShape.lineTo(-4.3, -4.4);
+    bubbleShape.lineTo(-1.1, -3.95);
+    bubbleShape.closePath();
 
-    // Inner wireframe lattice for high-tech holographic depth
-    const edgesGeometry = new THREE.EdgesGeometry(new THREE.BoxGeometry(8.95, 8.95, 8.95));
-    const edgesMaterial = new THREE.LineBasicMaterial({
+    const bubbleExtrudeSettings = {
+      depth: 0.85,
+      bevelEnabled: true,
+      bevelSegments: 4,
+      steps: 2,
+      bevelSize: 0.3,
+      bevelThickness: 0.3,
+    };
+    const bubbleGeo = new THREE.ExtrudeGeometry(bubbleShape, bubbleExtrudeSettings);
+    bubbleGeo.center();
+
+    // Wireframe outline for holographic WhatsApp bubble
+    const bubbleEdgesGeo = new THREE.EdgesGeometry(bubbleGeo, 22);
+    const bubbleEdgesMat = new THREE.LineBasicMaterial({
       color: 0x00A86B,
       transparent: true,
-      opacity: 0.15,
+      opacity: 0.22,
     });
-    const wireframeBox = new THREE.LineSegments(edgesGeometry, edgesMaterial);
-    objectGroup.add(wireframeBox);
+    const bubbleWireframe = new THREE.LineSegments(bubbleEdgesGeo, bubbleEdgesMat);
+    objectGroup.add(bubbleWireframe);
 
+    // =========================================================================
+    // 2. 3D WHATSAPP TELEPHONE HANDSET (CENTER RECEIVER)
+    // =========================================================================
+    const phoneShape = new THREE.Shape();
+    phoneShape.moveTo(-0.9, -1.3);
+    phoneShape.quadraticCurveTo(-1.5, -0.9, -1.3, -0.3);
+    phoneShape.quadraticCurveTo(-0.9, -0.2, -0.6, -0.5);
+    phoneShape.quadraticCurveTo(-0.2, 0.3, 0.3, 0.7);
+    phoneShape.quadraticCurveTo(0.1, 1.2, 0.6, 1.5);
+    phoneShape.quadraticCurveTo(1.3, 1.3, 1.0, 0.7);
+    phoneShape.quadraticCurveTo(0.6, 0.4, 0.1, -0.1);
+    phoneShape.quadraticCurveTo(-0.4, -0.6, -0.9, -1.3);
+
+    const phoneExtrudeSettings = {
+      depth: 0.7,
+      bevelEnabled: true,
+      bevelSegments: 3,
+      steps: 1,
+      bevelSize: 0.2,
+      bevelThickness: 0.2,
+    };
+    const phoneGeo = new THREE.ExtrudeGeometry(phoneShape, phoneExtrudeSettings);
+    phoneGeo.center();
+
+    const phoneEdgesGeo = new THREE.EdgesGeometry(phoneGeo, 25);
+    const phoneEdgesMat = new THREE.LineBasicMaterial({
+      color: 0x00A86B,
+      transparent: true,
+      opacity: 0.45,
+    });
+    const phoneWireframe = new THREE.LineSegments(phoneEdgesGeo, phoneEdgesMat);
+    objectGroup.add(phoneWireframe);
+
+    // =========================================================================
+    // 3. 3D META INFINITY ORBITAL RIBBON (Official Meta Lemniscate in 3D)
+    // =========================================================================
+    class MetaInfinityCurve extends THREE.Curve<THREE.Vector3> {
+      scale: number;
+      constructor(scale = 5.6) {
+        super();
+        this.scale = scale;
+      }
+      getPoint(t: number, optionalTarget = new THREE.Vector3()) {
+        const phi = t * Math.PI * 2;
+        // 3D Figure-8 Lemniscate
+        const x = Math.sin(phi) * this.scale;
+        const y = (Math.sin(2 * phi) * 0.5) * (this.scale * 0.75);
+        const z = Math.cos(phi) * (this.scale * 0.55);
+        return optionalTarget.set(x, y, z);
+      }
+    }
+
+    const metaCurve = new MetaInfinityCurve(5.6);
+    const metaTubeGeo = new THREE.TubeGeometry(metaCurve, 120, 0.07, 8, true);
+    const metaTubeMat = new THREE.MeshBasicMaterial({
+      color: 0x00A86B,
+      transparent: true,
+      opacity: 0.28,
+      wireframe: true,
+    });
+    const metaInfinityMesh = new THREE.Mesh(metaTubeGeo, metaTubeMat);
+    objectGroup.add(metaInfinityMesh);
+
+    // =========================================================================
+    // 4. UNIFIED PARTICLE CLOUD (WHATSAPP BUBBLE + PHONE + DATA PARTICLES)
+    // =========================================================================
+    const combinedPositions: number[] = [];
+    const combinedNormals: number[] = [];
+
+    // Helper to extract positions & normals from geometry
+    const extractPoints = (geo: THREE.BufferGeometry, step = 1) => {
+      const pos = geo.attributes.position;
+      const norm = geo.attributes.normal;
+      for (let i = 0; i < pos.count; i += step) {
+        combinedPositions.push(pos.getX(i), pos.getY(i), pos.getZ(i));
+        if (norm) {
+          combinedNormals.push(norm.getX(i), norm.getY(i), norm.getZ(i));
+        } else {
+          combinedNormals.push(0, 0, 1);
+        }
+      }
+    };
+
+    extractPoints(bubbleGeo, 1);
+    extractPoints(phoneGeo, 1);
+
+    // Add internal constellation particles inside the WhatsApp bubble
+    for (let i = 0; i < 450; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.sqrt(Math.random()) * (bubbleRadius * 0.85);
+      const z = (Math.random() - 0.5) * 1.0;
+      combinedPositions.push(Math.cos(angle) * dist, Math.sin(angle) * dist, z);
+      combinedNormals.push(Math.cos(angle), Math.sin(angle), 0);
+    }
+
+    // Add orbiting signal nodes along the Meta infinity curve
+    const metaParticlesCount = 180;
+    for (let i = 0; i < metaParticlesCount; i++) {
+      const p = metaCurve.getPoint(i / metaParticlesCount);
+      combinedPositions.push(p.x, p.y, p.z);
+      combinedNormals.push(p.x / 5.6, p.y / 5.6, p.z / 5.6);
+    }
+
+    const particlesGeo = new THREE.BufferGeometry();
+    particlesGeo.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(combinedPositions, 3)
+    );
+    particlesGeo.setAttribute(
+      "normal",
+      new THREE.Float32BufferAttribute(combinedNormals, 3)
+    );
+
+    // =========================================================================
+    // 5. SHADERS (SIMPLEX NOISE + INTERACTIVE DEPTH)
+    // =========================================================================
     const vertexShader = `
       uniform float uTime;
       uniform float uDistortion;
@@ -103,7 +237,7 @@ export function ThreeBackground() {
 
       void main() {
         vec3 pos = position;
-        float noise = snoise(vec3(pos.x * 0.4 + uTime * 0.15, pos.y * 0.4, pos.z * 0.4));
+        float noise = snoise(vec3(pos.x * 0.35 + uTime * 0.15, pos.y * 0.35, pos.z * 0.35));
         vNoise = noise;
         vec3 newPos = pos + (normal * noise * uDistortion);
         float dist = distance(uMouse * 10.0, newPos.xy);
@@ -131,14 +265,14 @@ export function ThreeBackground() {
 
     const uniforms = {
       uTime: { value: 0 },
-      uDistortion: { value: 0.1 },
-      uSize: { value: 2.0 },
-      uColor: { value: new THREE.Color("#0A504A") }, // Deep obsidian teal
-      uColor2: { value: new THREE.Color("#00A86B") }, // Electric jade green
+      uDistortion: { value: 0.12 },
+      uSize: { value: 2.2 },
+      uColor: { value: new THREE.Color("#0A504A") }, // Deep obsidian forest green
+      uColor2: { value: new THREE.Color("#00A86B") }, // Bright WhatsApp electric jade
       uMouse: { value: new THREE.Vector2(0, 0) },
     };
 
-    const material = new THREE.ShaderMaterial({
+    const pointsMaterial = new THREE.ShaderMaterial({
       vertexShader,
       fragmentShader,
       uniforms,
@@ -146,9 +280,12 @@ export function ThreeBackground() {
       blending: THREE.NormalBlending,
     });
 
-    const points = new THREE.Points(geometry, material);
-    objectGroup.add(points);
+    const emblemPoints = new THREE.Points(particlesGeo, pointsMaterial);
+    objectGroup.add(emblemPoints);
 
+    // =========================================================================
+    // 6. ANIMATION & EVENT HANDLERS
+    // =========================================================================
     let time = 0;
     let mouseX = 0,
       mouseY = 0;
@@ -160,17 +297,16 @@ export function ThreeBackground() {
       uniforms.uMouse.value.y += (mouseY - uniforms.uMouse.value.y) * 0.03;
     };
 
-    // Position centered directly in the middle of the viewport
     const adjustLayout = () => {
       const w = window.innerWidth;
       if (w < 1024) {
-        // Mobile / Tablet: Anchored centered slightly higher
-        objectGroup.position.set(0, 1.5, -2);
+        // Mobile / Tablet: Centered slightly above center
+        objectGroup.position.set(0, 1.2, -2);
         objectGroup.scale.set(0.6, 0.6, 0.6);
       } else {
         // Desktop: Center of hero screen
-        objectGroup.position.set(0, 1.8, 0);
-        objectGroup.scale.set(0.72, 0.72, 0.72);
+        objectGroup.position.set(0, 1.4, 0);
+        objectGroup.scale.set(0.78, 0.78, 0.78);
       }
     };
 
@@ -185,8 +321,8 @@ export function ThreeBackground() {
       const scrollY = window.scrollY;
       objectGroup.rotation.z = scrollY * 0.0004;
       const w = window.innerWidth;
-      const baseY = w < 1024 ? 1.5 : 1.8;
-      objectGroup.position.y = baseY + scrollY * 0.004;
+      const baseY = w < 1024 ? 1.2 : 1.4;
+      objectGroup.position.y = baseY + scrollY * 0.0035;
     };
 
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
@@ -198,9 +334,13 @@ export function ThreeBackground() {
       animationFrameId = requestAnimationFrame(animate);
       time += 0.008;
 
-      // Continuous 3D rotation with gentle mouse influence
-      objectGroup.rotation.x = time * 0.16 + mouseY * 0.2;
-      objectGroup.rotation.y = time * 0.22 + mouseX * 0.2;
+      // Elegant 3D continuous rotation with mouse parallax
+      objectGroup.rotation.x = time * 0.14 + mouseY * 0.22;
+      objectGroup.rotation.y = time * 0.2 + mouseX * 0.22;
+
+      // Meta orbital ribbon counter-rotation for rich kinetic depth
+      metaInfinityMesh.rotation.y = -time * 0.28;
+      metaInfinityMesh.rotation.z = time * 0.15;
 
       uniforms.uTime.value = time;
       camera.position.x += (mouseX * 1.5 - camera.position.x) * 0.025;
@@ -219,10 +359,16 @@ export function ThreeBackground() {
       if (container && renderer.domElement) {
         container.removeChild(renderer.domElement);
       }
-      geometry.dispose();
-      edgesGeometry.dispose();
-      edgesMaterial.dispose();
-      material.dispose();
+      bubbleGeo.dispose();
+      bubbleEdgesGeo.dispose();
+      bubbleEdgesMat.dispose();
+      phoneGeo.dispose();
+      phoneEdgesGeo.dispose();
+      phoneEdgesMat.dispose();
+      metaTubeGeo.dispose();
+      metaTubeMat.dispose();
+      particlesGeo.dispose();
+      pointsMaterial.dispose();
       renderer.dispose();
     };
   }, []);

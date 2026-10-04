@@ -385,12 +385,12 @@ export function LandingPage({
               </div> */}
 
               {/* Main Headline */}
-              <h1 className="font-primary text-5xl md:text-7xl lg:text-8xl font-medium tracking-tight text-[#0A504A] leading-[1.05]">
-                WAPP
-                <span className="text-[#00A86B]">X</span>
-                <br />
-                <span className="text-slate-400 font-light text-4xl md:text-6xl lg:text-7xl tracking-tight">
-                  Automation.
+              <h1 className="font-primary text-[#0A504A]">
+                <span className="block text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-medium tracking-[18px] sm:tracking-[24px] md:tracking-[32px] leading-none uppercase">
+                  WAPP<span className="text-[#00A86B]">X</span>
+                </span>
+                <span className="block font-secondary text-slate-400 font-light text-xs sm:text-sm md:text-base tracking-normal mt-3 md:mt-4">
+                  Whatsapp Business Automation & CRM
                 </span>
               </h1>
 
