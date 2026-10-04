@@ -5,7 +5,7 @@
 WAPPX transforms business WhatsApp numbers into automated sales, lead qualification, and customer support engines with 100% non-ban compliance, a drag-and-drop visual workflow canvas, a unified multi-agent live chat CRM inbox, and automated catalog order routing.
 
 - **Website**: https://wappx.zynexdev.com
-- **Developer & Company**: ZYNEX Developments (https://zynexdevelopments.com)
+- **Developer & Company**: ZYNEX Developments (https://zynexdev.com)
 - **API Standard**: Meta WhatsApp Cloud API v22.0
 - **Supported Regions**: Sri Lanka (LKR Native Pricing) and Global
 - **Target Audience**: E-commerce stores, SMEs, retail brands, healthcare, customer support teams, and digital marketing agencies.
