@@ -1207,9 +1207,10 @@ export function LandingPage({
                   <div className="flex items-center justify-between mb-4">
                     <span className="font-primary text-xs sm:text-sm font-bold uppercase tracking-wider text-[#0A504A]">Starter</span>
                   </div>
-                  <div className="mb-4 flex items-baseline gap-1">
+                  <div className="mb-4 flex items-baseline gap-1.5">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">LKR</span>
                     <span className="font-secondary text-3xl sm:text-4xl font-extrabold tracking-tight text-[#0A504A]">
-                      {isYearlyBilling ? "$39" : "$49"}
+                      {isYearlyBilling ? "1,200" : "1,500"}
                     </span>
                     <span className="text-xs text-slate-400 font-medium">/mo</span>
                   </div>
@@ -1260,9 +1261,10 @@ export function LandingPage({
                       Popular
                     </span>
                   </div>
-                  <div className="mb-4 flex items-baseline gap-1">
+                  <div className="mb-4 flex items-baseline gap-1.5">
+                    <span className="text-xs font-bold text-white/70 uppercase tracking-wider">LKR</span>
                     <span className="font-secondary text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-                      {isYearlyBilling ? "$119" : "$149"}
+                      {isYearlyBilling ? "2,160" : "2,700"}
                     </span>
                     <span className="text-xs text-white/60 font-medium">/mo</span>
                   </div>
@@ -1314,10 +1316,12 @@ export function LandingPage({
                   <div className="flex items-center justify-between mb-4">
                     <span className="font-primary text-xs sm:text-sm font-bold uppercase tracking-wider text-[#0A504A]">Enterprise</span>
                   </div>
-                  <div className="mb-4 flex items-baseline gap-1">
+                  <div className="mb-4 flex items-baseline gap-1.5">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">LKR</span>
                     <span className="font-secondary text-3xl sm:text-4xl font-extrabold tracking-tight text-[#0A504A]">
-                      Custom
+                      {isYearlyBilling ? "3,360" : "4,200"}
                     </span>
+                    <span className="text-xs text-slate-400 font-medium">/mo</span>
                   </div>
                   <p className="text-xs text-slate-500 mb-6 leading-relaxed">
                     White-label tenant provisioning, dedicated cloud database cluster, and custom CRM integration.
