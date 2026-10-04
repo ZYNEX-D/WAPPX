@@ -374,7 +374,7 @@ export function LandingPage({
           <Link href="/" className="flex items-center gap-3 group">
             <img
               src="/icon.png"
-              alt="WAPPX"
+              alt="WAPPX WhatsApp Automation & CRM Platform Logo"
               className="w-7 h-7 object-contain group-hover:scale-105 transition-transform"
             />
             <span className="font-primary text-lg font-semibold tracking-[-0.01em] text-[#0A504A] pl-1">
@@ -442,8 +442,8 @@ export function LandingPage({
         </div>
       </header>
 
-      {/* 3. CONTENT WRAPPER */}
-      <div className="z-10 flex flex-col w-full relative">
+      {/* 3. MAIN CONTENT */}
+      <main id="main-content" className="z-10 flex flex-col w-full relative">
         {/* ========================================================================= */}
         {/* HERO SECTION                                                             */}
         {/* ========================================================================= */}
@@ -1355,16 +1355,17 @@ export function LandingPage({
             </div>
           </div>
         </section>
+      </main>
 
-        {/* ========================================================================= */}
-        {/* FOOTER & CREATOR CREDITS                                                  */}
-        {/* ========================================================================= */}
-        <footer className="relative pt-16 pb-0 bg-white overflow-hidden">
+      {/* ========================================================================= */}
+      {/* FOOTER & CREATOR CREDITS                                                  */}
+      {/* ========================================================================= */}
+      <footer className="relative pt-16 pb-0 bg-white overflow-hidden z-10">
           <div className="max-w-7xl mx-auto flex flex-col gap-12 px-6 md:px-12 lg:px-20 relative z-10" data-aos="fade-up">
             <div className="flex flex-col md:flex-row justify-between gap-12">
               <div className="max-w-xs space-y-4">
                 <div className="flex items-center gap-3">
-                  <img src="/icon.png" alt="WAPPX" className="w-7 h-7 object-contain" />
+                  <img src="/icon.png" alt="WAPPX WhatsApp Automation Platform Logo" className="w-7 h-7 object-contain" />
                   <span className="font-primary font-semibold text-lg tracking-[-0.01em] text-[#0A504A] pl-1">
                     WAPP<span className="text-[#00A86B]">X</span>
                   </span>
@@ -1483,7 +1484,6 @@ export function LandingPage({
             </div>
           </div>
         </footer>
-      </div>
     </div>
   );
 }
