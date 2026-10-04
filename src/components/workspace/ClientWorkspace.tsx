@@ -480,7 +480,13 @@ export function ClientWorkspace({
 
   const handleSaveCatalog = async (updated: BusinessCatalog) => {
     try {
-      const saved = await saveCatalog(updated);
+      const sanitized: BusinessCatalog = {
+        ...updated,
+        clientId: updated.clientId || (updated as any).client_id || currentClientId || "client-1",
+        catalogId: updated.catalogId || (updated as any).catalog_id,
+        isDefault: updated.isDefault ?? (updated as any).is_default ?? true,
+      };
+      const saved = await saveCatalog(sanitized);
       setCatalogs((prev) => {
         const idx = prev.findIndex((c) => c.id === saved.id);
         if (idx >= 0) {

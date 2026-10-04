@@ -356,8 +356,19 @@ export function CatalogManager({
       }
 
       if (data.catalog) {
-        await onSaveCatalog(data.catalog);
-        setSelectedCatalogId(data.catalog.id);
+        const catObj: BusinessCatalog = {
+          id: data.catalog.id,
+          clientId: data.catalog.clientId || data.catalog.client_id || clientId || "client-1",
+          name: data.catalog.name,
+          catalogId: data.catalog.catalogId || data.catalog.catalog_id,
+          description: data.catalog.description,
+          items: data.catalog.items || [],
+          isDefault: data.catalog.isDefault ?? data.catalog.is_default ?? true,
+          createdAt: data.catalog.createdAt || data.catalog.created_at || new Date().toISOString(),
+          updatedAt: data.catalog.updatedAt || data.catalog.updated_at || new Date().toISOString(),
+        };
+        await onSaveCatalog(catObj);
+        setSelectedCatalogId(catObj.id);
       }
       setIsCatalogModalOpen(false);
       setCatalogNameInput("");
@@ -401,8 +412,19 @@ export function CatalogManager({
         });
         const linkData = await res.json();
         if (linkData.success && linkData.catalog) {
-          await onSaveCatalog(linkData.catalog);
-          setSelectedCatalogId(linkData.catalog.id);
+          const catObj: BusinessCatalog = {
+            id: linkData.catalog.id,
+            clientId: linkData.catalog.clientId || linkData.catalog.client_id || clientId || "client-1",
+            name: linkData.catalog.name,
+            catalogId: linkData.catalog.catalogId || linkData.catalog.catalog_id || cleanCatId,
+            description: linkData.catalog.description,
+            items: linkData.catalog.items || [],
+            isDefault: linkData.catalog.isDefault ?? linkData.catalog.is_default ?? true,
+            createdAt: linkData.catalog.createdAt || linkData.catalog.created_at || new Date().toISOString(),
+            updatedAt: linkData.catalog.updatedAt || linkData.catalog.updated_at || new Date().toISOString(),
+          };
+          await onSaveCatalog(catObj);
+          setSelectedCatalogId(catObj.id);
           setIsCatalogModalOpen(false);
           setCatalogNameInput("");
           setCatalogIdInput("");

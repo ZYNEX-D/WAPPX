@@ -499,6 +499,20 @@ export async function saveMetaConfig(config: MetaConfig, userId: string = "clien
   return true;
 }
 
+export function mapCatalogFromRow(row: any): BusinessCatalog {
+  return {
+    id: row.id,
+    clientId: row.client_id || row.clientId || "client-1",
+    name: row.name,
+    catalogId: row.catalog_id || row.catalogId || undefined,
+    description: row.description || undefined,
+    items: Array.isArray(row.items) ? (row.items as unknown as CatalogItem[]) : [],
+    isDefault: row.is_default ?? row.isDefault ?? false,
+    createdAt: row.created_at || row.createdAt || new Date().toISOString(),
+    updatedAt: row.updated_at || row.updatedAt || new Date().toISOString(),
+  };
+}
+
 export const INITIAL_DEFAULT_CATALOG_ITEMS: CatalogItem[] = [];
 
 export async function fetchCatalogs(clientId: string): Promise<BusinessCatalog[]> {
@@ -531,17 +545,7 @@ export async function fetchCatalogs(clientId: string): Promise<BusinessCatalog[]
       return [defaultCatalog];
     }
 
-    const mapped: BusinessCatalog[] = data.map((row) => ({
-      id: row.id,
-      clientId: row.client_id,
-      name: row.name,
-      catalogId: row.catalog_id || undefined,
-      description: row.description || undefined,
-      items: Array.isArray(row.items) ? (row.items as unknown as CatalogItem[]) : [],
-      isDefault: row.is_default,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    }));
+    const mapped: BusinessCatalog[] = data.map(mapCatalogFromRow);
 
     if (typeof window !== "undefined") {
       try {
@@ -557,21 +561,29 @@ export async function fetchCatalogs(clientId: string): Promise<BusinessCatalog[]
 }
 
 export async function saveCatalog(catalog: BusinessCatalog): Promise<BusinessCatalog> {
+  const resolvedClientId =
+    catalog.clientId ||
+    (catalog as any).client_id ||
+    "client-1";
+
   const now = new Date().toISOString();
   const catalogToSave: BusinessCatalog = {
     ...catalog,
+    clientId: resolvedClientId,
+    catalogId: catalog.catalogId || (catalog as any).catalog_id || undefined,
+    isDefault: catalog.isDefault ?? (catalog as any).is_default ?? false,
     updatedAt: now,
-    createdAt: catalog.createdAt || now,
+    createdAt: catalog.createdAt || (catalog as any).created_at || now,
   };
 
   try {
     const { error } = await supabase.from("catalogs").upsert({
       id: catalogToSave.id,
-      client_id: catalogToSave.clientId,
+      client_id: resolvedClientId,
       name: catalogToSave.name,
       catalog_id: catalogToSave.catalogId || null,
       description: catalogToSave.description || null,
-      items: catalogToSave.items as unknown as Json,
+      items: (catalogToSave.items || []) as unknown as Json,
       is_default: catalogToSave.isDefault ?? false,
       created_at: catalogToSave.createdAt,
       updated_at: catalogToSave.updatedAt,
