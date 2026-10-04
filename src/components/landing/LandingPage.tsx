@@ -639,20 +639,20 @@ export function LandingPage({
           className="relative w-full bg-[#F7F7F2] border-b border-[#0A504A]/10"
           style={{ height: "300vh" }}
         >
-          <div className="sticky top-0 left-0 w-full h-screen overflow-hidden flex flex-col items-center justify-between pt-20 pb-6 px-4 md:px-8">
+          <div className="sticky top-0 left-0 w-full h-screen overflow-hidden flex flex-col items-center justify-between pt-14 sm:pt-16 md:pt-20 pb-3 sm:pb-4 md:pb-6 px-2.5 sm:px-4 md:px-8">
             {/* Background Dot Pattern */}
             <div className="absolute inset-0 bg-[radial-gradient(#0A504A0a_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
 
             {/* Header: Crisp, prominent and always visible */}
-            <div id="lifecycle-header" className="text-center shrink-0 mb-1 md:mb-3 z-20">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00A86B]/10 border border-[#00A86B]/30 text-[#00A86B] text-[11px] font-bold tracking-wider uppercase mb-1 shadow-2xs">
-                <Radio className="w-3.5 h-3.5 text-[#00A86B] animate-pulse" />
+            <div id="lifecycle-header" className="text-center shrink-0 mb-1 sm:mb-2 md:mb-3 z-20 max-w-xl">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#00A86B]/10 border border-[#00A86B]/30 text-[#00A86B] text-[9px] sm:text-[10px] md:text-[11px] font-bold tracking-wider uppercase mb-0.5 sm:mb-1 shadow-2xs">
+                <Radio className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#00A86B] animate-pulse" />
                 <span>Traceability Lifecycle Engine</span>
               </div>
-              <h2 className="font-primary text-2xl md:text-3xl font-medium text-[#0A504A] tracking-tight">
+              <h2 className="font-primary text-lg sm:text-2xl md:text-3xl font-medium text-[#0A504A] tracking-tight leading-tight">
                 Message Automation Lifecycle
               </h2>
-              <p className="text-slate-500 text-xs md:text-sm max-w-lg mx-auto mt-0.5">
+              <p className="text-slate-500 text-[10px] sm:text-xs md:text-sm max-w-lg mx-auto mt-0.5 line-clamp-1 sm:line-clamp-none">
                 From initial customer inquiry to verified enterprise delivery in milliseconds.
               </p>
             </div>
@@ -660,27 +660,27 @@ export function LandingPage({
             {/* Central Track & Steps Container */}
             <div className="relative w-full max-w-3xl flex-1 flex flex-col justify-center my-auto">
               {/* Static Background Conduit Track */}
-              <div className="absolute left-1/2 top-3 bottom-3 w-[2px] bg-slate-200/90 -translate-x-1/2 rounded-full" />
+              <div className="absolute left-1/2 top-2 bottom-2 w-[2px] bg-slate-200/90 -translate-x-1/2 rounded-full" />
 
               {/* Animated Glowing Fill Line */}
               <div
                 id="lifecycle-line"
-                className="absolute left-1/2 top-3 w-[2.5px] bg-gradient-to-b from-[#00A86B] via-[#00A86B] to-[#0A504A] -translate-x-1/2 rounded-full transition-all duration-75 ease-out shadow-[0_0_8px_rgba(0,168,107,0.4)]"
+                className="absolute left-1/2 top-2 w-[2.5px] bg-gradient-to-b from-[#00A86B] via-[#00A86B] to-[#0A504A] -translate-x-1/2 rounded-full transition-all duration-75 ease-out shadow-[0_0_8px_rgba(0,168,107,0.4)]"
                 style={{ height: "0%" }}
               />
 
-              {/* 6 Lifecycle Steps with explicit CSS class hooks */}
-              <div className="space-y-5 md:space-y-6 py-2 relative">
+              {/* 6 Lifecycle Steps with responsive spacing & widths */}
+              <div className="space-y-2 sm:space-y-3.5 md:space-y-6 py-1 sm:py-2 relative">
                 {/* Step 1 */}
                 <div
                   className="lifecycle-step group flex items-center justify-between w-full"
                   data-threshold="0.04"
                 >
-                  <div className="w-[42%] text-right pr-6">
-                    <span className="step-num font-mono text-[10px] uppercase tracking-wider block mb-0.5">
+                  <div className="w-[46%] md:w-[42%] text-right pr-2.5 sm:pr-4 md:pr-6">
+                    <span className="step-num font-mono text-[9px] sm:text-[10px] uppercase tracking-wider block mb-0.5">
                       01 Context
                     </span>
-                    <h3 className="step-title text-sm md:text-base font-bold">
+                    <h3 className="step-title text-[11px] sm:text-xs md:text-base font-bold leading-tight">
                       Inbound Customer Message
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5 hidden md:block">
@@ -690,9 +690,9 @@ export function LandingPage({
                   <div className="relative shrink-0 z-10">
                     <div className="step-dot" />
                   </div>
-                  <div className="w-[42%] pl-6">
-                    <div className="step-card p-2.5 rounded-xl shadow-2xs inline-block text-left">
-                      <span className="text-xs font-semibold text-[#0A504A]">
+                  <div className="w-[46%] md:w-[42%] pl-2.5 sm:pl-4 md:pl-6">
+                    <div className="step-card p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl shadow-2xs inline-block text-left">
+                      <span className="text-[10px] sm:text-xs font-semibold text-[#0A504A] leading-snug block">
                         &ldquo;Can I upgrade to the enterprise plan today?&rdquo;
                       </span>
                     </div>
@@ -704,10 +704,10 @@ export function LandingPage({
                   className="lifecycle-step group flex items-center justify-between w-full"
                   data-threshold="0.19"
                 >
-                  <div className="w-[42%] text-right pr-6">
-                    <div className="step-card p-2.5 rounded-xl shadow-2xs inline-block text-left">
-                      <span className="text-[10px] text-slate-400 block mb-0.5">Requirement Detected</span>
-                      <span className="text-xs font-semibold text-[#0A504A]">
+                  <div className="w-[46%] md:w-[42%] text-right pr-2.5 sm:pr-4 md:pr-6">
+                    <div className="step-card p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl shadow-2xs inline-block text-left">
+                      <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">Requirement Detected</span>
+                      <span className="text-[10px] sm:text-xs font-semibold text-[#0A504A] leading-snug block">
                         High-volume automated catalog support
                       </span>
                     </div>
@@ -715,11 +715,11 @@ export function LandingPage({
                   <div className="relative shrink-0 z-10">
                     <div className="step-dot" />
                   </div>
-                  <div className="w-[42%] pl-6">
-                    <span className="step-num font-mono text-[10px] uppercase tracking-wider block mb-0.5">
+                  <div className="w-[46%] md:w-[42%] pl-2.5 sm:pl-4 md:pl-6">
+                    <span className="step-num font-mono text-[9px] sm:text-[10px] uppercase tracking-wider block mb-0.5">
                       02 Input
                     </span>
-                    <h3 className="step-title text-sm md:text-base font-bold">
+                    <h3 className="step-title text-[11px] sm:text-xs md:text-base font-bold leading-tight">
                       Intent Categorization
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5 hidden md:block">
@@ -733,11 +733,11 @@ export function LandingPage({
                   className="lifecycle-step group flex items-center justify-between w-full"
                   data-threshold="0.35"
                 >
-                  <div className="w-[42%] text-right pr-6">
-                    <span className="step-num font-mono text-[10px] uppercase tracking-wider block mb-0.5">
+                  <div className="w-[46%] md:w-[42%] text-right pr-2.5 sm:pr-4 md:pr-6">
+                    <span className="step-num font-mono text-[9px] sm:text-[10px] uppercase tracking-wider block mb-0.5">
                       03 Data
                     </span>
-                    <h3 className="step-title text-sm md:text-base font-bold">
+                    <h3 className="step-title text-[11px] sm:text-xs md:text-base font-bold leading-tight">
                       Live CRM & Inventory Sync
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5 hidden md:block">
@@ -747,10 +747,10 @@ export function LandingPage({
                   <div className="relative shrink-0 z-10">
                     <div className="step-dot" />
                   </div>
-                  <div className="w-[42%] pl-6">
-                    <div className="step-card p-2.5 rounded-xl shadow-2xs inline-flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#00A86B] animate-pulse" />
-                      <span className="text-xs font-bold text-[#0A504A]">Customer CRM: Active VIP</span>
+                  <div className="w-[46%] md:w-[42%] pl-2.5 sm:pl-4 md:pl-6">
+                    <div className="step-card p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl shadow-2xs inline-flex items-center gap-1.5 sm:gap-2">
+                      <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#00A86B] animate-pulse shrink-0" />
+                      <span className="text-[10px] sm:text-xs font-bold text-[#0A504A]">Customer CRM: Active VIP</span>
                     </div>
                   </div>
                 </div>
@@ -760,9 +760,9 @@ export function LandingPage({
                   className="lifecycle-step group flex items-center justify-between w-full"
                   data-threshold="0.51"
                 >
-                  <div className="w-[42%] text-right pr-6">
-                    <div className="step-card p-2.5 rounded-xl shadow-2xs inline-block text-left">
-                      <span className="text-xs font-semibold text-[#0A504A]">
+                  <div className="w-[46%] md:w-[42%] text-right pr-2.5 sm:pr-4 md:pr-6">
+                    <div className="step-card p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl shadow-2xs inline-block text-left">
+                      <span className="text-[10px] sm:text-xs font-semibold text-[#0A504A] leading-snug block">
                         Tailored catalog cards with instant checkout buttons
                       </span>
                     </div>
@@ -770,11 +770,11 @@ export function LandingPage({
                   <div className="relative shrink-0 z-10">
                     <div className="step-dot" />
                   </div>
-                  <div className="w-[42%] pl-6">
-                    <span className="step-num font-mono text-[10px] uppercase tracking-wider block mb-0.5">
+                  <div className="w-[46%] md:w-[42%] pl-2.5 sm:pl-4 md:pl-6">
+                    <span className="step-num font-mono text-[9px] sm:text-[10px] uppercase tracking-wider block mb-0.5">
                       04 Logic
                     </span>
-                    <h3 className="step-title text-sm md:text-base font-bold">
+                    <h3 className="step-title text-[11px] sm:text-xs md:text-base font-bold leading-tight">
                       Flow Decision Branching
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5 hidden md:block">
@@ -788,11 +788,11 @@ export function LandingPage({
                   className="lifecycle-step group flex items-center justify-between w-full"
                   data-threshold="0.67"
                 >
-                  <div className="w-[42%] text-right pr-6">
-                    <span className="step-num font-mono text-[10px] uppercase tracking-wider block mb-0.5">
+                  <div className="w-[46%] md:w-[42%] text-right pr-2.5 sm:pr-4 md:pr-6">
+                    <span className="step-num font-mono text-[9px] sm:text-[10px] uppercase tracking-wider block mb-0.5">
                       05 Result
                     </span>
-                    <h3 className="step-title text-sm md:text-base font-bold">
+                    <h3 className="step-title text-[11px] sm:text-xs md:text-base font-bold leading-tight">
                       Instant Delivery
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5 hidden md:block">
@@ -802,10 +802,10 @@ export function LandingPage({
                   <div className="relative shrink-0 z-10">
                     <div className="step-dot" />
                   </div>
-                  <div className="w-[42%] pl-6">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0A504A] text-xs font-bold shadow-md text-white">
+                  <div className="w-[46%] md:w-[42%] pl-2.5 sm:pl-4 md:pl-6">
+                    <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#0A504A] text-[10px] sm:text-xs font-bold shadow-md text-white">
                       <span>Delivered (&lt; 250ms)</span>
-                      <Check className="w-3.5 h-3.5 text-[#A2E4B8]" />
+                      <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#A2E4B8]" />
                     </span>
                   </div>
                 </div>
@@ -815,19 +815,19 @@ export function LandingPage({
                   className="lifecycle-step group flex items-center justify-between w-full"
                   data-threshold="0.83"
                 >
-                  <div className="w-[42%] text-right pr-6">
-                    <span className="font-mono text-[10px] text-slate-600 px-2.5 py-1 rounded-lg bg-slate-100 inline-block font-semibold">
+                  <div className="w-[46%] md:w-[42%] text-right pr-2.5 sm:pr-4 md:pr-6">
+                    <span className="font-mono text-[9px] sm:text-[10px] text-slate-600 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md sm:rounded-lg bg-slate-100 inline-block font-semibold">
                       TRACE: WAPPX-9821
                     </span>
                   </div>
                   <div className="relative shrink-0 z-10">
                     <div className="step-dot" />
                   </div>
-                  <div className="w-[42%] pl-6">
-                    <span className="step-num font-mono text-[10px] uppercase tracking-wider block mb-0.5">
+                  <div className="w-[46%] md:w-[42%] pl-2.5 sm:pl-4 md:pl-6">
+                    <span className="step-num font-mono text-[9px] sm:text-[10px] uppercase tracking-wider block mb-0.5">
                       06 Audit
                     </span>
-                    <h3 className="step-title text-sm md:text-base font-bold">
+                    <h3 className="step-title text-[11px] sm:text-xs md:text-base font-bold leading-tight">
                       Immutable Record
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5 hidden md:block">
@@ -839,21 +839,22 @@ export function LandingPage({
             </div>
 
             {/* Quick Interactive Stage Jump Pills */}
-            <div className="shrink-0 z-20 flex flex-wrap justify-center items-center gap-1.5 md:gap-2 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-200/80 shadow-xs max-w-full">
+            <div className="shrink-0 z-20 flex flex-wrap justify-center items-center gap-1 sm:gap-1.5 md:gap-2 bg-white/90 backdrop-blur-md px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border border-slate-200/80 shadow-xs max-w-full">
               {[
-                { label: "01 Inbound", idx: 0 },
-                { label: "02 Intent", idx: 1 },
-                { label: "03 CRM Sync", idx: 2 },
-                { label: "04 Flow Logic", idx: 3 },
-                { label: "05 Instant Pay", idx: 4 },
-                { label: "06 Audit Trail", idx: 5 },
+                { label: "01 Inbound", short: "01", idx: 0 },
+                { label: "02 Intent", short: "02", idx: 1 },
+                { label: "03 CRM Sync", short: "03", idx: 2 },
+                { label: "04 Flow Logic", short: "04", idx: 3 },
+                { label: "05 Instant Pay", short: "05", idx: 4 },
+                { label: "06 Audit Trail", short: "06", idx: 5 },
               ].map((stage) => (
                 <button
                   key={stage.idx}
                   onClick={() => scrollToLifecycleStage(stage.idx)}
-                  className="lifecycle-nav-pill text-[10px] md:text-xs px-2.5 py-1 rounded-full font-semibold transition-all cursor-pointer text-slate-500 hover:text-[#0A504A]"
+                  className="lifecycle-nav-pill text-[9px] sm:text-[10px] md:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full font-semibold transition-all cursor-pointer text-slate-500 hover:text-[#0A504A]"
                 >
-                  {stage.label}
+                  <span className="hidden xs:inline sm:inline">{stage.label}</span>
+                  <span className="xs:hidden sm:hidden">{stage.short}</span>
                 </button>
               ))}
             </div>
