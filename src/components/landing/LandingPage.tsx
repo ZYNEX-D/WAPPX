@@ -659,18 +659,20 @@ export function LandingPage({
 
             {/* Central Track & Steps Container */}
             <div className="relative w-full max-w-3xl flex-1 flex flex-col justify-center my-auto">
-              {/* Static Background Conduit Track */}
-              <div className="absolute left-1/2 top-2 bottom-2 w-[2px] bg-slate-200/90 -translate-x-1/2 rounded-full" />
-
-              {/* Animated Glowing Fill Line */}
-              <div
-                id="lifecycle-line"
-                className="absolute left-1/2 top-2 w-[2.5px] bg-gradient-to-b from-[#00A86B] via-[#00A86B] to-[#0A504A] -translate-x-1/2 rounded-full transition-all duration-75 ease-out shadow-[0_0_8px_rgba(0,168,107,0.4)]"
-                style={{ height: "0%" }}
-              />
-
               {/* 6 Lifecycle Steps with responsive spacing & widths */}
-              <div className="space-y-2 sm:space-y-3.5 md:space-y-6 py-1 sm:py-2 relative">
+              <div className="space-y-3 sm:space-y-4 md:space-y-6 py-2 relative">
+                {/* Static Background Conduit Track & Glowing Fill Line (Strictly bounded between Step 1 and Step 6) */}
+                <div className="absolute left-1/2 top-4 bottom-4 -translate-x-1/2 w-[2.5px] pointer-events-none z-0">
+                  {/* Static track */}
+                  <div className="w-full h-full bg-slate-200/90 rounded-full" />
+                  {/* Animated Glowing Fill Line */}
+                  <div
+                    id="lifecycle-line"
+                    className="absolute top-0 left-0 w-full bg-gradient-to-b from-[#00A86B] via-[#00A86B] to-[#0A504A] rounded-full transition-all duration-75 ease-out shadow-[0_0_8px_rgba(0,168,107,0.4)]"
+                    style={{ height: "0%" }}
+                  />
+                </div>
+
                 {/* Step 1 */}
                 <div
                   className="lifecycle-step group flex items-center justify-between w-full"
