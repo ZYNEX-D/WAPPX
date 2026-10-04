@@ -1152,16 +1152,16 @@ export function LandingPage({
         {/* ========================================================================= */}
         {/* TRANSPARENT PRICING                                                       */}
         {/* ========================================================================= */}
-        <section id="pricing" className="py-28 px-6 md:px-12 lg:px-20 border-b border-[#0A504A]/10 bg-[#F7F7F2]">
+        <section id="pricing" className="py-16 md:py-28 px-4 sm:px-6 md:px-12 lg:px-20 border-b border-[#0A504A]/10 bg-[#F7F7F2]">
           <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-12" data-aos="fade-up">
+            <div className="text-center mb-10 md:mb-12" data-aos="fade-up">
               <span className="text-[11px] font-bold text-[#00A86B] uppercase tracking-wider block mb-2">
                 Transparent SaaS Plans
               </span>
-              <h2 className="font-primary text-3xl md:text-4xl font-medium text-[#0A504A] tracking-tight mb-4">
+              <h2 className="font-primary text-2xl sm:text-3xl md:text-4xl font-medium text-[#0A504A] tracking-tight mb-3 sm:mb-4">
                 Scale Your WhatsApp Engine
               </h2>
-              <p className="text-slate-600 text-sm max-w-md mx-auto">
+              <p className="text-slate-600 text-xs sm:text-sm max-w-md mx-auto">
                 Connect your business phone today. Choose a plan tailored for your message volume.
               </p>
 
@@ -1198,39 +1198,39 @@ export function LandingPage({
                 data-aos="fade-up"
                 data-aos-delay="100"
                 onClick={() => setSelectedPricing("hobby")}
-                className={`p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${selectedPricing === "hobby"
+                className={`p-6 sm:p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${selectedPricing === "hobby"
                   ? "bg-white border-[#00A86B] shadow-xl scale-[1.02] ring-2 ring-[#00A86B]/20"
                   : "bg-white/70 border-slate-200 opacity-75 hover:opacity-100"
                   }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="font-primary text-sm font-bold text-[#0A504A]">Starter</span>
+                    <span className="font-primary text-xs sm:text-sm font-bold uppercase tracking-wider text-[#0A504A]">Starter</span>
                   </div>
                   <div className="mb-4 flex items-baseline gap-1">
-                    <span className="font-primary text-3xl font-bold text-[#0A504A]">
+                    <span className="font-secondary text-3xl sm:text-4xl font-extrabold tracking-tight text-[#0A504A]">
                       {isYearlyBilling ? "$39" : "$49"}
                     </span>
-                    <span className="text-xs text-slate-400">/mo</span>
+                    <span className="text-xs text-slate-400 font-medium">/mo</span>
                   </div>
                   <p className="text-xs text-slate-500 mb-6 leading-relaxed">
                     Ideal for small businesses and stores automating first customer responses.
                   </p>
                   <ul className="space-y-3 mb-8 text-xs text-slate-600">
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#00A86B]" />
+                      <Check className="w-4 h-4 text-[#00A86B] shrink-0" />
                       <span>1 WhatsApp Business Number</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#00A86B]" />
+                      <Check className="w-4 h-4 text-[#00A86B] shrink-0" />
                       <span>Up to 5 Visual Flow Nodes</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#00A86B]" />
+                      <Check className="w-4 h-4 text-[#00A86B] shrink-0" />
                       <span>Live Inbox (1 Agent Seat)</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#00A86B]" />
+                      <Check className="w-4 h-4 text-[#00A86B] shrink-0" />
                       <span>WhatsApp Simulator</span>
                     </li>
                   </ul>
@@ -1248,46 +1248,46 @@ export function LandingPage({
                 data-aos="fade-up"
                 data-aos-delay="200"
                 onClick={() => setSelectedPricing("pro")}
-                className={`p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${selectedPricing === "pro"
+                className={`p-6 sm:p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${selectedPricing === "pro"
                   ? "bg-[#0A504A] text-white shadow-2xl scale-[1.04] ring-2 ring-[#00A86B]"
                   : "bg-[#0A504A]/90 text-white/90"
                   }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="font-primary text-sm font-bold text-[#A2E4B8]">Growth Pro</span>
+                    <span className="font-primary text-xs sm:text-sm font-bold uppercase tracking-wider text-[#A2E4B8]">Growth Pro</span>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#00A86B] text-white">
                       Popular
                     </span>
                   </div>
                   <div className="mb-4 flex items-baseline gap-1">
-                    <span className="font-primary text-3xl font-bold text-white">
+                    <span className="font-secondary text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
                       {isYearlyBilling ? "$119" : "$149"}
                     </span>
-                    <span className="text-xs text-white/60">/mo</span>
+                    <span className="text-xs text-white/60 font-medium">/mo</span>
                   </div>
                   <p className="text-xs text-white/75 mb-6 leading-relaxed">
                     For growing brands needing high-volume catalog routing, webhooks & multi-agent support.
                   </p>
                   <ul className="space-y-3 mb-8 text-xs text-white/90">
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#A2E4B8]" />
+                      <Check className="w-4 h-4 text-[#A2E4B8] shrink-0" />
                       <span>Unlimited WhatsApp Numbers</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#A2E4B8]" />
+                      <Check className="w-4 h-4 text-[#A2E4B8] shrink-0" />
                       <span>Unlimited Visual Flow Nodes</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#A2E4B8]" />
+                      <Check className="w-4 h-4 text-[#A2E4B8] shrink-0" />
                       <span>Multi-Agent Live Inbox (5 Seats)</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#A2E4B8]" />
+                      <Check className="w-4 h-4 text-[#A2E4B8] shrink-0" />
                       <span>Custom Inbound Webhook Verify Token</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#A2E4B8]" />
+                      <Check className="w-4 h-4 text-[#A2E4B8] shrink-0" />
                       <span>Priority Support & SLA</span>
                     </li>
                   </ul>
@@ -1305,36 +1305,38 @@ export function LandingPage({
                 data-aos="fade-up"
                 data-aos-delay="300"
                 onClick={() => setSelectedPricing("ent")}
-                className={`p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${selectedPricing === "ent"
+                className={`p-6 sm:p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${selectedPricing === "ent"
                   ? "bg-white border-[#00A86B] shadow-xl scale-[1.02] ring-2 ring-[#00A86B]/20"
                   : "bg-white/70 border-slate-200 opacity-75 hover:opacity-100"
                   }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="font-primary text-sm font-bold text-[#0A504A]">Enterprise / Agency</span>
+                    <span className="font-primary text-xs sm:text-sm font-bold uppercase tracking-wider text-[#0A504A]">Enterprise</span>
                   </div>
                   <div className="mb-4 flex items-baseline gap-1">
-                    <span className="font-primary text-3xl font-bold text-[#0A504A]">Custom</span>
+                    <span className="font-secondary text-3xl sm:text-4xl font-extrabold tracking-tight text-[#0A504A]">
+                      Custom
+                    </span>
                   </div>
                   <p className="text-xs text-slate-500 mb-6 leading-relaxed">
                     White-label tenant provisioning, dedicated cloud database cluster, and custom CRM integration.
                   </p>
                   <ul className="space-y-3 mb-8 text-xs text-slate-600">
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#00A86B]" />
+                      <Check className="w-4 h-4 text-[#00A86B] shrink-0" />
                       <span>Multi-Tenant White-Label Workspaces</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#00A86B]" />
+                      <Check className="w-4 h-4 text-[#00A86B] shrink-0" />
                       <span>Dedicated Webhook Endpoints</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#00A86B]" />
+                      <Check className="w-4 h-4 text-[#00A86B] shrink-0" />
                       <span>Unlimited Agent Seats</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#00A86B]" />
+                      <Check className="w-4 h-4 text-[#00A86B] shrink-0" />
                       <span>Dedicated Technical Account Manager</span>
                     </li>
                   </ul>
