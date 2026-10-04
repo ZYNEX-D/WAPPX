@@ -25,6 +25,7 @@ import {
   FileText,
   Layers,
   ShoppingBag,
+  LifeBuoy,
 } from "lucide-react";
 import { UserWorkspace } from "@/types/whatsapp";
 
@@ -38,7 +39,8 @@ export type ActiveTab =
   | "builder"
   | "simulator"
   | "contacts"
-  | "settings";
+  | "settings"
+  | "support";
 
 interface SidebarProps {
   viewMode: "admin" | "client";
@@ -53,6 +55,9 @@ interface SidebarProps {
   onLogout?: () => void;
   userEmail?: string;
   isOwnerAdmin?: boolean;
+  adminTab?: "clients" | "tickets";
+  onSelectAdminTab?: (tab: "clients" | "tickets") => void;
+  openTicketsCount?: number;
 }
 
 export function Sidebar({
@@ -68,6 +73,9 @@ export function Sidebar({
   onLogout,
   userEmail,
   isOwnerAdmin = false,
+  adminTab = "clients",
+  onSelectAdminTab,
+  openTicketsCount = 0,
 }: SidebarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -204,8 +212,8 @@ export function Sidebar({
                   className="w-8 h-8 object-contain"
                 />
                 <div>
-                  <span className="font-medium text-lg tracking-[13px] text-[#0A504A] block leading-none">
-                    WAPPX
+                  <span className="font-primary text-lg font-semibold tracking-[13px] text-[#0A504A] pl-1">
+                    WAPP<span className="text-[#00A86B]">X</span>
                   </span>
 
                 </div>
@@ -221,7 +229,7 @@ export function Sidebar({
             </div>
 
             {/* Current Workspace Pill */}
-            <div className="mt-4 p-2.5 rounded-xl bg-white border border-[#0A504A]/10 shadow-xs flex items-center justify-between">
+            {/* <div className="mt-4 p-2.5 rounded-xl bg-white border border-[#0A504A]/10 shadow-xs flex items-center justify-between">
               <div className="flex items-center gap-2 min-w-0">
                 <div
                   className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${viewMode === "admin"
@@ -245,7 +253,6 @@ export function Sidebar({
                 </div>
               </div>
 
-              {/* Workspace switcher (only for Admin to toggle/switch clients) */}
               {isOwnerAdmin && (
                 <button
                   onClick={onOpenUserSwitch}
@@ -255,7 +262,7 @@ export function Sidebar({
                   <ChevronDown className="w-4 h-4" />
                 </button>
               )}
-            </div>
+            </div> */}
 
             {/* If Admin is currently inside a client's workspace, provide a prominent quick return button */}
             {isOwnerAdmin && viewMode === "client" && (

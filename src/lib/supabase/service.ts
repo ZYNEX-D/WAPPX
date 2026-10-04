@@ -1,5 +1,5 @@
 import { supabase } from "./client";
-import { Contact, FlowNode, Message, MetaConfig, FlowNodeType, Client, BusinessCatalog, CatalogItem } from "@/types/whatsapp";
+import { Contact, FlowNode, Message, MetaConfig, FlowNodeType, Client, BusinessCatalog, CatalogItem, SupportTicket, TicketMessage, TicketStatus } from "@/types/whatsapp";
 import { Database, Json } from "./types";
 
 type ContactRow = Database["public"]["Tables"]["contacts"]["Row"];
@@ -673,3 +673,156 @@ function deleteLocalCatalog(catalogId: string, clientId: string) {
     // ignore
   }
 }
+
+// ============================================================================
+// SUPPORT TICKETS SERVICE
+// ============================================================================
+
+export function mapTicketFromRow(row: any): SupportTicket {
+  return {
+    id: row.id,
+    clientId: row.client_id || row.clientId || "client-1",
+    clientName: row.client_name || row.clientName || "Client",
+    businessName: row.business_name || row.businessName || "",
+    clientEmail: row.client_email || row.clientEmail || "",
+    subject: row.subject || "Support Inquiry",
+    category: row.category || "technical",
+    priority: row.priority || "medium",
+    status: row.status || "open",
+    description: row.description || "",
+    messages: Array.isArray(row.messages) ? (row.messages as TicketMessage[]) : [],
+    assignedAdmin: row.assigned_admin || row.assignedAdmin || "Unassigned",
+    resolutionNotes: row.resolution_notes || row.resolutionNotes || undefined,
+    createdAt: row.created_at || row.createdAt || new Date().toISOString(),
+    updatedAt: row.updated_at || row.updatedAt || new Date().toISOString(),
+  };
+}
+
+export async function fetchTickets(clientId?: string): Promise<SupportTicket[]> {
+  try {
+    let query = supabase.from("support_tickets").select("*").order("created_at", { ascending: false });
+    if (clientId && clientId !== "all" && clientId !== "admin") {
+      query = query.eq("client_id", clientId);
+    }
+    const { data, error } = await query;
+    if (error) {
+      console.warn("fetchTickets warning:", error.message);
+      return [];
+    }
+    return (data || []).map(mapTicketFromRow);
+  } catch (err) {
+    console.error("fetchTickets exception:", err);
+    return [];
+  }
+}
+
+export async function createSupportTicket(
+  ticket: Omit<SupportTicket, "id" | "createdAt" | "updatedAt">
+): Promise<SupportTicket | null> {
+  try {
+    const id = `tick-${Date.now().toString().slice(-6)}`;
+    const now = new Date().toISOString();
+    const newTicket: SupportTicket = {
+      ...ticket,
+      id,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const { error } = await supabase.from("support_tickets").insert({
+      id: newTicket.id,
+      client_id: newTicket.clientId,
+      client_name: newTicket.clientName,
+      business_name: newTicket.businessName || "",
+      client_email: newTicket.clientEmail,
+      subject: newTicket.subject,
+      category: newTicket.category,
+      priority: newTicket.priority,
+      status: newTicket.status,
+      description: newTicket.description,
+      messages: (newTicket.messages || []) as any,
+      assigned_admin: newTicket.assignedAdmin || "Unassigned",
+      created_at: newTicket.createdAt,
+      updated_at: newTicket.updatedAt,
+    });
+
+    if (error) {
+      console.error("createSupportTicket error:", error.message);
+      return null;
+    }
+    return newTicket;
+  } catch (err) {
+    console.error("createSupportTicket exception:", err);
+    return null;
+  }
+}
+
+export async function updateSupportTicket(
+  ticketId: string,
+  updates: Partial<SupportTicket>
+): Promise<boolean> {
+  try {
+    const payload: any = {
+      updated_at: new Date().toISOString(),
+    };
+    if (updates.status) payload.status = updates.status;
+    if (updates.priority) payload.priority = updates.priority;
+    if (updates.category) payload.category = updates.category;
+    if (updates.assignedAdmin !== undefined) payload.assigned_admin = updates.assignedAdmin;
+    if (updates.resolutionNotes !== undefined) payload.resolution_notes = updates.resolutionNotes;
+    if (updates.messages) payload.messages = updates.messages;
+
+    const { error } = await supabase
+      .from("support_tickets")
+      .update(payload)
+      .eq("id", ticketId);
+
+    if (error) {
+      console.error("updateSupportTicket error:", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("updateSupportTicket exception:", err);
+    return false;
+  }
+}
+
+export async function addTicketReply(
+  ticketId: string,
+  message: TicketMessage,
+  newStatus?: TicketStatus
+): Promise<boolean> {
+  try {
+    const { data: ticket } = await supabase
+      .from("support_tickets")
+      .select("messages, status")
+      .eq("id", ticketId)
+      .single();
+
+    if (!ticket) return false;
+    const currentMessages: TicketMessage[] = Array.isArray(ticket.messages)
+      ? (ticket.messages as unknown as TicketMessage[])
+      : [];
+    const updatedMessages = [...currentMessages, message];
+
+    const payload: any = {
+      messages: updatedMessages as any,
+      updated_at: new Date().toISOString(),
+    };
+    if (newStatus) {
+      payload.status = newStatus;
+    }
+
+    const { error } = await supabase
+      .from("support_tickets")
+      .update(payload)
+      .eq("id", ticketId);
+
+    return !error;
+  } catch (err) {
+    console.error("addTicketReply exception:", err);
+    return false;
+  }
+}
+

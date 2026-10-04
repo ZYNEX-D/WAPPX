@@ -15,6 +15,7 @@ import { IntegrationsHub } from "@/components/integrations/IntegrationsHub";
 import { SetupGuideModal } from "@/components/guide/SetupGuideModal";
 import { UserSwitchModal } from "@/components/auth/UserSwitchModal";
 import { CatalogManager } from "@/components/catalog/CatalogManager";
+import { SupportTicketsView } from "@/components/support/SupportTicketsView";
 import {
   initialContacts,
   initialFlowNodes,
@@ -721,6 +722,13 @@ export function ClientWorkspace({
               config={metaConfig}
               clientId={currentClientId}
               onUpdateConfig={handleUpdateMetaConfig}
+            />
+          )}
+
+          {activeTab === "support" && (
+            <SupportTicketsView
+              currentUser={currentWorkspaceUser}
+              clientId={currentClientId}
             />
           )}
         </main>

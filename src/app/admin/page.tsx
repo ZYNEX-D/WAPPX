@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/navigation/Sidebar";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
+import { AdminTicketsManager } from "@/components/admin/AdminTicketsManager";
 import { SetupGuideModal } from "@/components/guide/SetupGuideModal";
 import { UserSwitchModal } from "@/components/auth/UserSwitchModal";
 import { Client, UserWorkspace } from "@/types/whatsapp";
@@ -26,6 +27,8 @@ export default function AdminPage() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [totalMessagesCount, setTotalMessagesCount] = useState<number>(0);
+  const [activeAdminTab, setActiveAdminTab] = useState<"clients" | "tickets">("clients");
+  const [openTicketsCount, setOpenTicketsCount] = useState<number>(0);
 
   // Modals state
   const [isGuideOpen, setIsGuideOpen] = useState(false);
@@ -69,9 +72,39 @@ export default function AdminPage() {
     }
   };
 
+  const loadOpenTicketsCount = async () => {
+    try {
+      const { count } = await supabase
+        .from("support_tickets")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "open");
+      if (typeof count === "number") {
+        setOpenTicketsCount(count);
+      }
+    } catch (err) {
+      console.error("Error loading open tickets count:", err);
+    }
+  };
+
   useEffect(() => {
     if (isAuthorized) {
       loadClientsList();
+      loadOpenTicketsCount();
+
+      const channel = supabase
+        .channel("admin_tickets_badge_sync")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "support_tickets" },
+          () => {
+            loadOpenTicketsCount();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [isAuthorized]);
 
@@ -143,20 +176,32 @@ export default function AdminPage() {
         onLogout={handleLogout}
         userEmail={authSession?.email}
         isOwnerAdmin={true}
+        adminTab={activeAdminTab}
+        onSelectAdminTab={setActiveAdminTab}
+        openTicketsCount={openTicketsCount}
       />
 
       {/* Main Admin Control Center */}
       <main className="flex-1 flex flex-col min-w-0 overflow-y-auto h-screen">
-        <AdminDashboard
-          clients={clients}
-          totalMessagesCount={totalMessagesCount}
-          onSelectClientWorkspace={(clientId) => {
-            router.push(`/app?client=${clientId}`);
-          }}
-          onCreateClient={handleAdminCreateClient}
-          onDeleteClient={handleAdminDeleteClient}
-          onRefresh={loadClientsList}
-        />
+        {activeAdminTab === "clients" ? (
+          <AdminDashboard
+            clients={clients}
+            totalMessagesCount={totalMessagesCount}
+            onSelectClientWorkspace={(clientId) => {
+              router.push(`/app?client=${clientId}`);
+            }}
+            onCreateClient={handleAdminCreateClient}
+            onDeleteClient={handleAdminDeleteClient}
+            onRefresh={loadClientsList}
+          />
+        ) : (
+          <AdminTicketsManager
+            clients={clients}
+            onSelectClientWorkspace={(clientId) => {
+              router.push(`/app?client=${clientId}`);
+            }}
+          />
+        )}
       </main>
 
       {/* Setup Guide Modal */}

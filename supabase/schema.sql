@@ -168,5 +168,35 @@ BEGIN
     ) THEN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.catalogs;
     END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'support_tickets'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.support_tickets;
+    END IF;
 END $$;
+
+-- 7. Support Tickets Table
+CREATE TABLE IF NOT EXISTS public.support_tickets (
+    id TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL,
+    client_name TEXT NOT NULL,
+    business_name TEXT DEFAULT '',
+    client_email TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'technical',
+    priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'waiting_client', 'resolved', 'closed')),
+    description TEXT NOT NULL,
+    messages JSONB NOT NULL DEFAULT '[]'::jsonb,
+    assigned_admin TEXT DEFAULT 'Unassigned',
+    resolution_notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_support_tickets_client_id ON public.support_tickets(client_id);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON public.support_tickets(status);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_created_at ON public.support_tickets(created_at);
 

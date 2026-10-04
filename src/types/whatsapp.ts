@@ -179,3 +179,36 @@ export interface UserWorkspace {
   businessName?: string;
   phone?: string;
 }
+
+export type TicketPriority = "low" | "medium" | "high" | "urgent";
+export type TicketStatus = "open" | "in_progress" | "waiting_client" | "resolved" | "closed";
+export type TicketCategory = "technical" | "billing" | "meta_api" | "flows" | "catalog" | "other";
+
+export interface TicketMessage {
+  id: string;
+  sender: "client" | "admin";
+  senderName: string;
+  senderEmail?: string;
+  text: string;
+  timestamp: string;
+  attachments?: string[];
+}
+
+export interface SupportTicket {
+  id: string;
+  clientId: string;
+  clientName: string;
+  businessName?: string;
+  clientEmail: string;
+  subject: string;
+  category: TicketCategory;
+  priority: TicketPriority;
+  status: TicketStatus;
+  description: string;
+  messages: TicketMessage[];
+  assignedAdmin?: string;
+  resolutionNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
