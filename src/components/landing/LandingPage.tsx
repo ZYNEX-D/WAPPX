@@ -982,7 +982,7 @@ export function LandingPage({
                 <span className="text-[11px] font-bold text-[#A2E4B8] uppercase tracking-wider block mb-4">
                   Customer Success Stories
                 </span>
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-8 leading-snug">
+                <h2 className="font-primary text-3xl md:text-4xl font-bold tracking-tight mb-8 leading-snug">
                   &ldquo;{currentTestimonial.quote}&rdquo;
                 </h2>
 
@@ -1097,10 +1097,10 @@ export function LandingPage({
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm font-bold text-[#0A504A]">Starter</span>
+                    <span className="font-primary text-sm font-bold text-[#0A504A]">Starter</span>
                   </div>
                   <div className="mb-4 flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-[#0A504A]">
+                    <span className="font-primary text-3xl font-bold text-[#0A504A]">
                       {isYearlyBilling ? "$39" : "$49"}
                     </span>
                     <span className="text-xs text-slate-400">/mo</span>
@@ -1146,13 +1146,13 @@ export function LandingPage({
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm font-bold text-[#A2E4B8]">Growth Pro</span>
+                    <span className="font-primary text-sm font-bold text-[#A2E4B8]">Growth Pro</span>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#00A86B] text-white">
                       Popular
                     </span>
                   </div>
                   <div className="mb-4 flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-white">
+                    <span className="font-primary text-3xl font-bold text-white">
                       {isYearlyBilling ? "$119" : "$149"}
                     </span>
                     <span className="text-xs text-white/60">/mo</span>
@@ -1202,10 +1202,10 @@ export function LandingPage({
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm font-bold text-[#0A504A]">Enterprise / Agency</span>
+                    <span className="font-primary text-sm font-bold text-[#0A504A]">Enterprise / Agency</span>
                   </div>
                   <div className="mb-4 flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-[#0A504A]">Custom</span>
+                    <span className="font-primary text-3xl font-bold text-[#0A504A]">Custom</span>
                   </div>
                   <p className="text-xs text-slate-500 mb-6 leading-relaxed">
                     White-label tenant provisioning, dedicated cloud database cluster, and custom CRM integration.

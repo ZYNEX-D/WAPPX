@@ -1,9 +1,16 @@
 @import "tailwindcss";
 
+@theme {
+  --font-primary: var(--font-michroma), 'Michroma', sans-serif;
+  --font-secondary: var(--font-onest), 'Onest', sans-serif;
+  --font-michroma: var(--font-michroma), 'Michroma', sans-serif;
+  --font-onest: var(--font-onest), 'Onest', sans-serif;
+}
+
 @layer base {
   :root {
     --font-onest: 'Onest', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --font-michroma: var(--font-onest);
+    --font-michroma: 'Michroma', sans-serif;
     --canvas: #F7F7F2;
     --canvas-white: #ffffff;
     --primary: #00A86B;
@@ -45,12 +52,12 @@ html {
 }
 
 .font-primary {
-  font-family: var(--font-onest), 'Onest', sans-serif;
-  letter-spacing: -0.02em;
+  font-family: var(--font-michroma), 'Michroma', sans-serif !important;
+  letter-spacing: -0.01em;
 }
 
 .font-secondary {
-  font-family: var(--font-onest), 'Onest', sans-serif;
+  font-family: var(--font-onest), 'Onest', sans-serif !important;
 }
 
 /* Ensure clean, crisp, thinner font rendering globally */
