@@ -864,16 +864,16 @@ export function LandingPage({
         {/* ========================================================================= */}
         {/* BENTO GRID: STRUCTURED AUTOMATION FEATURES                                */}
         {/* ========================================================================= */}
-        <section id="features" className="py-28 px-6 md:px-12 lg:px-20 bg-white">
+        <section id="features" className="py-16 md:py-28 px-4 sm:px-6 md:px-12 lg:px-20 bg-white">
           <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 md:mb-16 gap-6 md:gap-8">
               <div className="max-w-xl" data-aos="fade-up">
                 <span className="text-[11px] font-bold text-[#00A86B] uppercase tracking-wider block mb-2">
                   Engine Architecture
                 </span>
-                <h2 className="font-primary text-3xl md:text-5xl font-medium text-[#0A504A] tracking-tight leading-[1.1]">
+                <h2 className="font-primary text-2xl sm:text-3xl md:text-5xl font-medium text-[#0A504A] tracking-tight leading-[1.1]">
                   Visual Automation.
-                  <span className="text-slate-400 block font-light text-2xl md:text-4xl mt-1">
+                  <span className="text-slate-400 block font-light text-xl sm:text-2xl md:text-4xl mt-1">
                     Defensible & Scalable.
                   </span>
                 </h2>
@@ -894,13 +894,13 @@ export function LandingPage({
               <div
                 data-aos="fade-up"
                 data-aos-delay="100"
-                className="md:col-span-8 group relative border border-slate-200 rounded-2xl overflow-hidden hover:border-[#00A86B] transition-all duration-500 bg-[#F7F7F2]/50 p-8 flex flex-col justify-between"
+                className="md:col-span-8 group relative border border-slate-200 rounded-2xl overflow-hidden hover:border-[#00A86B] transition-all duration-500 bg-[#F7F7F2]/50 p-5 sm:p-6 md:p-8 flex flex-col justify-between"
               >
                 <div>
                   <div className="w-10 h-10 bg-white border border-[#0A504A]/10 rounded-xl flex items-center justify-center mb-6 text-[#0A504A] shadow-xs">
                     <GitBranch className="w-5 h-5 text-[#00A86B]" />
                   </div>
-                  <h3 className="text-2xl font-semibold text-[#0A504A] mb-2 font-primary">
+                  <h3 className="text-xl sm:text-2xl font-semibold text-[#0A504A] mb-2 font-primary">
                     Visual Flow Builder
                   </h3>
                   <p className="text-xs md:text-sm text-slate-600 max-w-lg leading-relaxed">
@@ -915,27 +915,27 @@ export function LandingPage({
                     <span>NODE ENGINE TRACE</span>
                     <span className="text-[#00A86B] font-bold">CONNECTED</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
-                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase">
-                        <span className="w-2 h-2 rounded-full bg-[#00A86B]" />
-                        Start Node
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-white border border-slate-200 shadow-2xs">
+                      <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">
+                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#00A86B] shrink-0" />
+                        <span className="truncate">Start Node</span>
                       </div>
-                      <p className="text-xs font-bold text-[#0A504A] mt-1">Order Query</p>
+                      <p className="text-[11px] sm:text-xs font-bold text-[#0A504A] mt-0.5 sm:mt-1 truncate">Order Query</p>
                     </div>
-                    <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
-                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase">
-                        <span className="w-2 h-2 rounded-full bg-[#0A504A]" />
-                        Catalog Step
+                    <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-white border border-slate-200 shadow-2xs">
+                      <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">
+                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#0A504A] shrink-0" />
+                        <span className="truncate">Catalog Step</span>
                       </div>
-                      <p className="text-xs font-bold text-[#0A504A] mt-1">Show 3 Items</p>
+                      <p className="text-[11px] sm:text-xs font-bold text-[#0A504A] mt-0.5 sm:mt-1 truncate">Show 3 Items</p>
                     </div>
-                    <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
-                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase">
-                        <span className="w-2 h-2 rounded-full bg-[#A2E4B8]" />
-                        Checkout
+                    <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-white border border-slate-200 shadow-2xs">
+                      <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">
+                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#A2E4B8] shrink-0" />
+                        <span className="truncate">Checkout</span>
                       </div>
-                      <p className="text-xs font-bold text-[#0A504A] mt-1">Instant Pay</p>
+                      <p className="text-[11px] sm:text-xs font-bold text-[#0A504A] mt-0.5 sm:mt-1 truncate">Instant Pay</p>
                     </div>
                   </div>
                 </div>
@@ -945,7 +945,7 @@ export function LandingPage({
               <div
                 data-aos="fade-up"
                 data-aos-delay="200"
-                className="md:col-span-4 group relative border border-slate-200 rounded-2xl overflow-hidden hover:border-[#00A86B] transition-all duration-500 bg-[#F7F7F2]/50 p-8 flex flex-col justify-between"
+                className="md:col-span-4 group relative border border-slate-200 rounded-2xl overflow-hidden hover:border-[#00A86B] transition-all duration-500 bg-[#F7F7F2]/50 p-5 sm:p-6 md:p-8 flex flex-col justify-between"
               >
                 <div>
                   <div className="w-10 h-10 bg-white border border-[#0A504A]/10 rounded-xl flex items-center justify-center mb-6 text-[#0A504A] shadow-xs">
@@ -976,7 +976,7 @@ export function LandingPage({
               <div
                 data-aos="fade-up"
                 data-aos-delay="150"
-                className="md:col-span-12 group relative border border-slate-200 rounded-2xl overflow-hidden hover:border-[#00A86B] transition-all duration-500 bg-[#F7F7F2]/50 p-8"
+                className="md:col-span-12 group relative border border-slate-200 rounded-2xl overflow-hidden hover:border-[#00A86B] transition-all duration-500 bg-[#F7F7F2]/50 p-5 sm:p-6 md:p-8"
               >
                 <div className="flex flex-col md:flex-row items-center justify-between gap-8">
                   <div className="max-w-xl">
