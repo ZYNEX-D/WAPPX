@@ -29,6 +29,7 @@ import {
   ChevronRight,
   Info,
   Shield,
+  ShieldCheck,
   ToggleLeft,
   ToggleRight,
   Lock,
