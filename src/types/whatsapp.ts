@@ -7,6 +7,14 @@ export interface InteractiveButton {
   title: string;
 }
 
+export type MetaReviewStatus =
+  | "APPROVED"
+  | "PENDING"
+  | "REJECTED"
+  | "NO_REVIEW"
+  | "NOT_SYNCED"
+  | "OUTDATED";
+
 export interface CatalogItem {
   id: string;
   title: string;
@@ -18,6 +26,8 @@ export interface CatalogItem {
   category?: string;
   status?: "active" | "out_of_stock" | "draft";
   url?: string;
+  reviewStatus?: MetaReviewStatus;
+  metaProductId?: string;
 }
 
 export interface BusinessCatalog {

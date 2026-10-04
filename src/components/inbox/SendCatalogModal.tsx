@@ -15,8 +15,17 @@ import {
   DollarSign,
   Plus,
   Trash2,
+  Clock,
+  AlertTriangle,
+  RefreshCw,
+  CheckCircle2,
 } from "lucide-react";
 import { CatalogPayload, CatalogItem } from "@/types/whatsapp";
+
+export const isItemApproved = (item?: CatalogItem) => {
+  if (!item) return false;
+  return item.reviewStatus === "APPROVED" || item.reviewStatus === "OUTDATED";
+};
 
 interface SendCatalogModalProps {
   isOpen: boolean;
@@ -88,8 +97,50 @@ export function SendCatalogModal({
   const [pdfTitle, setPdfTitle] = useState(`${businessName} Product & Solutions Lookbook 2026`);
   const [pdfUrl, setPdfUrl] = useState("https://zynexdev.lk/catalog-2026.pdf");
 
+  // Meta review status sync
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const refreshMetaStatus = async () => {
+    try {
+      setIsSyncing(true);
+      const res = await fetch("/api/whatsapp/catalog/sync?clientId=client-1", { cache: "no-store" });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.items)) {
+        setProductsList(data.items);
+      }
+    } catch (e) {
+      console.warn("Failed to auto-refresh catalog statuses:", e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (isOpen) {
+      refreshMetaStatus();
+    }
+  }, [isOpen]);
+
   const currentSelectedProduct =
     productsList.find((p) => p.id === selectedProductId) || productsList[0];
+
+  // Approval validation: Cannot send until approved!
+  const isProductModeApproved = isItemApproved(currentSelectedProduct);
+  const hasApprovedCatalogItems = productsList.some(isItemApproved);
+  const isMultiApproved =
+    selectedMultiIds.length > 0 &&
+    selectedMultiIds.every((id) =>
+      isItemApproved(productsList.find((p) => p.id === id))
+    );
+
+  const canSend =
+    activeMode === "pdf_catalog"
+      ? true
+      : activeMode === "product"
+      ? isProductModeApproved
+      : activeMode === "catalog_message"
+      ? hasApprovedCatalogItems
+      : isMultiApproved;
 
   const handleToggleMultiProduct = (id: string) => {
     if (selectedMultiIds.includes(id)) {
@@ -102,6 +153,10 @@ export function SendCatalogModal({
   };
 
   const handleSend = () => {
+    if (!canSend) {
+      alert("This item cannot be sent because it has not been approved by Meta yet.");
+      return;
+    }
     if (activeMode === "catalog_message") {
       const payload: CatalogPayload = {
         type: "catalog_message",
@@ -171,12 +226,24 @@ export function SendCatalogModal({
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={refreshMetaStatus}
+              disabled={isSyncing}
+              className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+              title="Refresh product approval status directly from Meta Graph API"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin text-[#00A86B]" : "text-slate-500"}`} />
+              <span>{isSyncing ? "Checking..." : "Verify Meta Status"}</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Mode Selector Tabs */}
@@ -308,28 +375,46 @@ export function SendCatalogModal({
                         <p className="text-[11px] text-slate-400 mt-0.5">Go to the &quot;Catalog &amp; Products&quot; tab to add your first product!</p>
                       </div>
                     ) : (
-                      productsList.map((prod) => (
-                        <div
-                          key={prod.id}
-                          onClick={() => setSelectedProductId(prod.id)}
-                          className={`p-3 rounded-2xl border text-left cursor-pointer transition-all flex items-start gap-2.5 ${
-                            selectedProductId === prod.id
-                              ? "border-[#00A86B] bg-emerald-50/50 ring-2 ring-[#00A86B]/20"
-                              : "border-slate-200 hover:border-slate-300 bg-white"
-                          }`}
-                        >
-                          <img
-                            src={prod.imageUrl}
-                            alt={prod.title}
-                            className="w-12 h-12 rounded-xl object-cover shrink-0 border border-slate-200"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold text-slate-800 truncate">{prod.title}</p>
-                            <p className="text-xs font-extrabold text-[#00A86B] mt-0.5">{prod.price}</p>
-                            <p className="text-[10px] text-slate-400 font-mono truncate">{prod.retailerId}</p>
+                      productsList.map((prod) => {
+                        const approved = isItemApproved(prod);
+                        return (
+                          <div
+                            key={prod.id}
+                            onClick={() => setSelectedProductId(prod.id)}
+                            className={`p-3 rounded-2xl border text-left cursor-pointer transition-all flex items-start gap-2.5 ${
+                              selectedProductId === prod.id
+                                ? "border-[#00A86B] bg-emerald-50/50 ring-2 ring-[#00A86B]/20"
+                                : "border-slate-200 hover:border-slate-300 bg-white"
+                            }`}
+                          >
+                            <img
+                              src={prod.imageUrl}
+                              alt={prod.title}
+                              className="w-12 h-12 rounded-xl object-cover shrink-0 border border-slate-200"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1">
+                                <p className="text-xs font-bold text-slate-800 truncate">{prod.title}</p>
+                                {approved ? (
+                                  <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-100/90 border border-emerald-300/70 px-1.5 py-0.2 rounded-md flex items-center gap-0.5 shrink-0">
+                                    <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" /> Approved
+                                  </span>
+                                ) : prod.reviewStatus === "REJECTED" ? (
+                                  <span className="text-[9px] font-extrabold text-rose-700 bg-rose-100/90 border border-rose-300/70 px-1.5 py-0.2 rounded-md flex items-center gap-0.5 shrink-0">
+                                    <AlertTriangle className="w-2.5 h-2.5 text-rose-600" /> Rejected
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] font-extrabold text-amber-700 bg-amber-100/90 border border-amber-300/70 px-1.5 py-0.2 rounded-md flex items-center gap-0.5 shrink-0">
+                                    <Clock className="w-2.5 h-2.5 text-amber-600" /> In Review
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs font-extrabold text-[#00A86B] mt-0.5">{prod.price}</p>
+                              <p className="text-[10px] text-slate-400 font-mono truncate">{prod.retailerId}</p>
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
@@ -579,11 +664,25 @@ export function SendCatalogModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/70">
-          <div className="text-xs text-slate-500">
-            Powered by <span className="font-bold text-[#00A86B]">WhatsApp Commerce Engine</span>
-          </div>
-          <div className="flex items-center gap-2.5">
+        <div className="px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/70">
+          {!canSend ? (
+            <div className="flex items-center gap-2 text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-300/80 px-3.5 py-2 rounded-xl w-full sm:w-auto">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>
+                {activeMode === "product"
+                  ? `Cannot send: This product is not approved by Meta yet (${currentSelectedProduct?.reviewStatus || "Under Review"}).`
+                  : activeMode === "catalog_message"
+                  ? "Cannot send: No approved products in your catalog yet. Awaiting Meta review."
+                  : "Cannot send: Some selected items are not approved by Meta yet."}
+              </span>
+            </div>
+          ) : (
+            <div className="text-xs text-slate-500">
+              Powered by <span className="font-bold text-[#00A86B]">WhatsApp Commerce Engine</span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2.5 ml-auto">
             <button
               type="button"
               onClick={onClose}
@@ -593,8 +692,13 @@ export function SendCatalogModal({
             </button>
             <button
               type="button"
+              disabled={!canSend}
               onClick={handleSend}
-              className="px-5 py-2 bg-[#00A86B] hover:bg-[#0A504A] text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+              className={`px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                canSend
+                  ? "bg-[#00A86B] hover:bg-[#0A504A] text-white shadow-sm cursor-pointer"
+                  : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+              }`}
             >
               <Send className="w-3.5 h-3.5" />
               <span>Send to Customer</span>
