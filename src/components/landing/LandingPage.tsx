@@ -121,7 +121,6 @@ export function LandingPage({
     // Lifecycle Animation Elements
     const section = document.getElementById("decision-lifecycle");
     const line = document.getElementById("lifecycle-line");
-    const beacon = document.getElementById("lifecycle-beacon");
     const steps = section?.querySelectorAll<HTMLElement>(".lifecycle-step");
     const pills = section?.querySelectorAll<HTMLElement>(".lifecycle-nav-pill");
 
@@ -147,12 +146,6 @@ export function LandingPage({
 
       // Line fill
       line.style.height = `${progress * 100}%`;
-
-      // Signal Beacon
-      if (beacon) {
-        beacon.style.top = `${progress * 100}%`;
-        beacon.style.opacity = progress > 0.01 && progress < 0.99 ? "1" : progress >= 0.99 ? "1" : "0";
-      }
 
       // Step Active / Past Classes
       steps?.forEach((step, idx) => {
@@ -588,13 +581,6 @@ export function LandingPage({
                 id="lifecycle-line"
                 className="absolute left-1/2 top-3 w-[2.5px] bg-gradient-to-b from-[#00A86B] via-[#00A86B] to-[#0A504A] -translate-x-1/2 rounded-full transition-all duration-75 ease-out shadow-[0_0_8px_rgba(0,168,107,0.4)]"
                 style={{ height: "0%" }}
-              />
-
-              {/* Signal Beacon that travels down the conduit */}
-              <div
-                id="lifecycle-beacon"
-                className="absolute left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-[#00A86B] ring-4 ring-[#A2E4B8]/60 shadow-[0_0_16px_#00A86B] transition-all duration-75 z-20 -mt-2 opacity-0 pointer-events-none"
-                style={{ top: "0%" }}
               />
 
               {/* 6 Lifecycle Steps with explicit CSS class hooks */}
