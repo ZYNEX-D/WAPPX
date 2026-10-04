@@ -438,7 +438,7 @@ export function LandingPage({
                 <span
                   data-aos="fade-up"
                   data-aos-delay="200"
-                  className="block font-secondary text-slate-400 font-light text-xs sm:text-sm md:text-base tracking-normal mt-3 md:mt-4"
+                  className="block font-secondary text-slate-400 font-light tracking-[8px] text-xs sm:text-sm md:text-base mt-3 md:mt-4"
                 >
                   Whatsapp Business Automation & CRM
                 </span>

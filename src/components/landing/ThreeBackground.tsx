@@ -14,7 +14,8 @@ export function ThreeBackground() {
 
     // 1. Scene & Camera Setup
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0xF7F7F2, 0.035);
+    // Seamless atmospheric fog matching page background (#F7F7F2)
+    scene.fog = new THREE.FogExp2(0xf7f7f2, 0.032);
 
     const camera = new THREE.PerspectiveCamera(
       45,
@@ -22,7 +23,7 @@ export function ThreeBackground() {
       0.1,
       100
     );
-    camera.position.set(0, 0, 18);
+    camera.position.set(0, 0, 19);
 
     // 2. High Quality Antialiased WebGL Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -31,159 +32,147 @@ export function ThreeBackground() {
     renderer.setClearColor(0x000000, 0);
     container.appendChild(renderer.domElement);
 
-    // 3. Studio Lighting (Creates that sleek, glossy 3D product look)
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
+    // 3. Studio Lighting (Crisp highlights on curved surfaces)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.3);
     scene.add(ambientLight);
 
     // Directional Key Light (Top-Right specular highlight)
-    const keyLight = new THREE.DirectionalLight(0xffffff, 2.4);
-    keyLight.position.set(8, 12, 10);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
+    keyLight.position.set(10, 14, 12);
     scene.add(keyLight);
 
-    // Signature WhatsApp Electric Emerald Rim Light (Bottom-Left backlight)
-    const rimLight = new THREE.DirectionalLight(0x00A86B, 3.2);
-    rimLight.position.set(-10, -6, -8);
+    // Signature Electric Emerald Rim Light (Backlight)
+    const rimLight = new THREE.DirectionalLight(0x00a86b, 3.8);
+    rimLight.position.set(-12, -8, -10);
     scene.add(rimLight);
 
-    // Soft Mint Front Fill Light
-    const fillLight = new THREE.DirectionalLight(0xA2E4B8, 1.2);
+    // Deep Pine Accent Light (Bottom Fill)
+    const fillLight = new THREE.DirectionalLight(0xa2e4b8, 1.4);
     fillLight.position.set(-6, 8, 8);
     scene.add(fillLight);
 
-    // Main 3D Object Group
-    const emblemGroup = new THREE.Group();
-    scene.add(emblemGroup);
+    // Main Abstract Group
+    const abstractGroup = new THREE.Group();
+    scene.add(abstractGroup);
 
     // =========================================================================
-    // 4. CLEAN 3D WHATSAPP SPEECH BUBBLE EMBLEM
+    // 4. ELEGANT SCULPTURAL TORUS KNOT (Kinetic Abstract Core)
     // =========================================================================
-    const bubbleShape = new THREE.Shape();
-    const r = 3.6;
+    // Smooth, fluid mathematical ribbon (TorusKnot p=2, q=3)
+    const knotGeo = new THREE.TorusKnotGeometry(2.3, 0.44, 220, 36, 2, 3);
 
-    // Smooth circular arc
-    const startAngle = 4.42; // ~253 deg
-    const endAngle = 3.75;  // ~215 deg
-    bubbleShape.absarc(0, 0.15, r, startAngle, endAngle, false);
-
-    // WhatsApp curved pointer tail
-    bubbleShape.quadraticCurveTo(-3.2, -2.6, -3.8, -3.6); // Tail tip
-    bubbleShape.quadraticCurveTo(-2.3, -3.1, -1.0, -3.2); // Smooth return
-    bubbleShape.closePath();
-
-    const bubbleExtrudeSettings = {
-      depth: 0.75,
-      bevelEnabled: true,
-      bevelSegments: 8,
-      steps: 2,
-      bevelSize: 0.25,
-      bevelThickness: 0.25,
-    };
-
-    const bubbleGeo = new THREE.ExtrudeGeometry(bubbleShape, bubbleExtrudeSettings);
-    bubbleGeo.center();
-
-    // Glossy Emerald Material (Like official luxury 3D app icon)
-    const bubbleMaterial = new THREE.MeshPhysicalMaterial({
+    // Glossy Emerald Material with clearcoat specular sheen
+    const knotMat = new THREE.MeshPhysicalMaterial({
       color: new THREE.Color("#00A86B"),
-      roughness: 0.2,
-      metalness: 0.08,
-      clearcoat: 0.9,
-      clearcoatRoughness: 0.12,
-      reflectivity: 0.7,
+      roughness: 0.18,
+      metalness: 0.12,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.1,
+      reflectivity: 0.85,
     });
 
-    const bubbleMesh = new THREE.Mesh(bubbleGeo, bubbleMaterial);
-    emblemGroup.add(bubbleMesh);
+    const knotMesh = new THREE.Mesh(knotGeo, knotMat);
+    abstractGroup.add(knotMesh);
 
     // =========================================================================
-    // 5. CLEAN EMBOSSED WHITE PHONE HANDSET ICON (FRONT & BACK)
+    // 5. INNER FACETED GLASS CRYSTAL CORE
     // =========================================================================
-    const phoneShape = new THREE.Shape();
-    phoneShape.moveTo(-0.7, -1.0);
-    phoneShape.quadraticCurveTo(-1.3, -0.7, -1.1, -0.2);
-    phoneShape.quadraticCurveTo(-0.75, -0.15, -0.5, -0.4);
-    phoneShape.quadraticCurveTo(-0.15, 0.25, 0.25, 0.6);
-    phoneShape.quadraticCurveTo(0.1, 1.0, 0.5, 1.25);
-    phoneShape.quadraticCurveTo(1.1, 1.1, 0.85, 0.6);
-    phoneShape.quadraticCurveTo(0.55, 0.35, 0.1, -0.05);
-    phoneShape.quadraticCurveTo(-0.35, -0.5, -0.7, -1.0);
-
-    const phoneExtrudeSettings = {
-      depth: 0.18,
-      bevelEnabled: true,
-      bevelSegments: 4,
-      steps: 1,
-      bevelSize: 0.08,
-      bevelThickness: 0.08,
-    };
-    const phoneGeo = new THREE.ExtrudeGeometry(phoneShape, phoneExtrudeSettings);
-    phoneGeo.center();
-
-    const phoneMaterial = new THREE.MeshStandardMaterial({
-      color: new THREE.Color("#FFFFFF"),
-      roughness: 0.15,
-      metalness: 0.02,
-    });
-
-    // Front Phone Icon
-    const frontPhoneMesh = new THREE.Mesh(phoneGeo, phoneMaterial);
-    frontPhoneMesh.position.set(0, 0.15, 0.55);
-    emblemGroup.add(frontPhoneMesh);
-
-    // Back Phone Icon (for full 360 degree rotation)
-    const backPhoneMesh = new THREE.Mesh(phoneGeo, phoneMaterial);
-    backPhoneMesh.position.set(0, 0.15, -0.55);
-    backPhoneMesh.rotation.y = Math.PI;
-    emblemGroup.add(backPhoneMesh);
-
-    // =========================================================================
-    // 6. ELEGANT HOLOGRAPHIC ORBIT RING & SATELLITE DATA NODES
-    // =========================================================================
-    const orbitRadius = 5.2;
-    const orbitRingGeo = new THREE.TorusGeometry(orbitRadius, 0.025, 16, 120);
-    const orbitRingMat = new THREE.MeshBasicMaterial({
-      color: 0x00A86B,
+    const coreGeo = new THREE.IcosahedronGeometry(1.05, 0);
+    const coreMat = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color("#0A504A"),
+      roughness: 0.08,
+      metalness: 0.2,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.05,
       transparent: true,
-      opacity: 0.28,
+      opacity: 0.85,
     });
-    const orbitRing = new THREE.Mesh(orbitRingGeo, orbitRingMat);
-    orbitRing.rotation.x = Math.PI * 0.38;
-    orbitRing.rotation.y = Math.PI * 0.15;
-    emblemGroup.add(orbitRing);
+    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+    abstractGroup.add(coreMesh);
 
-    // Satellite beads orbiting the emblem
-    const satellitesGroup = new THREE.Group();
-    satellitesGroup.rotation.copy(orbitRing.rotation);
-    emblemGroup.add(satellitesGroup);
-
-    const satelliteGeo = new THREE.SphereGeometry(0.12, 16, 16);
-    const satelliteMat = new THREE.MeshBasicMaterial({
-      color: 0x00A86B,
+    // Subtle delicate wireframe cage around inner crystal
+    const wireGeo = new THREE.IcosahedronGeometry(1.2, 0);
+    const wireMat = new THREE.MeshBasicMaterial({
+      color: 0xa2e4b8,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.35,
     });
-
-    const satellites: THREE.Mesh[] = [];
-    const satelliteAngles = [0, (Math.PI * 2) / 3, (Math.PI * 4) / 3];
-
-    satelliteAngles.forEach((angle) => {
-      const sat = new THREE.Mesh(satelliteGeo, satelliteMat);
-      sat.position.set(Math.cos(angle) * orbitRadius, Math.sin(angle) * orbitRadius, 0);
-      satellitesGroup.add(sat);
-      satellites.push(sat);
-    });
+    const wireMesh = new THREE.Mesh(wireGeo, wireMat);
+    abstractGroup.add(wireMesh);
 
     // =========================================================================
-    // 7. RESPONSIVE POSITIONING & SCALING
+    // 6. MULTI-AXIS KINETIC ARCHITECTURAL RINGS
+    // =========================================================================
+    const ring1Geo = new THREE.TorusGeometry(4.2, 0.018, 16, 160);
+    const ring1Mat = new THREE.MeshBasicMaterial({
+      color: 0x0a504a,
+      transparent: true,
+      opacity: 0.32,
+    });
+    const ring1 = new THREE.Mesh(ring1Geo, ring1Mat);
+    ring1.rotation.x = Math.PI * 0.35;
+    ring1.rotation.y = Math.PI * 0.18;
+    abstractGroup.add(ring1);
+
+    const ring2Geo = new THREE.TorusGeometry(5.2, 0.015, 16, 160);
+    const ring2Mat = new THREE.MeshBasicMaterial({
+      color: 0x00a86b,
+      transparent: true,
+      opacity: 0.25,
+    });
+    const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
+    ring2.rotation.x = -Math.PI * 0.28;
+    ring2.rotation.y = Math.PI * 0.42;
+    abstractGroup.add(ring2);
+
+    const ring3Geo = new THREE.TorusGeometry(6.3, 0.012, 16, 160);
+    const ring3Mat = new THREE.MeshBasicMaterial({
+      color: 0xa2e4b8,
+      transparent: true,
+      opacity: 0.2,
+    });
+    const ring3 = new THREE.Mesh(ring3Geo, ring3Mat);
+    ring3.rotation.x = Math.PI * 0.65;
+    ring3.rotation.z = Math.PI * 0.22;
+    abstractGroup.add(ring3);
+
+    // =========================================================================
+    // 7. ORBITING DATA BEADS (SATELLITE PULSES)
+    // =========================================================================
+    const satellitesGroup = new THREE.Group();
+    abstractGroup.add(satellitesGroup);
+
+    const beadGeo = new THREE.SphereGeometry(0.1, 16, 16);
+    const beadMat1 = new THREE.MeshBasicMaterial({ color: 0x00a86b });
+    const beadMat2 = new THREE.MeshBasicMaterial({ color: 0x0a504a });
+
+    const beads: { mesh: THREE.Mesh; radius: number; speed: number; phase: number; plane: number }[] = [
+      { mesh: new THREE.Mesh(beadGeo, beadMat1), radius: 4.2, speed: 0.6, phase: 0, plane: 1 },
+      { mesh: new THREE.Mesh(beadGeo, beadMat2), radius: 4.2, speed: 0.6, phase: Math.PI, plane: 1 },
+      { mesh: new THREE.Mesh(beadGeo, beadMat1), radius: 5.2, speed: -0.45, phase: Math.PI * 0.5, plane: 2 },
+      { mesh: new THREE.Mesh(beadGeo, beadMat2), radius: 6.3, speed: 0.35, phase: Math.PI * 1.2, plane: 3 },
+    ];
+
+    beads.forEach((b) => satellitesGroup.add(b.mesh));
+
+    // =========================================================================
+    // 8. RESPONSIVE POSITIONING & SCALING
     // =========================================================================
     const adjustLayout = () => {
       const w = window.innerWidth;
-      if (w < 1024) {
-        // Mobile / Tablet: Sits gently above center
-        emblemGroup.position.set(0, 1.2, -2);
-        emblemGroup.scale.set(0.68, 0.68, 0.68);
+      if (w < 768) {
+        // Mobile
+        abstractGroup.position.set(0, 1.0, -3);
+        abstractGroup.scale.set(0.65, 0.65, 0.65);
+      } else if (w < 1024) {
+        // Tablet
+        abstractGroup.position.set(0, 1.2, -1);
+        abstractGroup.scale.set(0.78, 0.78, 0.78);
       } else {
-        // Desktop: Center of hero screen
-        emblemGroup.position.set(0, 1.4, 0);
-        emblemGroup.scale.set(0.9, 0.9, 0.9);
+        // Desktop: Positioned elegantly in center-right of hero space
+        abstractGroup.position.set(2.2, 1.2, 0);
+        abstractGroup.scale.set(0.95, 0.95, 0.95);
       }
     };
 
@@ -195,7 +184,7 @@ export function ThreeBackground() {
     };
 
     // =========================================================================
-    // 8. INTERACTIVE PARALLAX & CONTINUOUS FLOATING ANIMATION
+    // 9. INTERACTIVE PARALLAX & CONTINUOUS KINETIC ANIMATION
     // =========================================================================
     let time = 0;
     let targetMouseX = 0;
@@ -210,10 +199,12 @@ export function ThreeBackground() {
 
     const handleScroll = () => {
       const scrollY = window.scrollY;
-      emblemGroup.rotation.z = scrollY * 0.0005;
+      abstractGroup.rotation.z = scrollY * 0.0004;
       const w = window.innerWidth;
-      const baseY = w < 1024 ? 1.2 : 1.4;
-      emblemGroup.position.y = baseY + scrollY * 0.0035;
+      const baseY = 1.2;
+      const baseX = w < 1024 ? 0 : 2.2;
+      abstractGroup.position.y = baseY + scrollY * 0.003;
+      abstractGroup.position.x = baseX + scrollY * 0.001;
     };
 
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
@@ -223,27 +214,56 @@ export function ThreeBackground() {
 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
-      time += 0.012;
+      time += 0.008;
 
       // Smooth mouse interpolation
-      mouseX += (targetMouseX - mouseX) * 0.05;
-      mouseY += (targetMouseY - mouseY) * 0.05;
+      mouseX += (targetMouseX - mouseX) * 0.04;
+      mouseY += (targetMouseY - mouseY) * 0.04;
 
       // Gentle floating hover motion
       const w = window.innerWidth;
-      const baseY = w < 1024 ? 1.2 : 1.4;
-      emblemGroup.position.y = baseY + Math.sin(time * 1.5) * 0.22;
+      const baseY = 1.2;
+      abstractGroup.position.y = baseY + Math.sin(time * 1.4) * 0.18;
 
-      // Smooth, elegant 3D tilt with mouse parallax
-      emblemGroup.rotation.x = Math.sin(time * 0.7) * 0.12 + mouseY * 0.32;
-      emblemGroup.rotation.y = time * 0.32 + mouseX * 0.42;
+      // Elegant rotation of the central sculpture
+      knotMesh.rotation.x = time * 0.35 + mouseY * 0.25;
+      knotMesh.rotation.y = time * 0.45 + mouseX * 0.35;
 
-      // Revolve satellites along the orbit ring
-      satellitesGroup.rotation.z = time * 0.45;
+      // Counter-rotation of the inner faceted core
+      coreMesh.rotation.x = -time * 0.5;
+      coreMesh.rotation.y = -time * 0.65;
+      wireMesh.rotation.x = coreMesh.rotation.x;
+      wireMesh.rotation.y = coreMesh.rotation.y;
+
+      // Slow dynamic spin of the concentric architectural rings
+      ring1.rotation.z = time * 0.2;
+      ring2.rotation.z = -time * 0.15;
+      ring3.rotation.z = time * 0.1;
+
+      // Calculate bead positions along their respective rings
+      beads.forEach((b) => {
+        const theta = time * b.speed + b.phase;
+        if (b.plane === 1) {
+          // Along Ring 1
+          const v = new THREE.Vector3(Math.cos(theta) * b.radius, Math.sin(theta) * b.radius, 0);
+          v.applyEuler(ring1.rotation);
+          b.mesh.position.copy(v);
+        } else if (b.plane === 2) {
+          // Along Ring 2
+          const v = new THREE.Vector3(Math.cos(theta) * b.radius, Math.sin(theta) * b.radius, 0);
+          v.applyEuler(ring2.rotation);
+          b.mesh.position.copy(v);
+        } else {
+          // Along Ring 3
+          const v = new THREE.Vector3(Math.cos(theta) * b.radius, Math.sin(theta) * b.radius, 0);
+          v.applyEuler(ring3.rotation);
+          b.mesh.position.copy(v);
+        }
+      });
 
       // Subtle camera parallax
-      camera.position.x += (mouseX * 1.2 - camera.position.x) * 0.03;
-      camera.position.y += (mouseY * 1.2 - camera.position.y) * 0.03;
+      camera.position.x += (mouseX * 1.0 - camera.position.x) * 0.03;
+      camera.position.y += (mouseY * 0.8 - camera.position.y) * 0.03;
       camera.lookAt(0, 0, 0);
 
       renderer.render(scene, camera);
@@ -259,14 +279,21 @@ export function ThreeBackground() {
       if (container && renderer.domElement) {
         container.removeChild(renderer.domElement);
       }
-      bubbleGeo.dispose();
-      bubbleMaterial.dispose();
-      phoneGeo.dispose();
-      phoneMaterial.dispose();
-      orbitRingGeo.dispose();
-      orbitRingMat.dispose();
-      satelliteGeo.dispose();
-      satelliteMat.dispose();
+      knotGeo.dispose();
+      knotMat.dispose();
+      coreGeo.dispose();
+      coreMat.dispose();
+      wireGeo.dispose();
+      wireMat.dispose();
+      ring1Geo.dispose();
+      ring1Mat.dispose();
+      ring2Geo.dispose();
+      ring2Mat.dispose();
+      ring3Geo.dispose();
+      ring3Mat.dispose();
+      beadGeo.dispose();
+      beadMat1.dispose();
+      beadMat2.dispose();
       renderer.dispose();
     };
   }, []);
