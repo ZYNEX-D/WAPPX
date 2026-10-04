@@ -30,6 +30,8 @@ import {
   Bot,
   HelpCircle,
 } from "lucide-react";
+import AOS from "aos";
+import "aos/dist/aos.css";
 import { ThreeBackground } from "./ThreeBackground";
 
 interface LandingPageProps {
@@ -110,6 +112,18 @@ export function LandingPage({
     });
     lenisRef.current = lenis;
     (window as any).lenis = lenis;
+
+    // Initialize AOS Animate On Scroll
+    AOS.init({
+      duration: 800,
+      easing: "ease-out-cubic",
+      once: true,
+      offset: 50,
+    });
+
+    lenis.on("scroll", () => {
+      AOS.refresh();
+    });
 
     let rafId: number;
     function raf(time: number) {
@@ -294,77 +308,113 @@ export function LandingPage({
       <div className="fixed inset-0 z-0 technical-grid pointer-events-none" />
       <ThreeBackground />
 
-      {/* 2. FIXED HEADER */}
-      <header className="fixed top-0 left-0 right-0 z-50 w-full px-6 py-4 md:px-12 flex justify-between items-center bg-[#F7F7F2]/90 backdrop-blur-md border-b border-[#0A504A]/10 transition-all duration-300">
-        {/* Brand: Raw transparent icon without background or shadow, generous letter spacing */}
-        <Link href="/" className="flex items-center gap-3 group">
-          <img
-            src="/icon.png"
-            alt="WAPPX"
-            className="w-7 h-7 object-contain group-hover:scale-105 transition-transform"
+      {/* 2. FIXED HEADER WITH PROGRESSIVE BLUR */}
+      <header className="fixed top-0 left-0 right-0 z-50 w-full transition-all duration-300">
+        {/* Progressive Blur Layering (Gradient Depth Blur) */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden ">
+          {/* Base gradient tint */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#F7F7F2]/95 via-[#F7F7F2]/80 to-[#F7F7F2]/40" />
+
+          {/* Progressive blur tier 1: Deep blur at the top */}
+          <div
+            className="absolute inset-0 backdrop-blur-[20px]"
+            style={{
+              maskImage: "linear-gradient(to bottom, black 0%, black 50%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 50%, transparent 100%)",
+            }}
           />
-          <span className="font-primary text-lg font-semibold tracking-[-0.01em] text-[#0A504A] pl-1">
-            WAPP<span className="text-[#00A86B]">X</span>
-          </span>
-        </Link>
+          {/* Progressive blur tier 2: Medium blur spanning further down */}
+          <div
+            className="absolute inset-0 backdrop-blur-[10px]"
+            style={{
+              maskImage: "linear-gradient(to bottom, black 25%, black 75%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to bottom, black 25%, black 75%, transparent 100%)",
+            }}
+          />
+          {/* Progressive blur tier 3: Feathered edge at the bottom */}
+          <div
+            className="absolute inset-0 backdrop-blur-[4px]"
+            style={{
+              maskImage: "linear-gradient(to bottom, transparent 40%, black 85%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to bottom, transparent 40%, black 85%, transparent 100%)",
+            }}
+          />
 
-        {/* Navigation Links with Lenis Smooth Scrolling */}
-        <nav className="hidden md:flex items-center gap-8">
-          <button
-            onClick={() => handleNavTo("#features")}
-            className="text-xs font-semibold text-slate-500 hover:text-[#0A504A] transition-colors cursor-pointer"
-          >
-            Platform
-          </button>
-          <button
-            onClick={() => handleNavTo("#decision-lifecycle")}
-            className="text-xs font-semibold text-slate-500 hover:text-[#0A504A] transition-colors cursor-pointer"
-          >
-            Lifecycle
-          </button>
-          <button
-            onClick={() => handleNavTo("#architecture")}
-            className="text-xs font-semibold text-slate-500 hover:text-[#0A504A] transition-colors cursor-pointer"
-          >
-            Architecture
-          </button>
-          <button
-            onClick={() => handleNavTo("#pricing")}
-            className="text-xs font-semibold text-slate-500 hover:text-[#0A504A] transition-colors cursor-pointer"
-          >
-            Pricing
-          </button>
-        </nav>
+          {/* Subtle bottom gradient boundary line */}
+          <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#0A504A]/10 to-transparent pointer-events-none" />
+        </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-3">
+        {/* Navigation Content Bar */}
+        <div className="relative z-10 w-full px-6 py-4 md:px-12 flex justify-between items-center">
+          {/* Brand: Raw transparent icon without background or shadow, generous letter spacing */}
+          <Link href="/" className="flex items-center gap-3 group">
+            <img
+              src="/icon.png"
+              alt="WAPPX"
+              className="w-7 h-7 object-contain group-hover:scale-105 transition-transform"
+            />
+            <span className="font-primary text-lg font-semibold tracking-[-0.01em] text-[#0A504A] pl-1">
+              WAPP<span className="text-[#00A86B]">X</span>
+            </span>
+          </Link>
 
-          {authSession ? (
+          {/* Navigation Links with Lenis Smooth Scrolling */}
+          <nav className="hidden md:flex items-center gap-8">
             <button
-              onClick={onGoToDashboard || onOpenLogin}
-              className="flex items-center gap-2 bg-[#0A504A] hover:bg-[#00A86B] text-white text-xs font-bold px-4 py-2 rounded-full transition-all shadow-sm cursor-pointer"
+              onClick={() => handleNavTo("#features")}
+              className="text-xs font-semibold text-slate-500 hover:text-[#0A504A] transition-colors cursor-pointer"
             >
-              <span>{authSession.role === "admin" ? "Admin Console" : "Open Workspace"}</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              Platform
             </button>
-          ) : (
-            <>
-              <button
-                onClick={onOpenLogin}
-                className="hidden sm:block text-xs font-bold text-[#0A504A] hover:text-[#00A86B] transition-colors px-3 py-1.5 cursor-pointer"
-              >
-                Sign In
-              </button>
+            <button
+              onClick={() => handleNavTo("#decision-lifecycle")}
+              className="text-xs font-semibold text-slate-500 hover:text-[#0A504A] transition-colors cursor-pointer"
+            >
+              Lifecycle
+            </button>
+            <button
+              onClick={() => handleNavTo("#architecture")}
+              className="text-xs font-semibold text-slate-500 hover:text-[#0A504A] transition-colors cursor-pointer"
+            >
+              Architecture
+            </button>
+            <button
+              onClick={() => handleNavTo("#pricing")}
+              className="text-xs font-semibold text-slate-500 hover:text-[#0A504A] transition-colors cursor-pointer"
+            >
+              Pricing
+            </button>
+          </nav>
 
+          {/* Action Controls */}
+          <div className="flex items-center gap-3">
+            {authSession ? (
               <button
-                onClick={onOpenLogin}
-                className="group relative isolate overflow-hidden bg-[#0A504A] text-xs font-bold px-5 py-2.5 rounded-full shadow-sm ring-1 ring-white/10 transition-all duration-300 hover:scale-[1.03] hover:bg-[#00A86B] text-white cursor-pointer"
+                onClick={onGoToDashboard || onOpenLogin}
+                className="flex items-center gap-2 bg-[#0A504A] hover:bg-[#00A86B] text-white text-xs font-bold px-4 py-2 rounded-full transition-all shadow-sm cursor-pointer"
               >
-                <div className="shimmer-layer absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent z-10" />
-                <span className="relative z-20">Start Free</span>
+                <span>{authSession.role === "admin" ? "Admin Console" : "Open Workspace"}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
-            </>
-          )}
+            ) : (
+              <>
+                <button
+                  onClick={onOpenLogin}
+                  className="hidden sm:block text-xs font-bold text-[#0A504A] hover:text-[#00A86B] transition-colors px-3 py-1.5 cursor-pointer"
+                >
+                  Sign In
+                </button>
+
+                <button
+                  onClick={onOpenLogin}
+                  className="group relative isolate overflow-hidden bg-[#0A504A] text-xs font-bold px-5 py-2.5 rounded-full shadow-sm ring-1 ring-white/10 transition-all duration-300 hover:scale-[1.03] hover:bg-[#00A86B] text-white cursor-pointer"
+                >
+                  <div className="shimmer-layer absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent z-10" />
+                  <span className="relative z-20">Start Free</span>
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -376,26 +426,30 @@ export function LandingPage({
         <section className="relative min-h-[90vh] flex flex-col lg:flex-row items-center justify-between px-6 md:px-12 lg:px-20 pt-32 pb-20 gap-16">
           <div className="max-w-2xl space-y-8 relative z-10">
             <div className="space-y-6">
-              {/* Badge */}
-              {/* <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#0A504A]/15 shadow-2xs bg-white">
-                <span className="w-2 h-2 rounded-full bg-[#00A86B] animate-pulse" />
-                <span className="text-[11px] font-bold text-[#0A504A] tracking-tight">
-                  Official WhatsApp Cloud Business Platform
-                </span>
-              </div> */}
-
               {/* Main Headline */}
               <h1 className="font-primary text-[#0A504A]">
-                <span className="block text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-medium tracking-[18px] sm:tracking-[24px] md:tracking-[32px] leading-none uppercase">
+                <span
+                  data-aos="fade-up"
+                  data-aos-delay="100"
+                  className="block text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-medium tracking-[18px] sm:tracking-[24px] md:tracking-[32px] leading-none uppercase"
+                >
                   WAPP<span className="text-[#00A86B]">X</span>
                 </span>
-                <span className="block font-secondary text-slate-400 font-light text-xs sm:text-sm md:text-base tracking-normal mt-3 md:mt-4">
+                <span
+                  data-aos="fade-up"
+                  data-aos-delay="200"
+                  className="block font-secondary text-slate-400 font-light text-xs sm:text-sm md:text-base tracking-normal mt-3 md:mt-4"
+                >
                   Whatsapp Business Automation & CRM
                 </span>
               </h1>
 
               {/* Description */}
-              <p className="max-w-xl text-sxs md:text-sm text-slate-600 leading-relaxed font-normal">
+              <p
+                data-aos="fade-up"
+                data-aos-delay="300"
+                className="max-w-xl text-sxs md:text-sm text-slate-600 leading-relaxed font-normal"
+              >
                 The visual flow builder and live customer intelligence platform for WhatsApp.
                 Connect your business phone in minutes, automate 24/7 customer journeys, and
                 escalate to live human agents with zero message loss.
@@ -403,7 +457,7 @@ export function LandingPage({
             </div>
 
             {/* CTAs */}
-            <div className="flex flex-wrap items-center gap-4">
+            <div data-aos="fade-up" data-aos-delay="400" className="flex flex-wrap items-center gap-4">
               <button
                 onClick={authSession ? onGoToDashboard : onOpenLogin}
                 className="group relative isolate overflow-hidden bg-[#0A504A] text-xs md:text-sm font-bold px-7 py-3.5 rounded-full shadow-md transition-all duration-300 hover:scale-[1.03] hover:bg-[#00A86B] active:scale-[0.98] flex items-center gap-2 text-white cursor-pointer"
@@ -425,7 +479,7 @@ export function LandingPage({
             </div>
 
             {/* Trust Pill */}
-            <div className="pt-2 flex items-center gap-3 text-xs text-slate-500">
+            <div data-aos="fade-up" data-aos-delay="500" className="pt-2 flex items-center gap-3 text-xs text-slate-500">
               <div className="flex -space-x-2">
                 <span className="w-6 h-6 rounded-full bg-[#0A504A] text-white flex items-center justify-center font-bold text-[9px] border-2 border-white">
                   AD
@@ -529,12 +583,20 @@ export function LandingPage({
         {/* ========================================================================= */}
         {/* LOGOS / INTEGRATION PARTNERS                                              */}
         {/* ========================================================================= */}
-        <section className="border-y border-[#0A504A]/10 py-12 bg-white">
+        <section className="border-y border-[#0A504A]/10 py-12 bg-white" data-aos="fade-up">
           <div className="max-w-7xl mx-auto px-6 md:px-12 flex flex-col md:flex-row items-center justify-between gap-8">
-            <p className="text-xs font-bold text-[#0A504A] uppercase tracking-wider whitespace-nowrap md:w-auto w-full text-center md:text-left">
+            <p
+              className="text-xs font-bold text-[#0A504A] uppercase tracking-wider whitespace-nowrap md:w-auto w-full text-center md:text-left"
+              data-aos="fade-right"
+              data-aos-delay="100"
+            >
               INTEGRATED ARCHITECTURE
             </p>
-            <div className="flex flex-wrap justify-center md:justify-end gap-x-10 gap-y-6 opacity-65 hover:opacity-100 transition-opacity">
+            <div
+              className="flex flex-wrap justify-center md:justify-end gap-x-10 gap-y-6 opacity-65 hover:opacity-100 transition-opacity"
+              data-aos="fade-left"
+              data-aos-delay="200"
+            >
               <span className="text-sm font-bold text-[#0A504A] tracking-tight">META CLOUD PLATFORM</span>
               <span className="text-sm font-bold text-[#0A504A] tracking-tight">SHOPIFY COMMERCE</span>
               <span className="text-sm font-bold text-[#0A504A] tracking-tight">STRIPE PAYMENTS</span>
@@ -780,7 +842,7 @@ export function LandingPage({
         <section id="features" className="py-28 px-6 md:px-12 lg:px-20 bg-white">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
-              <div className="max-w-xl">
+              <div className="max-w-xl" data-aos="fade-up">
                 <span className="text-[11px] font-bold text-[#00A86B] uppercase tracking-wider block mb-2">
                   Engine Architecture
                 </span>
@@ -793,6 +855,8 @@ export function LandingPage({
               </div>
               <button
                 onClick={onQuickStartSimulator}
+                data-aos="fade-left"
+                data-aos-delay="100"
                 className="pb-1 border-b-2 border-[#0A504A] text-xs font-bold text-[#0A504A] hover:text-[#00A86B] hover:border-[#00A86B] transition-colors cursor-pointer flex items-center gap-1.5"
               >
                 <span>Launch Interactive Demo</span>
@@ -802,7 +866,11 @@ export function LandingPage({
 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               {/* Card 1: Visual Flow Lineage (Span 8) */}
-              <div className="md:col-span-8 group relative border border-slate-200 rounded-2xl overflow-hidden hover:border-[#00A86B] transition-all duration-500 bg-[#F7F7F2]/50 p-8 flex flex-col justify-between">
+              <div
+                data-aos="fade-up"
+                data-aos-delay="100"
+                className="md:col-span-8 group relative border border-slate-200 rounded-2xl overflow-hidden hover:border-[#00A86B] transition-all duration-500 bg-[#F7F7F2]/50 p-8 flex flex-col justify-between"
+              >
                 <div>
                   <div className="w-10 h-10 bg-white border border-[#0A504A]/10 rounded-xl flex items-center justify-center mb-6 text-[#0A504A] shadow-xs">
                     <GitBranch className="w-5 h-5 text-[#00A86B]" />
@@ -849,7 +917,11 @@ export function LandingPage({
               </div>
 
               {/* Card 2: Immutable Audit & Realtime CRM (Span 4) */}
-              <div className="md:col-span-4 group relative border border-slate-200 rounded-2xl overflow-hidden hover:border-[#00A86B] transition-all duration-500 bg-[#F7F7F2]/50 p-8 flex flex-col justify-between">
+              <div
+                data-aos="fade-up"
+                data-aos-delay="200"
+                className="md:col-span-4 group relative border border-slate-200 rounded-2xl overflow-hidden hover:border-[#00A86B] transition-all duration-500 bg-[#F7F7F2]/50 p-8 flex flex-col justify-between"
+              >
                 <div>
                   <div className="w-10 h-10 bg-white border border-[#0A504A]/10 rounded-xl flex items-center justify-center mb-6 text-[#0A504A] shadow-xs">
                     <ShieldCheck className="w-5 h-5 text-[#00A86B]" />
@@ -876,7 +948,11 @@ export function LandingPage({
               </div>
 
               {/* Card 3: Multi-Agent Dispatch (Span 12) */}
-              <div className="md:col-span-12 group relative border border-slate-200 rounded-2xl overflow-hidden hover:border-[#00A86B] transition-all duration-500 bg-[#F7F7F2]/50 p-8">
+              <div
+                data-aos="fade-up"
+                data-aos-delay="150"
+                className="md:col-span-12 group relative border border-slate-200 rounded-2xl overflow-hidden hover:border-[#00A86B] transition-all duration-500 bg-[#F7F7F2]/50 p-8"
+              >
                 <div className="flex flex-col md:flex-row items-center justify-between gap-8">
                   <div className="max-w-xl">
                     <div className="w-10 h-10 bg-white border border-[#0A504A]/10 rounded-xl flex items-center justify-center mb-4 text-[#0A504A] shadow-xs">
@@ -916,7 +992,7 @@ export function LandingPage({
         {/* ========================================================================= */}
         <section id="architecture" className="py-24 px-6 md:px-12 lg:px-20 border-b border-[#0A504A]/10 bg-[#F7F7F2]">
           <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-8">
+            <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-8" data-aos="fade-up">
               <div className="max-w-2xl">
                 <h2 className="font-primary text-3xl font-medium text-[#0A504A] tracking-tight mb-3">
                   How WhatsApp Messaging Becomes Flawless
@@ -942,7 +1018,13 @@ export function LandingPage({
                   { num: "05", title: "Instant Delivery", desc: "Delivered directly into customer's WhatsApp app." },
                   { num: "06", title: "Live Audited", desc: "Delivery receipts stored in real-time CRM audit history." },
                 ].map((item, idx) => (
-                  <div key={idx} className="def-step group flex flex-col gap-4 def-inactive cursor-pointer" data-index={idx}>
+                  <div
+                    key={idx}
+                    className="def-step group flex flex-col gap-4 def-inactive cursor-pointer"
+                    data-index={idx}
+                    data-aos="fade-up"
+                    data-aos-delay={idx * 100}
+                  >
                     <div className="flex items-center gap-4">
                       <div className="def-num w-9 h-9 border border-slate-300 rounded-lg flex items-center justify-center text-[10px] font-mono font-bold text-slate-500 shadow-2xs transition-all duration-500 z-10 bg-white">
                         {item.num}
@@ -1045,7 +1127,7 @@ export function LandingPage({
         {/* ========================================================================= */}
         <section id="pricing" className="py-28 px-6 md:px-12 lg:px-20 border-b border-[#0A504A]/10 bg-[#F7F7F2]">
           <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-12">
+            <div className="text-center mb-12" data-aos="fade-up">
               <span className="text-[11px] font-bold text-[#00A86B] uppercase tracking-wider block mb-2">
                 Transparent SaaS Plans
               </span>
@@ -1086,6 +1168,8 @@ export function LandingPage({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
               {/* Individual / Starter */}
               <div
+                data-aos="fade-up"
+                data-aos-delay="100"
                 onClick={() => setSelectedPricing("hobby")}
                 className={`p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${selectedPricing === "hobby"
                   ? "bg-white border-[#00A86B] shadow-xl scale-[1.02] ring-2 ring-[#00A86B]/20"
@@ -1134,6 +1218,8 @@ export function LandingPage({
 
               {/* Pro / Recommended */}
               <div
+                data-aos="fade-up"
+                data-aos-delay="200"
                 onClick={() => setSelectedPricing("pro")}
                 className={`p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${selectedPricing === "pro"
                   ? "bg-[#0A504A] text-white shadow-2xl scale-[1.04] ring-2 ring-[#00A86B]"
@@ -1189,6 +1275,8 @@ export function LandingPage({
 
               {/* Enterprise */}
               <div
+                data-aos="fade-up"
+                data-aos-delay="300"
                 onClick={() => setSelectedPricing("ent")}
                 className={`p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${selectedPricing === "ent"
                   ? "bg-white border-[#00A86B] shadow-xl scale-[1.02] ring-2 ring-[#00A86B]/20"
@@ -1239,7 +1327,7 @@ export function LandingPage({
         {/* FOOTER & CREATOR CREDITS                                                  */}
         {/* ========================================================================= */}
         <footer className="relative pt-16 pb-0 bg-white overflow-hidden">
-          <div className="max-w-7xl mx-auto flex flex-col gap-12 px-6 md:px-12 lg:px-20 relative z-10">
+          <div className="max-w-7xl mx-auto flex flex-col gap-12 px-6 md:px-12 lg:px-20 relative z-10" data-aos="fade-up">
             <div className="flex flex-col md:flex-row justify-between gap-12">
               <div className="max-w-xs space-y-4">
                 <div className="flex items-center gap-3">
@@ -1314,12 +1402,9 @@ export function LandingPage({
             <div className="pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
               <p>&copy; {new Date().getFullYear()} WAPPX Inc. All rights reserved.</p>
 
-              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#A2E4B8]/20 border border-[#A2E4B8]/40 text-[#0A504A] text-xs font-medium shadow-2xs">
-                <Sparkles className="w-3.5 h-3.5 text-[#00A86B]" />
-                <span>
-                  Designed and developed by <strong className="font-bold text-[#0A504A]">THARUUX</strong> , with <strong className="font-bold text-[#0A504A]">ZYNEX Developments</strong>
-                </span>
-              </div>
+              <span>
+                Designed and developed by <strong className="font-bold text-[#0A504A]">ZYNEX Developments</strong>
+              </span>
             </div>
           </div>
 
