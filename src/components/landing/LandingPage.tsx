@@ -29,6 +29,7 @@ import {
   ChevronLeft,
   Bot,
   HelpCircle,
+  ChevronDown,
 } from "lucide-react";
 import AOS from "aos";
 import "aos/dist/aos.css";
@@ -57,6 +58,36 @@ export function LandingPage({
 
   // Testimonials state
   const [testimonialIndex, setTestimonialIndex] = useState(0);
+
+  // FAQ state & Answer Engine Optimization Knowledge Base
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
+
+  const faqs = [
+    {
+      q: "What is WAPPX and how does it automate WhatsApp?",
+      a: "WAPPX is an enterprise WhatsApp automation and CRM engine built on official Meta Cloud API v22.0. It allows businesses to automate 24/7 customer conversations with a no-code visual drag-and-drop flow builder, route inquiries to live human agents in a unified multi-seat inbox, and manage catalog orders with zero message loss.",
+    },
+    {
+      q: "Is WAPPX safe from WhatsApp account bans?",
+      a: "Yes, 100%. Unlike unofficial tools that use browser automation or QR-code web scraping, WAPPX operates exclusively via the official Meta Cloud API v22.0 with cryptographically signed webhooks and verified token authentication. Your phone numbers remain 100% compliant with Meta Business Policies.",
+    },
+    {
+      q: "What are the subscription plans and pricing for WAPPX in Sri Lanka?",
+      a: "WAPPX offers simple, transparent pricing in Sri Lankan Rupees (LKR): Starter at Rs. 1,500/month (1 Phone, 1k conversations), Pro Business at Rs. 2,700/month (2 Phones, 5k conversations, CRM Inbox, Catalog), and Enterprise Scale at Rs. 4,200/month (unlimited numbers and conversations, 15+ seats, dedicated SLA). Annual plans receive an instant 20% discount.",
+    },
+    {
+      q: "Do I need coding or technical knowledge to build workflows?",
+      a: "No coding skills are required. WAPPX features an intuitive visual drag-and-drop canvas where you can configure branching logic, interactive buttons, list menus, conditional routes, and catalog checkouts with zero code.",
+    },
+    {
+      q: "Can multiple team members manage customer chats simultaneously?",
+      a: "Yes. WAPPX includes a unified multi-agent live chat CRM inbox with conversation claiming, agent assignment, automated routing, customer tags, and internal agent notes.",
+    },
+    {
+      q: "How fast can I connect my WhatsApp Business number?",
+      a: "You can connect your WhatsApp number in under 5 minutes. Enter your Meta App ID, Phone Number ID, and Permanent System User Access Token in your workspace or follow our interactive step-by-step onboarding guide.",
+    },
+  ];
 
   const testimonials = [
     {
@@ -408,6 +439,12 @@ export function LandingPage({
             >
               Pricing
             </button>
+            <button
+              onClick={() => handleNavTo("#faq")}
+              className="text-xs font-semibold text-slate-500 hover:text-[#0A504A] transition-colors cursor-pointer"
+            >
+              FAQ
+            </button>
           </nav>
 
           {/* Action Controls */}
@@ -451,7 +488,7 @@ export function LandingPage({
           <div className="max-w-2xl space-y-8 relative z-10">
             <div className="space-y-6">
               {/* Main Headline */}
-              <h1 className="font-primary text-[#0A504A]">
+              <h1 id="hero-heading" className="font-primary text-[#0A504A]">
                 <span
                   data-aos="fade-up"
                   data-aos-delay="100"
@@ -470,6 +507,7 @@ export function LandingPage({
 
               {/* Description */}
               <p
+                id="hero-description"
                 data-aos="fade-up"
                 data-aos-delay="300"
                 className="max-w-xl text-xs sm:text-sm text-slate-600 leading-relaxed font-normal"
@@ -1355,6 +1393,67 @@ export function LandingPage({
             </div>
           </div>
         </section>
+
+        {/* ========================================================================= */}
+        {/* FREQUENTLY ASKED QUESTIONS (FAQ) & AEO SECTION                           */}
+        {/* ========================================================================= */}
+        <section id="faq" className="py-24 px-6 md:px-12 lg:px-20 relative z-10 border-t border-[#0A504A]/5">
+          <div className="max-w-4xl mx-auto space-y-12">
+            <div className="text-center space-y-4" data-aos="fade-up">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0A504A]/5 border border-[#0A504A]/10 text-xs font-semibold text-[#0A504A]">
+                <HelpCircle className="w-3.5 h-3.5 text-[#00A86B]" />
+                <span>FREQUENTLY ASKED QUESTIONS</span>
+              </div>
+              <h2 className="font-primary text-2xl sm:text-3xl md:text-4xl font-medium text-[#0A504A] tracking-tight">
+                Got Questions? <span className="text-[#00A86B]">We Have Answers.</span>
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto">
+                Direct, transparent answers regarding Meta Cloud compliance, local LKR pricing, and enterprise workflow capabilities.
+              </p>
+            </div>
+
+            <div className="space-y-4" data-aos="fade-up" data-aos-delay="100">
+              {faqs.map((faq, index) => {
+                const isOpen = openFaq === index;
+                return (
+                  <div
+                    key={index}
+                    className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#0A504A]/10 overflow-hidden transition-all duration-200 shadow-2xs hover:shadow-xs"
+                    itemScope
+                    itemType="https://schema.org/Question"
+                  >
+                    <button
+                      onClick={() => setOpenFaq(isOpen ? null : index)}
+                      className="w-full text-left px-6 py-5 flex items-center justify-between gap-4 cursor-pointer"
+                      aria-expanded={isOpen}
+                    >
+                      <span className="font-primary text-sm sm:text-base font-medium text-[#0A504A]" itemProp="name">
+                        {faq.q}
+                      </span>
+                      <div
+                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-transform duration-300 ${
+                          isOpen ? "rotate-180 bg-[#0A504A] text-white" : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </div>
+                    </button>
+                    {isOpen && (
+                      <div
+                        className="px-6 pb-6 pt-1 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-[#0A504A]/5 faq-answer"
+                        itemProp="acceptedAnswer"
+                        itemScope
+                        itemType="https://schema.org/Answer"
+                      >
+                        <p itemProp="text">{faq.a}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
       </main>
 
       {/* ========================================================================= */}
@@ -1421,6 +1520,16 @@ export function LandingPage({
                       <button onClick={onOpenLogin} className="hover:text-[#0A504A] cursor-pointer text-left">
                         Sign In
                       </button>
+                    </li>
+                    <li>
+                      <button onClick={() => handleNavTo("#faq")} className="hover:text-[#0A504A] cursor-pointer text-left">
+                        FAQ &amp; Knowledge Base
+                      </button>
+                    </li>
+                    <li>
+                      <a href="/llms.txt" target="_blank" rel="noopener noreferrer" className="hover:text-[#0A504A] cursor-pointer text-left inline-flex items-center gap-1">
+                        <span>AI Reference (llms.txt)</span>
+                      </a>
                     </li>
                     <li>
                       <button onClick={() => handleNavTo("#architecture")} className="hover:text-[#0A504A] cursor-pointer">

@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   description:
     "Transform WhatsApp into an automated sales, CRM, and customer support machine. Official Meta Cloud API v22.0 integration, visual drag-and-drop flow builder, real-time live chat inbox, and automated order routing.",
   applicationName: "WAPPX",
-  authors: [{ name: "ZYNEX Developments", url: "https://zynexdevelopments.com" }],
+  authors: [{ name: "ZYNEX Developments", url: "https://zynexdev.com" }],
   generator: "Next.js",
   keywords: [
     "WhatsApp Business Automation",
@@ -73,6 +73,15 @@ export const metadata: Metadata = {
     siteName: "WAPPX",
     locale: "en_US",
     type: "website",
+    images: [
+      {
+        url: "/thumbnail.png",
+        width: 1640,
+        height: 624,
+        alt: "WAPPX — WhatsApp Business Automation & CRM Engine",
+        type: "image/png",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
@@ -81,6 +90,7 @@ export const metadata: Metadata = {
       "Scale customer conversations, automate order processing, and streamline Meta Cloud WhatsApp workflows.",
     creator: "@zynexdev",
     site: "@zynexdev",
+    images: ["/thumbnail.png"],
   },
   robots: {
     index: true,
@@ -115,8 +125,35 @@ const jsonLd = [
     publisher: {
       "@type": "Organization",
       name: "ZYNEX Developments",
-      url: "https://zynexdevelopments.com",
+      url: "https://zynexdev.com",
     },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: "WAPPX — WhatsApp Business Automation & CRM Engine",
+    url: APP_URL,
+    speakable: {
+      "@type": "SpeakableSpecification",
+      cssSelector: ["#hero-heading", "#hero-description", ".faq-answer"],
+    },
+    about: [
+      {
+        "@type": "Thing",
+        name: "WhatsApp Business API",
+        sameAs: "https://en.wikipedia.org/wiki/WhatsApp",
+      },
+      {
+        "@type": "Thing",
+        name: "Chatbot",
+        sameAs: "https://en.wikipedia.org/wiki/Chatbot",
+      },
+      {
+        "@type": "Thing",
+        name: "Customer Relationship Management",
+        sameAs: "https://en.wikipedia.org/wiki/Customer_relationship_management",
+      },
+    ],
   },
   {
     "@context": "https://schema.org",
@@ -125,8 +162,9 @@ const jsonLd = [
     legalName: "ZYNEX Developments",
     url: APP_URL,
     logo: `${APP_URL}/icon.png`,
+    image: `${APP_URL}/thumbnail.png`,
     foundingDate: "2026",
-    sameAs: ["https://zynexdevelopments.com"],
+    sameAs: ["https://zynexdev.com"],
   },
   {
     "@context": "https://schema.org",
@@ -180,34 +218,50 @@ const jsonLd = [
     mainEntity: [
       {
         "@type": "Question",
-        name: "What is WAPPX?",
+        name: "What is WAPPX and how does it automate WhatsApp?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "WAPPX is an enterprise-grade WhatsApp Business Automation and CRM platform powered by the official Meta Cloud API v22.0. It provides visual flow building, automated customer responses, catalog order management, and live multi-agent chat.",
+          text: "WAPPX is an enterprise WhatsApp automation and CRM engine built on official Meta Cloud API v22.0. It allows businesses to automate 24/7 customer conversations with a no-code visual drag-and-drop flow builder, route inquiries to live human agents in a unified multi-seat inbox, and manage catalog orders with zero message loss.",
         },
       },
       {
         "@type": "Question",
-        name: "Do I need coding skills to build WhatsApp workflows in WAPPX?",
+        name: "Is WAPPX safe from WhatsApp account bans?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "No coding skills are required. WAPPX includes an intuitive visual drag-and-drop canvas to build branching logic, buttons, list menus, and customer journeys with zero code.",
+          text: "Yes, 100%. Unlike unofficial tools that use browser automation or QR-code web scraping, WAPPX operates exclusively via the official Meta Cloud API v22.0 with cryptographically signed webhooks and verified token authentication. Your phone numbers remain 100% compliant with Meta Business Policies.",
         },
       },
       {
         "@type": "Question",
-        name: "What currency are WAPPX subscription plans priced in?",
+        name: "What are the subscription plans and pricing for WAPPX in Sri Lanka?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "WAPPX plans are priced transparently in Sri Lankan Rupees (LKR) starting at Rs. 1,500/month for Starter, Rs. 2,700/month for Pro Business, and Rs. 4,200/month for Enterprise Scale, with a 20% discount on yearly billing.",
+          text: "WAPPX offers simple, transparent pricing in Sri Lankan Rupees (LKR): Starter at Rs. 1,500/month (1 Phone, 1k conversations), Pro Business at Rs. 2,700/month (2 Phones, 5k conversations, CRM Inbox, Catalog), and Enterprise Scale at Rs. 4,200/month (unlimited numbers and conversations, 15+ seats, dedicated SLA). Annual plans receive an instant 20% discount.",
         },
       },
       {
         "@type": "Question",
-        name: "Does WAPPX support official Meta Cloud API v22.0?",
+        name: "Do I need coding or technical knowledge to build workflows?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Yes, WAPPX is fully built on official Meta Cloud API v22.0 webhooks with 99.9% uptime SLA, verified message delivery, and support for interactive message templates.",
+          text: "No coding skills are required. WAPPX features an intuitive visual drag-and-drop canvas where you can configure branching logic, interactive buttons, list menus, conditional routes, and catalog checkouts with zero code.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Can multiple team members manage customer chats simultaneously?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Yes. WAPPX includes a unified multi-agent live chat CRM inbox with conversation claiming, agent assignment, automated routing, customer tags, and internal agent notes.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "How fast can I connect my WhatsApp Business number?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "You can connect your WhatsApp number in under 5 minutes. Enter your Meta App ID, Phone Number ID, and Permanent System User Access Token in your workspace or follow our interactive step-by-step onboarding guide.",
         },
       },
     ],
