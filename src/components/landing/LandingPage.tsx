@@ -455,14 +455,14 @@ export function LandingPage({
                 <span
                   data-aos="fade-up"
                   data-aos-delay="100"
-                  className="block text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-medium tracking-[18px] sm:tracking-[24px] md:tracking-[32px] leading-none uppercase"
+                  className="block text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-medium tracking-[14px] sm:tracking-[22px] md:tracking-[32px] -mr-[14px] sm:-mr-[22px] md:-mr-[32px] leading-none uppercase"
                 >
                   WAPP<span className="text-[#00A86B]">X</span>
                 </span>
                 <span
                   data-aos="fade-up"
                   data-aos-delay="200"
-                  className="block font-secondary text-slate-400 font-light tracking-[8px] text-xs sm:text-sm md:text-base mt-3 md:mt-4"
+                  className="block font-secondary text-slate-400 font-light tracking-[1.5px] sm:tracking-[3px] md:tracking-[5px] text-[11px] sm:text-xs md:text-sm mt-2.5 sm:mt-3 leading-snug"
                 >
                   Whatsapp Business Automation & CRM
                 </span>
@@ -472,7 +472,7 @@ export function LandingPage({
               <p
                 data-aos="fade-up"
                 data-aos-delay="300"
-                className="max-w-xl text-sxs md:text-sm text-slate-600 leading-relaxed font-normal"
+                className="max-w-xl text-xs sm:text-sm text-slate-600 leading-relaxed font-normal"
               >
                 The visual flow builder and live customer intelligence platform for WhatsApp.
                 Connect your business phone in minutes, automate 24/7 customer journeys, and
