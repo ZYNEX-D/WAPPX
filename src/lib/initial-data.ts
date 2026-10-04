@@ -74,3 +74,60 @@ export const initialFlowNodes: FlowNode[] = [
 export const initialContacts: Contact[] = [];
 
 export const initialMessages: Record<string, Message[]> = {};
+
+export const initialCatalogOrders = [
+  {
+    id: "ORD-8291",
+    userId: "client-1",
+    contactId: "c-1",
+    contactName: "Kasun Perera",
+    contactPhone: "+94771234567",
+    catalogName: "Main Store Catalog",
+    items: [
+      {
+        productId: "prod-1",
+        name: "Men's Casual Cotton Shirt",
+        quantity: 1,
+        unitPrice: 3800,
+        currency: "LKR",
+      },
+      {
+        productId: "prod-2",
+        name: "Classic Brown Leather Belt",
+        quantity: 1,
+        unitPrice: 2700,
+        currency: "LKR",
+      },
+    ],
+    subtotal: 6500,
+    currency: "LKR",
+    customerNote: "Please deliver after 4:00 PM to Colombo 04",
+    status: "pending" as const,
+    createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
+  },
+  {
+    id: "ORD-8274",
+    userId: "client-1",
+    contactId: "c-2",
+    contactName: "Nimali Silva",
+    contactPhone: "+94719876543",
+    catalogName: "Main Store Catalog",
+    items: [
+      {
+        productId: "prod-3",
+        name: "Women's Summer Floral Dress",
+        quantity: 1,
+        unitPrice: 4800,
+        currency: "LKR",
+      },
+    ],
+    subtotal: 4800,
+    currency: "LKR",
+    customerNote: "Express delivery to Peradeniya Road, Kandy",
+    status: "confirmed" as const,
+    trackingNumber: "DOM-918231",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+  },
+];

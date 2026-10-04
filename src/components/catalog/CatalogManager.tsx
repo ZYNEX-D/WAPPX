@@ -32,15 +32,27 @@ import {
   RefreshCw,
   AlertTriangle,
 } from "lucide-react";
-import { BusinessCatalog, CatalogItem } from "@/types/whatsapp";
+import { BusinessCatalog, CatalogItem, CatalogOrder, CatalogOrderStatus, Contact } from "@/types/whatsapp";
+import { OrdersManager } from "./OrdersManager";
 
 interface CatalogManagerProps {
   catalogs: BusinessCatalog[];
   clientId: string;
   businessName?: string;
+  orders?: CatalogOrder[];
+  contacts?: Contact[];
   onSaveCatalog: (catalog: BusinessCatalog) => Promise<void>;
   onDeleteCatalog?: (catalogId: string) => Promise<void>;
   onSelectForChat?: (item: CatalogItem) => void;
+  onUpdateOrderStatus?: (
+    orderId: string,
+    status: CatalogOrderStatus,
+    trackingNumber?: string,
+    shippingAddress?: string
+  ) => Promise<boolean> | void;
+  onDeleteOrder?: (orderId: string) => Promise<boolean> | void;
+  onSendWhatsAppMessage?: (phone: string, text: string) => Promise<void> | void;
+  onNavigateToChat?: (contactPhone: string) => void;
 }
 
 const SAMPLE_IMAGE_PRESETS = [
@@ -72,10 +84,20 @@ export function CatalogManager({
   catalogs,
   clientId,
   businessName = "WAPPX Commerce",
+  orders = [],
+  contacts = [],
   onSaveCatalog,
   onDeleteCatalog,
   onSelectForChat,
+  onUpdateOrderStatus,
+  onDeleteOrder,
+  onSendWhatsAppMessage,
+  onNavigateToChat,
 }: CatalogManagerProps) {
+  // Sub-tab selection: Products / Catalogs vs Catalog Orders
+  const [commerceSubTab, setCommerceSubTab] = useState<"catalog" | "orders">("catalog");
+  const pendingOrdersCount = orders ? orders.filter((o) => o.status === "pending").length : 0;
+
   // Active catalog selection
   const [selectedCatalogId, setSelectedCatalogId] = useState<string>(
     catalogs[0]?.id || `cat-${clientId}-default`
@@ -699,8 +721,46 @@ export function CatalogManager({
           </div>
         </div>
 
+        {/* Top-Level Commerce Sub-Tabs: Products & Inventory vs Catalog Orders */}
+        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-6">
+            <button
+              type="button"
+              onClick={() => setCommerceSubTab("catalog")}
+              className={`text-xs pb-1 transition-colors cursor-pointer border-b-2 flex items-center gap-1.5 ${
+                commerceSubTab === "catalog"
+                  ? "border-slate-900 text-slate-900 font-normal"
+                  : "border-transparent text-slate-400 hover:text-slate-600 font-light"
+              }`}
+            >
+              <Package className="w-3.5 h-3.5" />
+              <span>Products & Catalog</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCommerceSubTab("orders")}
+              className={`text-xs pb-1 transition-colors cursor-pointer border-b-2 flex items-center gap-1.5 ${
+                commerceSubTab === "orders"
+                  ? "border-slate-900 text-slate-900 font-normal"
+                  : "border-transparent text-slate-400 hover:text-slate-600 font-light"
+              }`}
+            >
+              <ShoppingBag className="w-3.5 h-3.5" />
+              <span>Catalog Orders</span>
+              {pendingOrdersCount > 0 && (
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse ml-0.5" title={`${pendingOrdersCount} new orders`} />
+              )}
+              <span className="text-[11px] text-slate-400 font-light">
+                ({orders.length})
+              </span>
+            </button>
+          </div>
+        </div>
+
         {/* Catalog Tabs & Meta Commerce ID Indicator */}
-        <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {commerceSubTab === "catalog" && (
+        <div className="mt-3 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
             {catalogs.map((cat) => {
               const isActive = cat.id === selectedCatalogId;
@@ -807,12 +867,26 @@ export function CatalogManager({
             )}
           </div>
         </div>
+        )}
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════
-          TOOLBAR: Search & Filters
-      ═══════════════════════════════════════════════════════════════ */}
-      <div className="px-6 py-3 bg-white border-b border-slate-200/70 shrink-0 flex flex-wrap items-center justify-between gap-3">
+      {/* RENDER ORDERS MANAGER OR CATALOG PRODUCTS */}
+      {commerceSubTab === "orders" ? (
+        <OrdersManager
+          orders={orders}
+          contacts={contacts}
+          clientId={clientId}
+          onUpdateOrderStatus={onUpdateOrderStatus || (() => {})}
+          onDeleteOrder={onDeleteOrder}
+          onSendWhatsAppMessage={onSendWhatsAppMessage}
+          onNavigateToChat={onNavigateToChat}
+        />
+      ) : (
+        <>
+          {/* ═══════════════════════════════════════════════════════════════
+              TOOLBAR: Search & Filters
+          ═══════════════════════════════════════════════════════════════ */}
+          <div className="px-6 py-3 bg-white border-b border-slate-200/70 shrink-0 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 flex-1 min-w-[260px] max-w-md">
           <div className="relative w-full">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -1043,6 +1117,8 @@ export function CatalogManager({
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════════
           CREATE / EDIT PRODUCT MODAL

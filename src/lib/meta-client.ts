@@ -232,6 +232,69 @@ export async function sendMetaProductMessage({
 }
 
 /**
+ * Sends a WhatsApp Multi-Product interactive message (sections of products)
+ */
+export async function sendMetaProductListMessage({
+  phoneNumberId,
+  accessToken,
+  recipientPhone,
+  catalogId,
+  headerText = "Catalog Collection",
+  bodyText,
+  footerText = "WhatsApp In-App Commerce",
+  sections,
+}: {
+  phoneNumberId: string;
+  accessToken: string;
+  recipientPhone: string;
+  catalogId: string;
+  headerText?: string;
+  bodyText: string;
+  footerText?: string;
+  sections: { title: string; productRetailerIds: string[] }[];
+}): Promise<{ success: boolean; data?: MetaSendResponse; error?: string }> {
+  try {
+    const cleanPhone = recipientPhone.replace(/[^0-9]/g, "");
+    const formattedSections = sections.map((sec) => ({
+      title: sec.title.slice(0, 24),
+      product_items: sec.productRetailerIds.map((id) => ({ product_retailer_id: id })),
+    }));
+
+    const res = await fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: cleanPhone,
+        type: "interactive",
+        interactive: {
+          type: "product_list",
+          header: { type: "text", text: headerText },
+          body: { text: bodyText },
+          footer: footerText ? { text: footerText } : undefined,
+          action: {
+            catalog_id: catalogId,
+            sections: formattedSections,
+          },
+        },
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data?.error?.message || "Failed to send product list" };
+    }
+    return { success: true, data };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+/**
  * Sends a single WhatsApp Image message with optional caption
  */
 export async function sendMetaImageMessage({
@@ -447,14 +510,41 @@ export async function sendMetaCatalogOrShowcase({
     return { ...textRes, mode: "showcase_text" };
   }
 
-  // 3. Full Catalog / Multi-Product Showcase Mode
+  // 3. Multi-Product Section List Mode (product_list)
+  if (catalog.type === "product_list" && catalog.catalogId) {
+    const skus = (catalog.products || [])
+      .map((p) => p.retailerId || p.id)
+      .filter(Boolean);
+
+    if (skus.length > 0) {
+      const listRes = await sendMetaProductListMessage({
+        phoneNumberId,
+        accessToken,
+        recipientPhone,
+        catalogId: catalog.catalogId,
+        headerText: (catalog.catalogName || "Catalog Collection").slice(0, 60),
+        bodyText: catalog.bodyText || "Explore our products directly on WhatsApp:",
+        footerText: catalog.footerText || "Tap 'View items' to open catalog",
+        sections: [
+          {
+            title: (catalog.catalogName || "Featured Items").slice(0, 24),
+            productRetailerIds: skus.slice(0, 30),
+          },
+        ],
+      });
+      if (listRes.success) return { ...listRes, mode: "native_product_list" };
+      console.warn("[Meta Client] Native product_list not delivered, trying in-app catalog_message:", listRes.error);
+    }
+  }
+
+  // 4. Native In-App Store Catalog Mode (catalog_message)
   const sku = catalog.thumbnailProductId || catalog.products?.[0]?.retailerId;
   const nativeRes = await sendMetaCatalogMessage({
     phoneNumberId,
     accessToken,
     recipientPhone,
-    bodyText: catalog.bodyText || "Explore our official product catalogue",
-    footerText: catalog.footerText || "Tap 'View Catalog' to browse",
+    bodyText: catalog.bodyText || "Browse our official product catalog directly within WhatsApp:",
+    footerText: catalog.footerText || "Tap 'View Catalog' to open store",
     thumbnailProductRetailerId: sku,
   });
 
@@ -502,9 +592,8 @@ export async function sendMetaCatalogOrShowcase({
     recipientPhone,
     bodyText: showcaseText,
     buttons: [
-      { id: "btn-pricing", title: "💼 Packages & Pricing" },
+      { id: "btn-catalog", title: "🛍️ View Full Catalog" },
       { id: "btn-agent", title: "👤 Talk to Agent" },
-      { id: "btn-demo", title: "📅 Request Demo" },
     ],
   });
 

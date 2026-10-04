@@ -7,6 +7,7 @@ import {
   sendMetaCatalogOrShowcase,
 } from "@/lib/meta-client";
 import { mapContactFromRow, mapFlowNodeFromRow } from "@/lib/supabase/service";
+import { FlowNode, CatalogOrder, CatalogOrderItem } from "@/types/whatsapp";
 
 // Fallback verify token (matches the one in initial-data & .env.local)
 const DEFAULT_VERIFY_TOKEN = "zynex_meta_webhook_secret_2026";
@@ -102,14 +103,120 @@ export async function POST(req: NextRequest) {
 
         let incomingText = "";
         let buttonId: string | undefined = undefined;
+        let orderPayload: CatalogOrder | undefined = undefined;
+        let incomingMediaUrl: string | undefined = undefined;
+        let incomingMediaType: "image" | "audio" | "document" | undefined = undefined;
 
         if (messageType === "text") {
           incomingText = message.text?.body || "";
+        } else if (messageType === "image" && message.image) {
+          incomingMediaType = "image";
+          incomingMediaUrl = message.image.id ? `/api/whatsapp/media/${message.image.id}` : undefined;
+          incomingText = message.image.caption || "";
+        } else if ((messageType === "audio" || messageType === "voice") && (message.audio || message.voice)) {
+          incomingMediaType = "audio";
+          const audioObj = message.audio || message.voice;
+          incomingMediaUrl = audioObj?.id ? `/api/whatsapp/media/${audioObj.id}` : undefined;
+          incomingText = "";
+        } else if (messageType === "document" && message.document) {
+          incomingMediaType = "document";
+          incomingMediaUrl = message.document.id ? `/api/whatsapp/media/${message.document.id}` : undefined;
+          incomingText = message.document.filename || message.document.caption || "Document";
+        } else if (messageType === "video" && message.video) {
+          incomingMediaType = "image";
+          incomingMediaUrl = message.video.id ? `/api/whatsapp/media/${message.video.id}` : undefined;
+          incomingText = message.video.caption || "";
+        } else if (messageType === "sticker" && message.sticker) {
+          incomingMediaType = "image";
+          incomingMediaUrl = message.sticker.id ? `/api/whatsapp/media/${message.sticker.id}` : undefined;
+          incomingText = "";
         } else if (messageType === "interactive") {
           if (message.interactive?.type === "button_reply") {
             buttonId = message.interactive?.button_reply?.id;
             incomingText = message.interactive?.button_reply?.title || "";
+          } else if (message.interactive?.type === "list_reply") {
+            buttonId = message.interactive?.list_reply?.id;
+            incomingText = message.interactive?.list_reply?.title || "";
           }
+        } else if (messageType === "order" || message.order) {
+          // Meta WhatsApp Cloud API Catalog Order message
+          const rawOrder = message.order;
+          const catalogId = rawOrder?.catalog_id;
+          const customerNote = rawOrder?.text || "";
+          const productItems = Array.isArray(rawOrder?.product_items)
+            ? rawOrder.product_items
+            : [];
+
+          let subtotal = 0;
+          let currency = "LKR";
+          const items: CatalogOrderItem[] = productItems.map((item: any, idx: number) => {
+            const qty = Number(item.quantity) || 1;
+            const price = Number(item.item_price) || 0;
+            if (item.currency) currency = item.currency;
+            subtotal += qty * price;
+            return {
+              productId: item.product_retailer_id || `item-${idx + 1}`,
+              name: item.name || item.product_retailer_id || `Product #${idx + 1}`,
+              quantity: qty,
+              unitPrice: price,
+              currency: item.currency || currency,
+            };
+          });
+
+          // Enrich product names and catalog name from database if available
+          let resolvedCatalogName: string | undefined = undefined;
+          try {
+            const { data: dbCatalogs } = await supabaseAdmin
+              .from("catalogs")
+              .select("*")
+              .or(`client_id.eq.${targetUserId},client_id.eq.default,client_id.eq.client-1`);
+
+            if (dbCatalogs && dbCatalogs.length > 0) {
+              const matchedCat = dbCatalogs.find((c) => c.catalog_id === catalogId) || dbCatalogs[0];
+              if (matchedCat) {
+                resolvedCatalogName = matchedCat.name;
+                const catItems: any[] = Array.isArray(matchedCat.items) ? matchedCat.items : [];
+                for (const it of items) {
+                  const matchProd = catItems.find(
+                    (p) =>
+                      p.retailerId === it.productId ||
+                      p.id === it.productId ||
+                      p.metaProductId === it.productId
+                  );
+                  if (matchProd) {
+                    if (matchProd.title) it.name = matchProd.title;
+                    if (matchProd.imageUrl) it.imageUrl = matchProd.imageUrl;
+                  }
+                }
+              }
+            }
+          } catch (enrichErr) {
+            console.warn("[Webhook] Catalog enrichment error:", enrichErr);
+          }
+
+          const orderId = `ORD-${Date.now().toString().slice(-6)}`;
+          incomingText = `🛍️ WhatsApp Catalog Order #${orderId}\n` +
+            items.map((i) => `• ${i.quantity}x ${i.name} (${currency} ${i.unitPrice})`).join("\n") +
+            `\nSubtotal: ${currency} ${subtotal.toLocaleString()}` +
+            (customerNote ? `\nNote: "${customerNote}"` : "");
+
+          orderPayload = {
+            id: orderId,
+            userId: targetUserId,
+            contactId: "",
+            contactName: customerProfileName,
+            contactPhone: normalizedPhone,
+            catalogId,
+            catalogName: resolvedCatalogName,
+            items,
+            subtotal,
+            currency,
+            customerNote: customerNote || undefined,
+            status: "pending",
+            whatsappMessageId: message.id,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
         }
 
         const now = new Date();
@@ -156,6 +263,16 @@ export async function POST(req: NextRequest) {
             existingContact = createdContact;
           }
         } else {
+          const contactSnippet = orderPayload
+            ? `🛍️ Order #${orderPayload.id} (${orderPayload.currency} ${orderPayload.subtotal.toLocaleString()})`
+            : incomingMediaType === "image"
+            ? (incomingText ? `📷 ${incomingText}` : "📷 Photo")
+            : incomingMediaType === "audio"
+            ? "🎵 Audio message"
+            : incomingMediaType === "document"
+            ? `📄 ${incomingText}`
+            : incomingText;
+
           // Update contact timestamp, snippet, and ensure it is assigned to targetUserId
           await supabaseAdmin
             .from("contacts")
@@ -165,7 +282,7 @@ export async function POST(req: NextRequest) {
                 existingContact.name && !existingContact.name.startsWith("Customer (")
                   ? existingContact.name
                   : customerProfileName,
-              last_message_snippet: incomingText,
+              last_message_snippet: contactSnippet,
               last_message_time: timeStr,
               unread_count: (existingContact.unread_count || 0) + 1,
               updated_at: new Date().toISOString(),
@@ -174,6 +291,32 @@ export async function POST(req: NextRequest) {
         }
 
         if (existingContact) {
+          // If this was an order message, persist to catalog_orders table
+          if (orderPayload) {
+            orderPayload.contactId = existingContact.id;
+            try {
+              await supabaseAdmin.from("catalog_orders").insert({
+                id: orderPayload.id,
+                user_id: targetUserId,
+                contact_id: existingContact.id,
+                contact_name: customerProfileName,
+                contact_phone: normalizedPhone,
+                catalog_id: orderPayload.catalogId || null,
+                catalog_name: orderPayload.catalogName || null,
+                items: orderPayload.items as any,
+                subtotal: orderPayload.subtotal,
+                currency: orderPayload.currency,
+                customer_note: orderPayload.customerNote || null,
+                status: "pending",
+                whatsapp_message_id: message.id || null,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              });
+            } catch (orderErr) {
+              console.error("[Meta Webhook] Error persisting catalog order:", orderErr);
+            }
+          }
+
           // 3. Persist customer incoming message scoped to this user/tenant
           await supabaseAdmin.from("messages").insert({
             id: msgId,
@@ -184,37 +327,64 @@ export async function POST(req: NextRequest) {
             timestamp: timeStr,
             status: "delivered",
             selected_button_id: buttonId || null,
+            buttons: orderPayload ? ({ order: orderPayload } as any) : null,
+            media_url: incomingMediaUrl || null,
+            media_type: incomingMediaType || null,
             is_internal_note: false,
           });
 
-          // 4. Process Automated Bot Flow if active for this user
+          // 4. Handle Order Auto-Confirmation and Automated Bot Flows
           if (existingContact.is_bot_active) {
-            const { data: nodeRows } = await supabaseAdmin
-              .from("flow_nodes")
-              .select("*")
-              .eq("user_id", targetUserId)
-              .order("id", { ascending: true });
+            let flowNodes: FlowNode[] = [];
 
-            // If user has no custom flows yet, fallback to client-1 or default flows
-            let flowNodes = nodeRows && nodeRows.length > 0 ? nodeRows.map(mapFlowNodeFromRow) : [];
+            // 4a. Fetch all active flows for this user from the multi-flow table
+            try {
+              const { data: activeFlowRows } = await supabaseAdmin
+                .from("flows")
+                .select("nodes")
+                .eq("user_id", targetUserId)
+                .eq("is_active", true);
+
+              if (activeFlowRows && activeFlowRows.length > 0) {
+                for (const fRow of activeFlowRows) {
+                  if (Array.isArray(fRow.nodes)) {
+                    flowNodes.push(...(fRow.nodes as any));
+                  }
+                }
+              }
+            } catch (err) {
+              console.warn("Could not query flows table, falling back to flow_nodes:", err);
+            }
+
+            // 4b. Fallback to legacy flow_nodes table if no multi-flows found
             if (flowNodes.length === 0) {
-              const { data: fallbackRows } = await supabaseAdmin
+              const { data: nodeRows } = await supabaseAdmin
                 .from("flow_nodes")
                 .select("*")
-                .or("user_id.eq.client-1,user_id.eq.default")
+                .eq("user_id", targetUserId)
                 .order("id", { ascending: true });
-              if (fallbackRows && fallbackRows.length > 0) {
-                flowNodes = fallbackRows.map(mapFlowNodeFromRow);
+
+              if (nodeRows && nodeRows.length > 0) {
+                flowNodes = nodeRows.map(mapFlowNodeFromRow);
+              } else {
+                const { data: fallbackRows } = await supabaseAdmin
+                  .from("flow_nodes")
+                  .select("*")
+                  .or("user_id.eq.client-1,user_id.eq.default")
+                  .order("id", { ascending: true });
+                if (fallbackRows && fallbackRows.length > 0) {
+                  flowNodes = fallbackRows.map(mapFlowNodeFromRow);
+                }
               }
             }
 
-            if (flowNodes.length > 0) {
-              const botResult = processBotInteraction({
-                incomingText,
-                buttonId,
-                contact: mapContactFromRow(existingContact),
-                nodes: flowNodes,
-              });
+            const botResult = processBotInteraction({
+              incomingText,
+              buttonId,
+              contact: mapContactFromRow(existingContact),
+              nodes: flowNodes,
+              order: orderPayload,
+            });
 
               if (botResult) {
                 const { replyMessage, updatedContact } = botResult;
@@ -286,7 +456,6 @@ export async function POST(req: NextRequest) {
             }
           }
         }
-      }
 
       // Meta requires returning an immediate 200 OK within 3 seconds
       return NextResponse.json({ status: "EVENT_RECEIVED" }, { status: 200 });

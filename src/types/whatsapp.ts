@@ -52,6 +52,44 @@ export interface CatalogPayload {
   products?: CatalogItem[];
 }
 
+export type CatalogOrderStatus =
+  | "pending"
+  | "confirmed"
+  | "processing"
+  | "shipped"
+  | "delivered"
+  | "cancelled";
+
+export interface CatalogOrderItem {
+  productId: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  currency: string;
+  imageUrl?: string;
+  sku?: string;
+}
+
+export interface CatalogOrder {
+  id: string;
+  userId: string; // Tenant / Client
+  contactId: string;
+  contactName: string;
+  contactPhone: string;
+  catalogId?: string;
+  catalogName?: string;
+  items: CatalogOrderItem[];
+  subtotal: number;
+  currency: string;
+  customerNote?: string;
+  status: CatalogOrderStatus;
+  shippingAddress?: string;
+  trackingNumber?: string;
+  whatsappMessageId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Message {
   id: string;
   sender: MessageSenderType;
@@ -65,6 +103,7 @@ export interface Message {
   mediaUrl?: string;
   mediaType?: "image" | "audio" | "document";
   catalog?: CatalogPayload;
+  order?: CatalogOrder;
   isInternalNote?: boolean;
   userId?: string;
   reaction?: string;
@@ -118,7 +157,7 @@ export interface FlowNode {
   content: string;
   triggerKeywords?: string[];
   contactType?: "any_contact" | "new_contact" | "existing_contact";
-  triggerType?: "new_message" | "keyword_match";
+  triggerType?: "new_message" | "keyword_match" | "order_placed";
   buttons?: { id: string; title: string; nextNodeId?: string }[];
   mediaUrl?: string;
   caption?: string;
@@ -136,6 +175,20 @@ export interface FlowNode {
   fallbackNodeId?: string;
   position: { x: number; y: number };
   userId?: string;
+  flowId?: string;
+}
+
+export interface BotFlow {
+  id: string;
+  userId: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  isDefault: boolean;
+  nodes: FlowNode[];
+  triggerKeywords?: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface FlowEdge {

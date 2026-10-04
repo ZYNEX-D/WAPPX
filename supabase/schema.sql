@@ -90,12 +90,27 @@ CREATE TABLE IF NOT EXISTS public.catalogs (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- 7. Multi-Flows Table (Supports Multiple Flows per client)
+CREATE TABLE IF NOT EXISTS public.flows (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    is_default BOOLEAN NOT NULL DEFAULT false,
+    nodes JSONB NOT NULL DEFAULT '[]'::jsonb,
+    trigger_keywords TEXT[] NOT NULL DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Indexes for optimal query performance
 CREATE INDEX IF NOT EXISTS idx_messages_contact_id ON public.messages(contact_id);
 CREATE INDEX IF NOT EXISTS idx_messages_created_at ON public.messages(created_at);
 CREATE INDEX IF NOT EXISTS idx_contacts_status ON public.contacts(status);
 CREATE INDEX IF NOT EXISTS idx_contacts_phone ON public.contacts(phone);
 CREATE INDEX IF NOT EXISTS idx_catalogs_client_id ON public.catalogs(client_id);
+CREATE INDEX IF NOT EXISTS idx_flows_user_id ON public.flows(user_id);
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE public.contacts ENABLE ROW LEVEL SECURITY;
@@ -104,6 +119,7 @@ ALTER TABLE public.flow_nodes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.meta_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.catalogs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.flows ENABLE ROW LEVEL SECURITY;
 
 -- Allow anon and authenticated clients full access for CRM operations
 DO $$ 
@@ -115,6 +131,7 @@ BEGIN
     DROP POLICY IF EXISTS "Public access to clients" ON public.clients;
     DROP POLICY IF EXISTS "Allow anon full access on catalogs" ON public.catalogs;
     DROP POLICY IF EXISTS "Public access to catalogs" ON public.catalogs;
+    DROP POLICY IF EXISTS "Public access to flows" ON public.flows;
 END $$;
 
 CREATE POLICY "Public access to contacts" ON public.contacts FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
@@ -123,6 +140,7 @@ CREATE POLICY "Public access to flow_nodes" ON public.flow_nodes FOR ALL TO anon
 CREATE POLICY "Public access to meta_config" ON public.meta_config FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Public access to clients" ON public.clients FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Public access to catalogs" ON public.catalogs FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Public access to flows" ON public.flows FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
 -- Enable Supabase Realtime for instant synchronization across clients
 DO $$
@@ -199,4 +217,30 @@ CREATE TABLE IF NOT EXISTS public.support_tickets (
 CREATE INDEX IF NOT EXISTS idx_support_tickets_client_id ON public.support_tickets(client_id);
 CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON public.support_tickets(status);
 CREATE INDEX IF NOT EXISTS idx_support_tickets_created_at ON public.support_tickets(created_at);
+
+-- 8. Catalog Orders Table (WhatsApp Commerce Orders)
+CREATE TABLE IF NOT EXISTS public.catalog_orders (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    contact_id TEXT NOT NULL,
+    contact_name TEXT NOT NULL,
+    contact_phone TEXT NOT NULL,
+    catalog_id TEXT,
+    catalog_name TEXT,
+    items JSONB NOT NULL DEFAULT '[]'::jsonb,
+    subtotal NUMERIC NOT NULL DEFAULT 0,
+    currency TEXT NOT NULL DEFAULT 'LKR',
+    customer_note TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled')),
+    shipping_address TEXT,
+    tracking_number TEXT,
+    whatsapp_message_id TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_catalog_orders_user_id ON public.catalog_orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_catalog_orders_contact_id ON public.catalog_orders(contact_id);
+CREATE INDEX IF NOT EXISTS idx_catalog_orders_status ON public.catalog_orders(status);
+CREATE INDEX IF NOT EXISTS idx_catalog_orders_created_at ON public.catalog_orders(created_at);
 

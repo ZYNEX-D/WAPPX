@@ -25,6 +25,7 @@ import {
   FileText,
   Layers,
   ShoppingBag,
+  PackageCheck,
   LifeBuoy,
 } from "lucide-react";
 import { UserWorkspace } from "@/types/whatsapp";
@@ -32,6 +33,7 @@ import { UserWorkspace } from "@/types/whatsapp";
 export type ActiveTab =
   | "dashboard"
   | "inbox"
+  | "orders"
   | "catalog"
   | "campaigns"
   | "templates"
@@ -48,6 +50,7 @@ interface SidebarProps {
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   pendingHumanCount: number;
+  pendingOrdersCount?: number;
   currentUser?: UserWorkspace;
   onOpenGuide: () => void;
   onOpenUserSwitch: () => void;
@@ -66,6 +69,7 @@ export function Sidebar({
   activeTab,
   setActiveTab,
   pendingHumanCount,
+  pendingOrdersCount = 0,
   currentUser,
   onOpenGuide,
   onOpenUserSwitch,
@@ -92,8 +96,14 @@ export function Sidebar({
       badge: pendingHumanCount > 0 ? pendingHumanCount : null,
     },
     {
+      id: "orders" as ActiveTab,
+      label: "Order Management",
+      icon: PackageCheck,
+      badge: pendingOrdersCount > 0 ? pendingOrdersCount : null,
+    },
+    {
       id: "catalog" as ActiveTab,
-      label: "Catalog & Products",
+      label: "Product Catalog",
       icon: ShoppingBag,
     },
     {
@@ -113,7 +123,7 @@ export function Sidebar({
     },
     {
       id: "builder" as ActiveTab,
-      label: "Flow Builder",
+      label: "Flows & Automations",
       icon: GitFork,
     },
     {
