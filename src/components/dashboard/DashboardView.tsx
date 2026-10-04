@@ -9,7 +9,6 @@ import {
   Users,
   MessageSquare,
   Bot,
-  ShieldCheck,
   ShieldAlert,
   Clock,
   Sparkles,
@@ -372,10 +371,7 @@ export function DashboardView({
         <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-white/10 to-transparent opacity-60 pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold text-emerald-100 border border-white/10">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
-              <span>Meta Cloud API v22.0 Connected</span>
-            </div>
+
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
               {businessName} Analytics & Hub
             </h1>

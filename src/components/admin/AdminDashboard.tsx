@@ -134,7 +134,7 @@ export function AdminDashboard({
                 Total Clients
               </div>
               <div className="text-2xl font-black text-[#0A504A]">{clients.length}</div>
-              <div className="text-[10px] text-[#00A86B] font-semibold">Active Workspaces</div>
+
             </div>
           </div>
 
@@ -148,7 +148,7 @@ export function AdminDashboard({
                 Connected WhatsApp
               </div>
               <div className="text-2xl font-black text-[#0A504A]">{connectedNumbersCount}</div>
-              <div className="text-[10px] text-[#00A86B] font-semibold">Official Cloud APIs</div>
+
             </div>
           </div>
 
@@ -162,7 +162,7 @@ export function AdminDashboard({
                 Total Messages
               </div>
               <div className="text-2xl font-black text-[#0A504A]">{totalMessagesCount}</div>
-              <div className="text-[10px] text-slate-500">Recorded in Database</div>
+
             </div>
           </div>
 

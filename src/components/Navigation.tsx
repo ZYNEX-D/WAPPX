@@ -7,7 +7,6 @@ import {
   Smartphone,
   Users,
   Settings,
-  ShieldCheck,
   BookOpen,
   ChevronDown,
   LayoutDashboard,
@@ -104,10 +103,7 @@ export function Navigation({
               </div>
             </div>
 
-            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 bg-[#A2E4B8]/25 rounded-full text-xs font-semibold text-[#0A504A] border border-[#A2E4B8]/40">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#00A86B]" />
-              <span>{viewMode === "admin" ? "Platform Control" : "Meta Cloud API v22.0"}</span>
-            </div>
+
           </div>
 
           {/* Central Navigation */}

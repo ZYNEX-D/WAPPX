@@ -122,9 +122,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
           <div className="flex items-center gap-2.5 mb-2">
             <img src="/icon.png" alt="WAPPX" className="w-7 h-7 rounded-lg object-contain shadow-xs bg-white/10 p-0.5" />
             <span className="font-bold text-lg tracking-tight">WAPPX</span>
-            <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#A2E4B8]/20 text-[#A2E4B8] border border-[#A2E4B8]/30">
-              Cloud API v22.0
-            </span>
+
           </div>
 
           <h2 className="text-xl font-bold tracking-tight text-white">

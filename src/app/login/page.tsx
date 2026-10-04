@@ -180,11 +180,7 @@ export default function LoginPage() {
             <div className="absolute -top-12 -right-12 w-44 h-44 rounded-full bg-[#A2E4B8]/20 blur-2xl pointer-events-none" />
             <div className="absolute -bottom-10 -left-10 w-44 h-44 rounded-full bg-[#00A86B]/25 blur-2xl pointer-events-none" />
 
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#A2E4B8]/20 text-[#A2E4B8] border border-[#A2E4B8]/30">
-                SaaS Portal
-              </span>
-            </div>
+
 
             <h1 className="text-2xl font-bold tracking-tight text-white">
               Sign In to WAPPX
@@ -268,11 +264,7 @@ export default function LoginPage() {
               )}
             </button>
 
-            <div className="pt-2 text-center">
-              <p className="text-[11px] text-slate-400">
-                Official Meta WhatsApp Cloud API v22.0 Partner Stack
-              </p>
-            </div>
+
           </form>
         </div>
       </main>

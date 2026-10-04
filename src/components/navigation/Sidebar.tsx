@@ -207,9 +207,7 @@ export function Sidebar({
                   <span className="font-medium text-lg tracking-[13px] text-[#0A504A] block leading-none">
                     WAPPX
                   </span>
-                  <span className="text-[10px] text-[#64748b] font-light tracking-tight mt-0.5 block">
-                    WhatsApp Cloud API v22.0
-                  </span>
+
                 </div>
               </div>
 
