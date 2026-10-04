@@ -2,6 +2,8 @@
 
 @layer base {
   :root {
+    --font-onest: 'Onest', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-michroma: var(--font-onest);
     --canvas: #F7F7F2;
     --canvas-white: #ffffff;
     --primary: #00A86B;
@@ -25,13 +27,17 @@
     background-color: var(--canvas);
     color: #334155;
     font-family: var(--font-onest), 'Onest', sans-serif;
+    font-weight: 350;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    letter-spacing: -0.012em;
   }
 }
 
 html {
   scroll-padding-top: 5.5rem;
+  font-family: var(--font-onest), 'Onest', sans-serif;
 }
 
 .scroll-focus-card {
@@ -39,11 +45,22 @@ html {
 }
 
 .font-primary {
-  font-family: var(--font-michroma), 'Michroma', sans-serif;
+  font-family: var(--font-onest), 'Onest', sans-serif;
+  letter-spacing: -0.02em;
 }
 
 .font-secondary {
   font-family: var(--font-onest), 'Onest', sans-serif;
+}
+
+/* Ensure clean, crisp, thinner font rendering globally */
+body, input, textarea, select, button {
+  font-family: var(--font-onest), 'Onest', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-onest), 'Onest', sans-serif;
+  letter-spacing: -0.025em;
 }
 
 /* Custom Scrollbar from design.example */

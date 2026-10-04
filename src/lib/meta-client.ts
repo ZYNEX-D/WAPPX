@@ -389,18 +389,23 @@ export async function sendMetaCatalogOrShowcase({
       console.warn("[Meta Client] Native product card not available on WABA, falling back to showcase:", nativeRes.error);
     }
 
-    // Showcase fallback: Product Image with details caption
-    if (prod?.imageUrl && (prod.imageUrl.startsWith("http://") || prod.imageUrl.startsWith("https://"))) {
-      const caption = `🛍️ *${prod.title || catalog.catalogName || "Featured Product"}*${prod.price ? ` (${prod.price})` : ""}\n\n${prod.description || catalog.bodyText || ""}\n\n_Official WhatsApp Catalog_`;
-      const imgRes = await sendMetaImageMessage({
-        phoneNumberId,
-        accessToken,
-        recipientPhone,
-        imageUrl: prod.imageUrl,
-        caption,
-      });
-      if (imgRes.success) return { ...imgRes, mode: "showcase_image" };
-    }
+    // Showcase fallback: Rich interactive button card with product details
+    const productCardText = `🛍️ *${prod?.title || catalog.catalogName || "Featured Product"}*${
+      prod?.price ? ` (${prod.price})` : ""
+    }\n\n${prod?.description || catalog.bodyText || ""}\n\n_Official WhatsApp Business Product_`;
+
+    const productButtons = await sendMetaInteractiveButtons({
+      phoneNumberId,
+      accessToken,
+      recipientPhone,
+      bodyText: productCardText,
+      buttons: [
+        { id: "btn-pricing", title: "💼 Packages & Pricing" },
+        { id: "btn-agent", title: "👤 Talk to Agent" },
+      ],
+    });
+
+    if (productButtons.success) return { ...productButtons, mode: "showcase_buttons" };
 
     // Text fallback
     const text = `🛍️ *${prod?.title || catalog.catalogName || "Product"}*${prod?.price ? ` (${prod.price})` : ""}\n\n${prod?.description || catalog.bodyText || ""}`;
@@ -428,9 +433,12 @@ export async function sendMetaCatalogOrShowcase({
     return { ...nativeRes, mode: "native_catalog" };
   }
 
-  console.warn("[Meta Client] Native catalog message not linked to WABA, delivering via Rich Interactive Showcase:", nativeRes.error);
+  console.warn(
+    "[Meta Client] Native catalog message not linked to WABA in Meta Commerce Settings (code 131009), delivering via Rich Interactive Showcase:",
+    nativeRes.error
+  );
 
-  // Fallback: Rich WhatsApp Showcase
+  // Fallback: Rich WhatsApp Showcase (Interactive Buttons deliver 100% reliably)
   const itemsList = catalog.products && catalog.products.length > 0 ? catalog.products : [];
   let showcaseText = `🛍️ *${catalog.catalogName || "Official Product Catalog"}*\n\n${catalog.bodyText || "Explore our collection of packages and products:"}\n\n`;
 
@@ -444,19 +452,7 @@ export async function sendMetaCatalogOrShowcase({
     });
   }
 
-  showcaseText += `_Reply with a package name or tap below to inquire!_`;
-
-  const heroImage = itemsList.find((i) => i.imageUrl && (i.imageUrl.startsWith("http://") || i.imageUrl.startsWith("https://")))?.imageUrl;
-  if (heroImage) {
-    const imgRes = await sendMetaImageMessage({
-      phoneNumberId,
-      accessToken,
-      recipientPhone,
-      imageUrl: heroImage,
-      caption: showcaseText.length <= 1024 ? showcaseText : showcaseText.slice(0, 1020) + "...",
-    });
-    if (imgRes.success) return { ...imgRes, mode: "showcase_image" };
-  }
+  showcaseText += `_Tap below to inquire or speak with our team:_`;
 
   const buttonsRes = await sendMetaInteractiveButtons({
     phoneNumberId,

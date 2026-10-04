@@ -28,44 +28,7 @@ interface SendCatalogModalProps {
   customProducts?: CatalogItem[];
 }
 
-const DEFAULT_PRODUCTS: CatalogItem[] = [
-  {
-    id: "prod-1",
-    retailerId: "ZYN-WPP-STARTER",
-    title: "WhatsApp Automation Starter",
-    description: "1,000 automated bot chats/mo, 1 live agent seat, and interactive menus.",
-    price: "$29.00",
-    currency: "USD",
-    imageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: "prod-2",
-    retailerId: "ZYN-WPP-GROWTH",
-    title: "Growth Commerce & CRM Suite",
-    description: "5,000 chats/mo, 5 agents, Shopify & Google Sheets webhooks, and analytics.",
-    price: "$79.00",
-    currency: "USD",
-    imageUrl: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: "prod-3",
-    retailerId: "ZYN-WPP-SCALE",
-    title: "Enterprise AI & Multi-Agent Engine",
-    description: "Unlimited flows, OpenAI smart replies, team routing, and 99.9% uptime SLA.",
-    price: "$199.00",
-    currency: "USD",
-    imageUrl: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: "prod-4",
-    retailerId: "ZYN-CUSTOM-ERP",
-    title: "Custom WhatsApp ERP Integration",
-    description: "Full end-to-end integration with custom database, warehouse, and POS systems.",
-    price: "$450.00",
-    currency: "USD",
-    imageUrl: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=600&q=80",
-  },
-];
+const DEFAULT_PRODUCTS: CatalogItem[] = [];
 
 export function SendCatalogModal({
   isOpen,
@@ -332,28 +295,36 @@ export function SendCatalogModal({
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700">Select Product to Showcase</label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-56 overflow-y-auto p-1">
-                    {productsList.map((prod) => (
-                      <div
-                        key={prod.id}
-                        onClick={() => setSelectedProductId(prod.id)}
-                        className={`p-3 rounded-2xl border text-left cursor-pointer transition-all flex items-start gap-2.5 ${
-                          selectedProductId === prod.id
-                            ? "border-[#00A86B] bg-emerald-50/50 ring-2 ring-[#00A86B]/20"
-                            : "border-slate-200 hover:border-slate-300 bg-white"
-                        }`}
-                      >
-                        <img
-                          src={prod.imageUrl}
-                          alt={prod.title}
-                          className="w-12 h-12 rounded-xl object-cover shrink-0 border border-slate-200"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-slate-800 truncate">{prod.title}</p>
-                          <p className="text-xs font-extrabold text-[#00A86B] mt-0.5">{prod.price}</p>
-                          <p className="text-[10px] text-slate-400 font-mono truncate">{prod.retailerId}</p>
-                        </div>
+                    {productsList.length === 0 ? (
+                      <div className="col-span-full py-8 px-4 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50">
+                        <ShoppingBag className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                        <p className="text-xs font-bold text-slate-700">No products in catalog yet</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">Go to the &quot;Catalog &amp; Products&quot; tab to add your first product!</p>
                       </div>
-                    ))}
+                    ) : (
+                      productsList.map((prod) => (
+                        <div
+                          key={prod.id}
+                          onClick={() => setSelectedProductId(prod.id)}
+                          className={`p-3 rounded-2xl border text-left cursor-pointer transition-all flex items-start gap-2.5 ${
+                            selectedProductId === prod.id
+                              ? "border-[#00A86B] bg-emerald-50/50 ring-2 ring-[#00A86B]/20"
+                              : "border-slate-200 hover:border-slate-300 bg-white"
+                          }`}
+                        >
+                          <img
+                            src={prod.imageUrl}
+                            alt={prod.title}
+                            className="w-12 h-12 rounded-xl object-cover shrink-0 border border-slate-200"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-slate-800 truncate">{prod.title}</p>
+                            <p className="text-xs font-extrabold text-[#00A86B] mt-0.5">{prod.price}</p>
+                            <p className="text-[10px] text-slate-400 font-mono truncate">{prod.retailerId}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
 
@@ -390,44 +361,52 @@ export function SendCatalogModal({
                     </span>
                   </div>
                   <div className="space-y-2 max-h-56 overflow-y-auto p-1">
-                    {productsList.map((prod) => {
-                      const isChecked = selectedMultiIds.includes(prod.id);
-                      return (
-                        <div
-                          key={prod.id}
-                          onClick={() => handleToggleMultiProduct(prod.id)}
-                          className={`p-3 rounded-xl border flex items-center justify-between gap-3 cursor-pointer transition-all ${
-                            isChecked
-                              ? "border-[#00A86B] bg-emerald-50/40"
-                              : "border-slate-200 hover:bg-slate-50"
-                          }`}
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <img
-                              src={prod.imageUrl}
-                              alt={prod.title}
-                              className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0"
-                            />
-                            <div className="truncate">
-                              <p className="text-xs font-bold text-slate-800 truncate">{prod.title}</p>
-                              <p className="text-[11px] text-slate-500 truncate">{prod.description}</p>
+                    {productsList.length === 0 ? (
+                      <div className="py-8 px-4 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50">
+                        <ShoppingBag className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                        <p className="text-xs font-bold text-slate-700">No products in catalog yet</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">Go to the &quot;Catalog &amp; Products&quot; tab to add your first product!</p>
+                      </div>
+                    ) : (
+                      productsList.map((prod) => {
+                        const isChecked = selectedMultiIds.includes(prod.id);
+                        return (
+                          <div
+                            key={prod.id}
+                            onClick={() => handleToggleMultiProduct(prod.id)}
+                            className={`p-3 rounded-xl border flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                              isChecked
+                                ? "border-[#00A86B] bg-emerald-50/40"
+                                : "border-slate-200 hover:bg-slate-50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <img
+                                src={prod.imageUrl}
+                                alt={prod.title}
+                                className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0"
+                              />
+                              <div className="truncate">
+                                <p className="text-xs font-bold text-slate-800 truncate">{prod.title}</p>
+                                <p className="text-[11px] text-slate-500 truncate">{prod.description}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 shrink-0">
+                              <span className="text-xs font-bold text-[#00A86B]">{prod.price}</span>
+                              <div
+                                className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all ${
+                                  isChecked
+                                    ? "bg-[#00A86B] border-[#00A86B] text-white"
+                                    : "border-slate-300 bg-white"
+                                }`}
+                              >
+                                {isChecked && <Check className="w-3.5 h-3.5" />}
+                              </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3 shrink-0">
-                            <span className="text-xs font-bold text-[#00A86B]">{prod.price}</span>
-                            <div
-                              className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all ${
-                                isChecked
-                                  ? "bg-[#00A86B] border-[#00A86B] text-white"
-                                  : "border-slate-300 bg-white"
-                              }`}
-                            >
-                              {isChecked && <Check className="w-3.5 h-3.5" />}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    )}
                   </div>
                 </div>
               </div>

@@ -467,7 +467,7 @@ export function LiveInbox({
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             <button
               onClick={() => setFilterTab("all")}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${filterTab === "all"
+              className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${filterTab === "all"
                 ? "bg-slate-900 text-white shadow-xs"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200/70"
                 }`}
@@ -476,7 +476,7 @@ export function LiveInbox({
             </button>
             <button
               onClick={() => setFilterTab("human")}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1 cursor-pointer ${filterTab === "human"
+              className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1 cursor-pointer ${filterTab === "human"
                 ? "bg-rose-600 text-white shadow-xs"
                 : "bg-rose-50 text-rose-600 hover:bg-rose-100/80 border border-rose-200/60"
                 }`}
@@ -489,7 +489,7 @@ export function LiveInbox({
             </button>
             <button
               onClick={() => setFilterTab("bot")}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${filterTab === "bot"
+              className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${filterTab === "bot"
                 ? "bg-emerald-600 text-white shadow-xs"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200/70"
                 }`}
@@ -498,7 +498,7 @@ export function LiveInbox({
             </button>
             <button
               onClick={() => setFilterTab("mine")}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${filterTab === "mine"
+              className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${filterTab === "mine"
                 ? "bg-emerald-600 text-white shadow-xs"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200/70"
                 }`}
@@ -531,7 +531,7 @@ export function LiveInbox({
                 >
                   {/* Avatar */}
                   <div className="relative shrink-0 mt-0.5">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-100/80 to-emerald-200/60 text-emerald-900 border border-emerald-200 flex items-center justify-center font-bold text-xs select-none">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-100/80 to-emerald-200/60 text-emerald-900 border border-emerald-200 flex items-center justify-center font-medium text-xs select-none">
                       {contact.name.slice(0, 2).toUpperCase()}
                     </div>
                     {contact.isBotActive ? (
@@ -552,7 +552,7 @@ export function LiveInbox({
                   {/* Info Column */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
-                      <h2 className="text-[13.5px] font-semibold text-slate-900 truncate">
+                      <h2 className="text-[13.5px] font-medium text-slate-900 truncate">
                         {contact.name}
                       </h2>
                       <span className={`text-[11px] shrink-0 font-medium ${isNeedsHuman ? "text-rose-600 font-bold" : "text-slate-400"

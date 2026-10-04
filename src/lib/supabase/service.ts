@@ -499,52 +499,7 @@ export async function saveMetaConfig(config: MetaConfig, userId: string = "clien
   return true;
 }
 
-export const INITIAL_DEFAULT_CATALOG_ITEMS: CatalogItem[] = [
-  {
-    id: "item-1",
-    retailerId: "WPP-STARTER",
-    title: "WhatsApp Automation Starter",
-    description: "1,000 automated bot chats/mo, 1 live agent seat, flow triggers, and interactive reply menus.",
-    price: "$29.00",
-    currency: "USD",
-    category: "Software Plans",
-    status: "active",
-    imageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: "item-2",
-    retailerId: "WPP-GROWTH",
-    title: "Growth Commerce & CRM Suite",
-    description: "5,000 chats/mo, 5 agents, Shopify & Google Sheets webhooks, full analytics, and drip campaigns.",
-    price: "$79.00",
-    currency: "USD",
-    category: "Software Plans",
-    status: "active",
-    imageUrl: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: "item-3",
-    retailerId: "WPP-SCALE",
-    title: "Enterprise AI & Multi-Agent Engine",
-    description: "Unlimited flows, OpenAI smart replies, team routing, custom domain, and 99.9% uptime SLA.",
-    price: "$199.00",
-    currency: "USD",
-    category: "Enterprise",
-    status: "active",
-    imageUrl: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: "item-4",
-    retailerId: "WPP-CUSTOM-ERP",
-    title: "Custom ERP & WhatsApp Sync",
-    description: "Tailored webhook pipeline connecting SAP, Odoo, or Zoho to WhatsApp interactive carts.",
-    price: "$349.00",
-    currency: "USD",
-    category: "Custom Solutions",
-    status: "active",
-    imageUrl: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=600&q=80",
-  },
-];
+export const INITIAL_DEFAULT_CATALOG_ITEMS: CatalogItem[] = [];
 
 export async function fetchCatalogs(clientId: string): Promise<BusinessCatalog[]> {
   try {
@@ -576,7 +531,7 @@ export async function fetchCatalogs(clientId: string): Promise<BusinessCatalog[]
       return [defaultCatalog];
     }
 
-    return data.map((row) => ({
+    const mapped: BusinessCatalog[] = data.map((row) => ({
       id: row.id,
       clientId: row.client_id,
       name: row.name,
@@ -587,6 +542,14 @@ export async function fetchCatalogs(clientId: string): Promise<BusinessCatalog[]
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));
+
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(getLocalKey(clientId), JSON.stringify(mapped));
+      } catch (e) {}
+    }
+
+    return mapped;
   } catch (err) {
     console.error("fetchCatalogs error:", err);
     return getLocalCatalogs(clientId);
@@ -600,9 +563,6 @@ export async function saveCatalog(catalog: BusinessCatalog): Promise<BusinessCat
     updatedAt: now,
     createdAt: catalog.createdAt || now,
   };
-
-  // Sync to localStorage as immediate offline cache
-  saveLocalCatalog(catalogToSave);
 
   try {
     const { error } = await supabase.from("catalogs").upsert({
@@ -619,28 +579,33 @@ export async function saveCatalog(catalog: BusinessCatalog): Promise<BusinessCat
 
     if (error) {
       console.error("Supabase saveCatalog error:", error.message);
+      throw new Error(`Database error: ${error.message}`);
     }
-  } catch (err) {
+
+    // Sync to localStorage after successful DB write
+    saveLocalCatalog(catalogToSave);
+  } catch (err: any) {
     console.error("saveCatalog exception:", err);
+    throw err;
   }
 
   return catalogToSave;
 }
 
 export async function deleteCatalog(catalogId: string, clientId?: string): Promise<boolean> {
-  if (clientId) {
-    deleteLocalCatalog(catalogId, clientId);
-  }
   try {
     const { error } = await supabase.from("catalogs").delete().eq("id", catalogId);
     if (error) {
       console.error("Supabase deleteCatalog error:", error.message);
-      return false;
+      throw new Error(`Database error: ${error.message}`);
+    }
+    if (clientId) {
+      deleteLocalCatalog(catalogId, clientId);
     }
     return true;
-  } catch (err) {
+  } catch (err: any) {
     console.error("deleteCatalog exception:", err);
-    return false;
+    throw err;
   }
 }
 

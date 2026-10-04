@@ -147,18 +147,18 @@ export function Sidebar({
 
           <div className="flex items-center gap-2">
             <img src="/icon.png" alt="WAPPX" className="w-7 h-7 object-contain" />
-            <span className="font-bold text-lg text-[#0A504A]">WAPPX</span>
+            <span className="font-medium text-lg tracking-tight text-[#0A504A]">WAPPX</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           {viewMode === "client" && (
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#A2E4B8]/30 text-[#0A504A] max-w-[120px] truncate">
+            <span className="text-[11px] font-normal px-2 py-0.5 rounded-full bg-[#A2E4B8]/30 text-[#0A504A] max-w-[120px] truncate">
               {currentUser?.name || "Client"}
             </span>
           )}
           {viewMode === "admin" && (
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#0A504A] text-white">
+            <span className="text-[11px] font-normal px-2 py-0.5 rounded-full bg-[#0A504A] text-white">
               Admin
             </span>
           )}
@@ -189,9 +189,8 @@ export function Sidebar({
       {/* SIDEBAR MAIN CONTAINER (Responsive: Fixed on desktop, Drawer on mobile)    */}
       {/* ========================================================================= */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-68 bg-[#F7F7F2] border-r border-[#0A504A]/10 flex flex-col justify-between transition-transform duration-300 ease-in-out font-secondary ${
-          mobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
-        } lg:static lg:h-screen lg:shrink-0`}
+        className={`fixed top-0 bottom-0 left-0 z-50 w-68 bg-[#F7F7F2] border-r border-[#0A504A]/10 flex flex-col justify-between transition-transform duration-300 ease-in-out font-secondary text-[13px] font-normal ${mobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
+          } lg:static lg:h-screen lg:shrink-0`}
       >
         {/* TOP SECTION */}
         <div className="flex flex-col overflow-y-auto no-scrollbar">
@@ -205,10 +204,10 @@ export function Sidebar({
                   className="w-8 h-8 object-contain"
                 />
                 <div>
-                  <span className="font-bold text-xl tracking-tight text-[#0A504A] block leading-none">
+                  <span className="font-medium text-lg tracking-[13px] text-[#0A504A] block leading-none">
                     WAPPX
                   </span>
-                  <span className="text-[10px] text-[#64748b] font-medium tracking-tight mt-0.5 block">
+                  <span className="text-[10px] text-[#64748b] font-light tracking-tight mt-0.5 block">
                     WhatsApp Cloud API v22.0
                   </span>
                 </div>
@@ -227,11 +226,10 @@ export function Sidebar({
             <div className="mt-4 p-2.5 rounded-xl bg-white border border-[#0A504A]/10 shadow-xs flex items-center justify-between">
               <div className="flex items-center gap-2 min-w-0">
                 <div
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                    viewMode === "admin"
-                      ? "bg-[#0A504A] text-white"
-                      : "bg-[#A2E4B8] text-[#0A504A]"
-                  }`}
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${viewMode === "admin"
+                    ? "bg-[#0A504A] text-white"
+                    : "bg-[#A2E4B8] text-[#0A504A]"
+                    }`}
                 >
                   {viewMode === "admin" ? (
                     <Crown className="w-4 h-4 text-[#ffe200]" />
@@ -240,10 +238,10 @@ export function Sidebar({
                   )}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <p className="text-[10px] font-normal uppercase tracking-wider text-slate-400">
                     {viewMode === "admin" ? "Platform Control" : "Client Workspace"}
                   </p>
-                  <p className="text-xs font-bold text-[#0A504A] truncate">
+                  <p className="text-xs font-normal text-[#0A504A] truncate">
                     {viewMode === "admin" ? "Admin Console" : currentUser?.name || "Client Portal"}
                   </p>
                 </div>
@@ -265,7 +263,7 @@ export function Sidebar({
             {isOwnerAdmin && viewMode === "client" && (
               <button
                 onClick={() => onSwitchViewMode("admin")}
-                className="w-full mt-2.5 py-1.5 px-3 bg-[#0A504A] hover:bg-[#00A86B] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                className="w-full mt-2.5 py-1.5 px-3 bg-[#0A504A] hover:bg-[#00A86B] text-white rounded-xl text-xs font-normal transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span>Return to Admin Console</span>
@@ -278,12 +276,12 @@ export function Sidebar({
             {/* View Mode = Admin Navigation Items */}
             {viewMode === "admin" ? (
               <>
-                <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <div className="px-3 py-1.5 text-[10px] font-normal text-slate-400 uppercase tracking-wider">
                   Admin Management
                 </div>
 
                 <button
-                  className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold bg-[#0A504A] text-white shadow-xs"
+                  className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium bg-[#0A504A] text-white shadow-xs"
                 >
                   <div className="flex items-center gap-3">
                     <LayoutDashboard className="w-4 h-4 text-[#A2E4B8]" />
@@ -294,7 +292,7 @@ export function Sidebar({
 
                 <button
                   onClick={() => onSwitchViewMode("client")}
-                  className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-[#0A504A] hover:bg-white transition-all cursor-pointer"
+                  className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-light text-slate-600 hover:text-[#0A504A] hover:bg-white transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <Building2 className="w-4 h-4 text-[#00A86B]" />
@@ -306,7 +304,7 @@ export function Sidebar({
             ) : (
               /* View Mode = Client Workspace Navigation Items */
               <>
-                <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <div className="px-3 py-1.5 text-[10px] font-normal text-slate-400 uppercase tracking-wider">
                   Workspace Apps
                 </div>
 
@@ -318,23 +316,21 @@ export function Sidebar({
                     <button
                       key={item.id}
                       onClick={() => handleNavClick(item.id)}
-                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                        isActive
-                          ? "bg-[#0A504A] text-white shadow-sm font-bold"
-                          : "text-slate-600 hover:text-[#0A504A] hover:bg-white"
-                      }`}
+                      className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs transition-all cursor-pointer ${isActive
+                        ? "bg-[#0A504A] text-white shadow-xs font-medium"
+                        : "text-slate-600 hover:text-[#0A504A] hover:bg-white/80 font-light"
+                        }`}
                     >
                       <div className="flex items-center gap-3">
                         <Icon
-                          className={`w-4 h-4 ${
-                            isActive ? "text-[#A2E4B8]" : "text-slate-500"
-                          }`}
+                          className={`w-4 h-4 ${isActive ? "text-[#A2E4B8]" : "text-slate-400"
+                            }`}
                         />
-                        <span>{item.label}</span>
+                        <span className="tracking-tight">{item.label}</span>
                       </div>
 
                       {item.badge && (
-                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-500 text-white">
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-normal bg-red-500 text-white">
                           {item.badge}
                         </span>
                       )}
@@ -354,10 +350,10 @@ export function Sidebar({
               onOpenGuide();
               setMobileMenuOpen(false);
             }}
-            className="w-full flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-[#0A504A] hover:bg-[#A2E4B8]/20 transition-colors cursor-pointer"
+            className="w-full flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-light text-[#0A504A] hover:bg-[#A2E4B8]/20 transition-colors cursor-pointer"
           >
             <BookOpen className="w-4 h-4 text-[#00A86B]" />
-            <span>Setup Guide / උපදෙස්</span>
+            <span className="tracking-tight">Setup Guide / උපදෙස්</span>
           </button>
 
           {/* View Public Landing Page */}
@@ -367,24 +363,24 @@ export function Sidebar({
                 onViewLanding();
                 setMobileMenuOpen(false);
               }}
-              className="w-full flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-[#0A504A] hover:bg-slate-100 transition-colors cursor-pointer"
+              className="w-full flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-light text-slate-600 hover:text-[#0A504A] hover:bg-slate-100 transition-colors cursor-pointer"
             >
               <Globe className="w-4 h-4 text-slate-400" />
-              <span>Public Landing Page</span>
+              <span className="tracking-tight">Public Landing Page</span>
             </button>
           )}
 
           {/* User Profile Card & Logout */}
           <div className="pt-2 mt-1 border-t border-slate-200/80 flex items-center justify-between px-2">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-[#0A504A] text-white flex items-center justify-center font-bold text-xs shrink-0">
+              <div className="w-8 h-8 rounded-full bg-[#0A504A] text-white flex items-center justify-center font-normal text-xs shrink-0">
                 {viewMode === "admin" ? "AD" : currentUser?.name?.slice(0, 2).toUpperCase() || "CL"}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-[#0A504A] truncate">
+                <p className="text-xs font-normal text-[#0A504A] truncate">
                   {userEmail || (viewMode === "admin" ? "admin@zynex.lk" : currentUser?.name)}
                 </p>
-                <p className="text-[10px] text-slate-400 capitalize">
+                <p className="text-[10px] font-light text-slate-400 capitalize">
                   {viewMode === "admin" ? "Platform Admin" : "Client Workspace"}
                 </p>
               </div>

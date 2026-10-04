@@ -479,21 +479,31 @@ export function ClientWorkspace({
   };
 
   const handleSaveCatalog = async (updated: BusinessCatalog) => {
-    const saved = await saveCatalog(updated);
-    setCatalogs((prev) => {
-      const idx = prev.findIndex((c) => c.id === saved.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = saved;
-        return next;
-      }
-      return [saved, ...prev];
-    });
+    try {
+      const saved = await saveCatalog(updated);
+      setCatalogs((prev) => {
+        const idx = prev.findIndex((c) => c.id === saved.id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = saved;
+          return next;
+        }
+        return [saved, ...prev];
+      });
+    } catch (err: any) {
+      console.error("handleSaveCatalog error:", err);
+      throw err;
+    }
   };
 
   const handleDeleteCatalog = async (catalogId: string) => {
-    await deleteCatalog(catalogId, currentClientId);
-    setCatalogs((prev) => prev.filter((c) => c.id !== catalogId));
+    try {
+      await deleteCatalog(catalogId, currentClientId);
+      setCatalogs((prev) => prev.filter((c) => c.id !== catalogId));
+    } catch (err: any) {
+      console.error("handleDeleteCatalog error:", err);
+      throw err;
+    }
   };
 
   const handleLogout = async () => {

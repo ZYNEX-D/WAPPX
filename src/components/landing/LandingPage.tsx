@@ -310,7 +310,7 @@ export function LandingPage({
             alt="WAPPX"
             className="w-7 h-7 object-contain group-hover:scale-105 transition-transform"
           />
-          <span className="font-primary text-base font-bold tracking-[0.35em] text-[#0A504A] pl-1">
+          <span className="font-primary text-lg font-semibold tracking-[-0.01em] text-[#0A504A] pl-1">
             WAPP<span className="text-[#00A86B]">X</span>
           </span>
         </Link>
@@ -392,11 +392,11 @@ export function LandingPage({
               </div>
 
               {/* Main Headline */}
-              <h1 className="font-primary text-5xl md:text-7xl lg:text-8xl font-bold tracking-[0.18em] text-[#0A504A] leading-[1.05]">
+              <h1 className="font-primary text-5xl md:text-7xl lg:text-8xl font-medium tracking-tight text-[#0A504A] leading-[1.05]">
                 WAPP
                 <span className="text-[#00A86B]">X</span>
                 <br />
-                <span className="text-slate-400 font-normal text-4xl md:text-6xl lg:text-7xl tracking-normal">
+                <span className="text-slate-400 font-light text-4xl md:text-6xl lg:text-7xl tracking-tight">
                   Automation.
                 </span>
               </h1>
@@ -570,7 +570,7 @@ export function LandingPage({
                 <Radio className="w-3.5 h-3.5 text-[#00A86B] animate-pulse" />
                 <span>Traceability Lifecycle Engine</span>
               </div>
-              <h2 className="font-primary text-2xl md:text-3xl font-bold text-[#0A504A] tracking-tight">
+              <h2 className="font-primary text-2xl md:text-3xl font-medium text-[#0A504A] tracking-tight">
                 Message Automation Lifecycle
               </h2>
               <p className="text-slate-500 text-xs md:text-sm max-w-lg mx-auto mt-0.5">
@@ -798,9 +798,9 @@ export function LandingPage({
                 <span className="text-[11px] font-bold text-[#00A86B] uppercase tracking-wider block mb-2">
                   Engine Architecture
                 </span>
-                <h2 className="font-primary text-3xl md:text-5xl font-bold text-[#0A504A] tracking-tight leading-[1.1]">
+                <h2 className="font-primary text-3xl md:text-5xl font-medium text-[#0A504A] tracking-tight leading-[1.1]">
                   Visual Automation.
-                  <span className="text-slate-400 block font-normal text-2xl md:text-4xl mt-1">
+                  <span className="text-slate-400 block font-light text-2xl md:text-4xl mt-1">
                     Defensible & Scalable.
                   </span>
                 </h2>
@@ -821,7 +821,7 @@ export function LandingPage({
                   <div className="w-10 h-10 bg-white border border-[#0A504A]/10 rounded-xl flex items-center justify-center mb-6 text-[#0A504A] shadow-xs">
                     <GitBranch className="w-5 h-5 text-[#00A86B]" />
                   </div>
-                  <h3 className="text-2xl font-bold text-[#0A504A] mb-2 font-primary">
+                  <h3 className="text-2xl font-semibold text-[#0A504A] mb-2 font-primary">
                     Visual Flow Builder
                   </h3>
                   <p className="text-xs md:text-sm text-slate-600 max-w-lg leading-relaxed">
@@ -932,7 +932,7 @@ export function LandingPage({
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-8">
               <div className="max-w-2xl">
-                <h2 className="font-primary text-3xl font-bold text-[#0A504A] tracking-tight mb-3">
+                <h2 className="font-primary text-3xl font-medium text-[#0A504A] tracking-tight mb-3">
                   How WhatsApp Messaging Becomes Flawless
                 </h2>
                 <p className="text-slate-600 text-sm leading-relaxed">
@@ -1063,7 +1063,7 @@ export function LandingPage({
               <span className="text-[11px] font-bold text-[#00A86B] uppercase tracking-wider block mb-2">
                 Transparent SaaS Plans
               </span>
-              <h2 className="font-primary text-3xl md:text-4xl font-bold text-[#0A504A] tracking-tight mb-4">
+              <h2 className="font-primary text-3xl md:text-4xl font-medium text-[#0A504A] tracking-tight mb-4">
                 Scale Your WhatsApp Engine
               </h2>
               <p className="text-slate-600 text-sm max-w-md mx-auto">
@@ -1263,7 +1263,7 @@ export function LandingPage({
               <div className="max-w-xs space-y-4">
                 <div className="flex items-center gap-3">
                   <img src="/icon.png" alt="WAPPX" className="w-7 h-7 object-contain" />
-                  <span className="font-primary font-bold text-base tracking-[0.35em] text-[#0A504A] pl-1">
+                  <span className="font-primary font-semibold text-lg tracking-[-0.01em] text-[#0A504A] pl-1">
                     WAPP<span className="text-[#00A86B]">X</span>
                   </span>
                 </div>

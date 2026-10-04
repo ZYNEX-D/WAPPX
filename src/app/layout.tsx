@@ -1,16 +1,9 @@
 import type { Metadata } from "next";
-import { Michroma, Onest } from "next/font/google";
+import { Onest } from "next/font/google";
 import "./globals.css";
 
-const michroma = Michroma({
-  weight: "400",
-  variable: "--font-michroma",
-  subsets: ["latin"],
-  display: "swap",
-});
-
 const onest = Onest({
-  weight: ["400", "500", "600", "700", "800", "900"],
+  weight: ["200", "300", "400", "500", "600", "700", "800"],
   variable: "--font-onest",
   subsets: ["latin"],
   display: "swap",
@@ -32,7 +25,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${michroma.variable} ${onest.variable} antialiased`}
+      className={`${onest.variable} antialiased`}
     >
       <body className="min-h-full flex flex-col font-secondary bg-[#F7F7F2] text-[#0A504A]">
         {children}
