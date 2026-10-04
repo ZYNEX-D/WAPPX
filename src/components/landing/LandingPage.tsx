@@ -1238,8 +1238,8 @@ export function LandingPage({
         {/* ========================================================================= */}
         {/* FOOTER & CREATOR CREDITS                                                  */}
         {/* ========================================================================= */}
-        <footer className="py-16 px-6 md:px-12 lg:px-20 bg-white">
-          <div className="max-w-7xl mx-auto flex flex-col gap-12">
+        <footer className="relative pt-16 pb-0 bg-white overflow-hidden">
+          <div className="max-w-7xl mx-auto flex flex-col gap-12 px-6 md:px-12 lg:px-20 relative z-10">
             <div className="flex flex-col md:flex-row justify-between gap-12">
               <div className="max-w-xs space-y-4">
                 <div className="flex items-center gap-3">
@@ -1320,6 +1320,48 @@ export function LandingPage({
                   Designed and developed by <strong className="font-bold text-[#0A504A]">THARUUX</strong> , with <strong className="font-bold text-[#0A504A]">ZYNEX Developments</strong>
                 </span>
               </div>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* FULL-WIDTH GIANT WATERMARK BRANDING WITH PROGRESSIVE BLUR                */}
+          {/* ========================================================================= */}
+          <div className="relative w-full overflow-hidden select-none pointer-events-none mt-8 -mb-2 sm:-mb-4 md:-mb-8 lg:-mb-12">
+            {/* Giant Full-Width Typography */}
+            <div className="w-full text-center flex items-center justify-center leading-none">
+              <span className="font-primary font-bold text-[18vw] leading-[0.78] tracking-[0.06em] text-[#0A504A]/[0.07] uppercase whitespace-nowrap">
+                WAPP<span className="text-[#00A86B]/[0.12]">X</span>
+              </span>
+            </div>
+
+            {/* Progressive Blur Layering (Gradually blurs from top to bottom) */}
+            <div className="absolute inset-0 pointer-events-none">
+              {/* Blur Level 1: Subtle initial blur */}
+              <div
+                className="absolute inset-0 backdrop-blur-[2px]"
+                style={{
+                  maskImage: "linear-gradient(to bottom, transparent 15%, black 45%, black 100%)",
+                  WebkitMaskImage: "linear-gradient(to bottom, transparent 15%, black 45%, black 100%)",
+                }}
+              />
+              {/* Blur Level 2: Medium depth blur */}
+              <div
+                className="absolute inset-0 backdrop-blur-[6px]"
+                style={{
+                  maskImage: "linear-gradient(to bottom, transparent 35%, black 70%, black 100%)",
+                  WebkitMaskImage: "linear-gradient(to bottom, transparent 35%, black 70%, black 100%)",
+                }}
+              />
+              {/* Blur Level 3: Deep atmospheric blur */}
+              <div
+                className="absolute inset-0 backdrop-blur-[14px]"
+                style={{
+                  maskImage: "linear-gradient(to bottom, transparent 60%, black 100%)",
+                  WebkitMaskImage: "linear-gradient(to bottom, transparent 60%, black 100%)",
+                }}
+              />
+              {/* Soft progressive fade gradient */}
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/20 to-white/95" />
             </div>
           </div>
         </footer>
