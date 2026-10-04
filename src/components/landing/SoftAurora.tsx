@@ -178,11 +178,11 @@ void main() {
     float peak = max(chroma.r, max(chroma.g, chroma.b));
     chroma = pow(clamp(chroma / max(peak, 0.0001), 0.0, 1.0), vec3(1.08));
 
-    float ink = clamp((weight1 + weight2) * uBrightness * 1.55, 0.0, 0.82);
+    float ink = clamp((weight1 + weight2) * uBrightness * 0.85, 0.0, 0.45);
     vec3 baseBg = vec3(0.9686, 0.9686, 0.9490);
     gl_FragColor = vec4(mix(baseBg, chroma, ink), ink);
   } else {
-    gl_FragColor = vec4(col, alpha);
+    gl_FragColor = vec4(col, alpha * 0.5);
   }
 }
 `;
