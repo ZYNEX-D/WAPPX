@@ -71,29 +71,33 @@ export async function POST(req: NextRequest) {
         const incomingPhoneNumberId = change.metadata?.phone_number_id;
 
         // 1. Locate the specific user/tenant who owns this phone_number_id!
-        let targetUserId = "default";
+        let targetUserId = "client-1";
         let targetConfig: any = null;
 
         if (incomingPhoneNumberId) {
-          const { data: cfg } = await supabaseAdmin
+          const { data: configs } = await supabaseAdmin
             .from("meta_config")
             .select("*")
-            .eq("phone_number_id", incomingPhoneNumberId)
-            .maybeSingle();
+            .eq("phone_number_id", incomingPhoneNumberId);
 
-          if (cfg) {
-            targetConfig = cfg;
-            targetUserId = cfg.user_id || cfg.id;
+          if (configs && configs.length > 0) {
+            // Prioritize specific client/workspace config over 'default'
+            const specificConfig = configs.find((c) => c.user_id && c.user_id !== "default") || configs[0];
+            targetConfig = specificConfig;
+            targetUserId = specificConfig.user_id || specificConfig.id || "client-1";
           }
         }
 
         if (!targetConfig) {
-          const { data: defaultCfg } = await supabaseAdmin
+          const { data: fallbackConfig } = await supabaseAdmin
             .from("meta_config")
             .select("*")
-            .eq("id", "default")
+            .limit(1)
             .maybeSingle();
-          targetConfig = defaultCfg;
+          if (fallbackConfig) {
+            targetConfig = fallbackConfig;
+            targetUserId = fallbackConfig.user_id || fallbackConfig.id || "client-1";
+          }
         }
 
         let incomingText = "";
@@ -113,11 +117,16 @@ export async function POST(req: NextRequest) {
         const msgId = message.id || `msg-${Date.now()}`;
 
         // 2. Fetch or create contact in Supabase
-        let { data: existingContact } = await supabaseAdmin
+        const { data: contactList } = await supabaseAdmin
           .from("contacts")
           .select("*")
-          .eq("phone", normalizedPhone)
-          .maybeSingle();
+          .eq("phone", normalizedPhone);
+
+        // Prioritize contact assigned to targetUserId, or fallback to first match
+        let existingContact =
+          contactList?.find((c) => c.user_id === targetUserId) ||
+          contactList?.[0] ||
+          null;
 
         if (!existingContact) {
           const newContactId = `c-${Date.now()}`;
@@ -147,7 +156,7 @@ export async function POST(req: NextRequest) {
             existingContact = createdContact;
           }
         } else {
-          // Update contact timestamp, snippet, and user_id
+          // Update contact timestamp, snippet, and ensure it is assigned to targetUserId
           await supabaseAdmin
             .from("contacts")
             .update({
@@ -186,16 +195,16 @@ export async function POST(req: NextRequest) {
               .eq("user_id", targetUserId)
               .order("id", { ascending: true });
 
-            // If user has no custom flows yet, fallback to default flows
+            // If user has no custom flows yet, fallback to client-1 or default flows
             let flowNodes = nodeRows && nodeRows.length > 0 ? nodeRows.map(mapFlowNodeFromRow) : [];
             if (flowNodes.length === 0) {
-              const { data: defaultRows } = await supabaseAdmin
+              const { data: fallbackRows } = await supabaseAdmin
                 .from("flow_nodes")
                 .select("*")
-                .eq("user_id", "default")
+                .or("user_id.eq.client-1,user_id.eq.default")
                 .order("id", { ascending: true });
-              if (defaultRows && defaultRows.length > 0) {
-                flowNodes = defaultRows.map(mapFlowNodeFromRow);
+              if (fallbackRows && fallbackRows.length > 0) {
+                flowNodes = fallbackRows.map(mapFlowNodeFromRow);
               }
             }
 

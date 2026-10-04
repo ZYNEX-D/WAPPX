@@ -209,7 +209,7 @@ export function ClientWorkspace({
         (payload) => {
           const newRow = payload.new as any;
           if (!newRow || !newRow.contact_id) return;
-          if (newRow.user_id && newRow.user_id !== currentClientId) return;
+          if (newRow.user_id && newRow.user_id !== currentClientId && newRow.user_id !== "default") return;
 
           const mappedMsg = mapMessageFromRow(newRow);
           setMessages((prev) => {
@@ -227,7 +227,7 @@ export function ClientWorkspace({
         { event: "*", schema: "public", table: "contacts" },
         (payload) => {
           const row = (payload.new || payload.old) as any;
-          if (row?.user_id && row.user_id !== currentClientId) return;
+          if (row?.user_id && row.user_id !== currentClientId && row.user_id !== "default") return;
 
           if (payload.eventType === "INSERT") {
             const newContact = mapContactFromRow(payload.new as any);
@@ -250,8 +250,54 @@ export function ClientWorkspace({
       )
       .subscribe();
 
+    // Resilient background polling every 3 seconds to guarantee instant message arrival
+    const pollInterval = setInterval(() => {
+      if (!isMounted) return;
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+
+      fetchMessages(currentClientId)
+        .then((latestMsgs) => {
+          if (!isMounted || !latestMsgs) return;
+          setMessages((prev) => {
+            let hasChanged = false;
+            const updated = { ...prev };
+            for (const [cid, msgList] of Object.entries(latestMsgs)) {
+              const currentList = prev[cid] || [];
+              if (
+                currentList.length !== msgList.length ||
+                (msgList.length > 0 && currentList[currentList.length - 1]?.id !== msgList[msgList.length - 1]?.id)
+              ) {
+                updated[cid] = msgList;
+                hasChanged = true;
+              }
+            }
+            return hasChanged ? updated : prev;
+          });
+        })
+        .catch(() => {});
+
+      fetchContacts(currentClientId)
+        .then((latestContacts) => {
+          if (!isMounted || !Array.isArray(latestContacts)) return;
+          setContacts((prev) => {
+            if (prev.length !== latestContacts.length) return latestContacts;
+            const hasSnippetChange = latestContacts.some((lc) => {
+              const match = prev.find((p) => p.id === lc.id);
+              return (
+                !match ||
+                match.lastMessageSnippet !== lc.lastMessageSnippet ||
+                match.lastMessageTime !== lc.lastMessageTime
+              );
+            });
+            return hasSnippetChange ? latestContacts : prev;
+          });
+        })
+        .catch(() => {});
+    }, 3000);
+
     return () => {
       isMounted = false;
+      clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
   }, [currentClientId]);
@@ -670,7 +716,11 @@ export function ClientWorkspace({
           )}
 
           {activeTab === "settings" && (
-            <MetaSettings config={metaConfig} onUpdateConfig={handleUpdateMetaConfig} />
+            <MetaSettings
+              config={metaConfig}
+              clientId={currentClientId}
+              onUpdateConfig={handleUpdateMetaConfig}
+            />
           )}
         </main>
       </div>

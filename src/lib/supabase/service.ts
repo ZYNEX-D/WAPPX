@@ -212,7 +212,7 @@ export async function fetchContacts(userId: string = "client-1"): Promise<Contac
   const { data, error } = await supabase
     .from("contacts")
     .select("*")
-    .eq("user_id", userId)
+    .or(`user_id.eq.${userId},user_id.eq.default`)
     .order("created_at", { ascending: false });
 
   if (error || !Array.isArray(data)) {
@@ -227,7 +227,7 @@ export async function fetchMessages(userId: string = "client-1"): Promise<Record
   const { data, error } = await supabase
     .from("messages")
     .select("*")
-    .eq("user_id", userId)
+    .or(`user_id.eq.${userId},user_id.eq.default`)
     .order("created_at", { ascending: true });
 
   if (error || !Array.isArray(data)) {
