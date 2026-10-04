@@ -389,6 +389,35 @@ export async function sendMetaCatalogOrShowcase({
       console.warn("[Meta Client] Native product card not available on WABA, falling back to showcase:", nativeRes.error);
     }
 
+    // Showcase fallback: If product image is available, send high-res product photo with full card details!
+    if (prod?.imageUrl && (prod.imageUrl.startsWith("http://") || prod.imageUrl.startsWith("https://"))) {
+      const captionText = `🛍️ *${prod.title || catalog.catalogName || "Product"}*${
+        prod.price ? ` (${prod.price})` : ""
+      }\n\n${prod.description || catalog.bodyText || ""}\n\n_Official WhatsApp Business Product_`;
+
+      const imgRes = await sendMetaImageMessage({
+        phoneNumberId,
+        accessToken,
+        recipientPhone,
+        imageUrl: prod.imageUrl,
+        caption: captionText,
+      });
+
+      // Follow up with interactive action buttons
+      await sendMetaInteractiveButtons({
+        phoneNumberId,
+        accessToken,
+        recipientPhone,
+        bodyText: `Interested in *${prod.title || "this package"}*? Choose an option below:`,
+        buttons: [
+          { id: "btn-pricing", title: "💼 Packages & Pricing" },
+          { id: "btn-agent", title: "👤 Talk to Agent" },
+        ],
+      });
+
+      if (imgRes.success) return { ...imgRes, mode: "showcase_image" };
+    }
+
     // Showcase fallback: Rich interactive button card with product details
     const productCardText = `🛍️ *${prod?.title || catalog.catalogName || "Featured Product"}*${
       prod?.price ? ` (${prod.price})` : ""
@@ -438,8 +467,21 @@ export async function sendMetaCatalogOrShowcase({
     nativeRes.error
   );
 
-  // Fallback: Rich WhatsApp Showcase (Interactive Buttons deliver 100% reliably)
+  // Fallback: Rich WhatsApp Showcase with Hero Photo & Interactive Buttons
   const itemsList = catalog.products && catalog.products.length > 0 ? catalog.products : [];
+  
+  // Send hero photo if available
+  const heroImage = itemsList.find((i) => i.imageUrl && (i.imageUrl.startsWith("http://") || i.imageUrl.startsWith("https://")))?.imageUrl;
+  if (heroImage) {
+    await sendMetaImageMessage({
+      phoneNumberId,
+      accessToken,
+      recipientPhone,
+      imageUrl: heroImage,
+      caption: `🛍️ *${catalog.catalogName || "Official Product Catalog"}*\n${catalog.bodyText || "Explore our featured products and services."}`,
+    });
+  }
+
   let showcaseText = `🛍️ *${catalog.catalogName || "Official Product Catalog"}*\n\n${catalog.bodyText || "Explore our collection of packages and products:"}\n\n`;
 
   if (itemsList.length > 0) {

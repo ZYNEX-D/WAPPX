@@ -35,7 +35,7 @@ export function SendCatalogModal({
   onClose,
   onSendCatalog,
   contactName,
-  defaultCatalogId = "1757228632208483",
+  defaultCatalogId = "2080375866175781",
   businessName = "ZYNEX Developments",
   customProducts,
 }: SendCatalogModalProps) {
@@ -62,7 +62,13 @@ export function SendCatalogModal({
     "Here is the product details you requested! You can review the features and add to cart directly:"
   );
 
-  // Sync customProducts if updated
+  // Sync customProducts & defaultCatalogId if updated
+  React.useEffect(() => {
+    if (defaultCatalogId) {
+      setCatalogId(defaultCatalogId);
+    }
+  }, [defaultCatalogId]);
+
   React.useEffect(() => {
     if (customProducts && customProducts.length > 0) {
       setProductsList(customProducts);

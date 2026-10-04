@@ -73,6 +73,7 @@ interface LiveInboxProps {
   onAddNote: (contactId: string, note: string) => void;
   currentUser?: UserWorkspace;
   catalogProducts?: CatalogItem[];
+  defaultCatalogId?: string;
 }
 
 export function LiveInbox({
@@ -87,6 +88,7 @@ export function LiveInbox({
   onAddNote,
   currentUser,
   catalogProducts,
+  defaultCatalogId,
 }: LiveInboxProps) {
   const myAgentName = currentUser?.name
     ? `${currentUser.name.split(" ")[0]} (You)`
@@ -1597,6 +1599,7 @@ export function LiveInbox({
         contactName={selectedContact?.name || "Customer"}
         businessName={currentUser?.name || "ZYNEX Developments"}
         customProducts={catalogProducts}
+        defaultCatalogId={defaultCatalogId}
         onSendCatalog={(catalog, customText) => {
           onSendMessage(
             selectedContact.id,

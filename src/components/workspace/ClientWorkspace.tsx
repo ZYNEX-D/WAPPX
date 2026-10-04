@@ -657,6 +657,7 @@ export function ClientWorkspace({
               onAddNote={handleAddNote}
               currentUser={currentWorkspaceUser}
               catalogProducts={catalogs.flatMap((c) => c.items)}
+              defaultCatalogId={catalogs.find((c) => c.catalogId)?.catalogId || "2080375866175781"}
             />
           )}
 
