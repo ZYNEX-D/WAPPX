@@ -377,12 +377,12 @@ export function LandingPage({
           <div className="max-w-2xl space-y-8 relative z-10">
             <div className="space-y-6">
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#0A504A]/15 shadow-2xs bg-white">
+              {/* <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#0A504A]/15 shadow-2xs bg-white">
                 <span className="w-2 h-2 rounded-full bg-[#00A86B] animate-pulse" />
                 <span className="text-[11px] font-bold text-[#0A504A] tracking-tight">
                   Official WhatsApp Cloud Business Platform
                 </span>
-              </div>
+              </div> */}
 
               {/* Main Headline */}
               <h1 className="font-primary text-5xl md:text-7xl lg:text-8xl font-medium tracking-tight text-[#0A504A] leading-[1.05]">
@@ -395,7 +395,7 @@ export function LandingPage({
               </h1>
 
               {/* Description */}
-              <p className="max-w-xl text-sm md:text-base text-slate-600 leading-relaxed font-normal">
+              <p className="max-w-xl text-sxs md:text-sm text-slate-600 leading-relaxed font-normal">
                 The visual flow builder and live customer intelligence platform for WhatsApp.
                 Connect your business phone in minutes, automate 24/7 customer journeys, and
                 escalate to live human agents with zero message loss.
@@ -965,8 +965,9 @@ export function LandingPage({
         </section>
 
         {/* ========================================================================= */}
-        {/* TESTIMONIALS & STATS (DARK SECTION)                                      */}
+        {/* TESTIMONIALS & STATS (HIDDEN FOR INITIAL LAUNCH)                         */}
         {/* ========================================================================= */}
+        {/* Hidden for early-stage platform launch:
         <section className="py-28 bg-[#0A504A] relative overflow-hidden text-white">
           <div
             className="absolute inset-0 opacity-10 pointer-events-none"
@@ -1002,7 +1003,6 @@ export function LandingPage({
                   </div>
                 </div>
 
-                {/* Slider Controls */}
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() =>
@@ -1023,7 +1023,6 @@ export function LandingPage({
                 </div>
               </div>
 
-              {/* Dynamic Stats Column */}
               <div className="flex flex-row md:flex-col justify-between gap-6 md:gap-0 md:space-y-12 border-t md:border-t-0 md:border-l pt-8 md:pt-0 md:pl-16 border-white/15">
                 {currentTestimonial.stats.map((stat, i) => (
                   <div key={i}>
@@ -1039,6 +1038,7 @@ export function LandingPage({
             </div>
           </div>
         </section>
+        */}
 
         {/* ========================================================================= */}
         {/* TRANSPARENT PRICING                                                       */}
@@ -1060,21 +1060,19 @@ export function LandingPage({
               <div className="mt-6 inline-flex items-center p-1 rounded-full bg-slate-200/80 border border-slate-300">
                 <button
                   onClick={() => setIsYearlyBilling(false)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                    !isYearlyBilling
-                      ? "bg-[#0A504A] text-white shadow-xs"
-                      : "text-slate-600 hover:text-[#0A504A]"
-                  }`}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${!isYearlyBilling
+                    ? "bg-[#0A504A] text-white shadow-xs"
+                    : "text-slate-600 hover:text-[#0A504A]"
+                    }`}
                 >
                   Monthly
                 </button>
                 <button
                   onClick={() => setIsYearlyBilling(true)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    isYearlyBilling
-                      ? "bg-[#0A504A] text-white shadow-xs"
-                      : "text-slate-600 hover:text-[#0A504A]"
-                  }`}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${isYearlyBilling
+                    ? "bg-[#0A504A] text-white shadow-xs"
+                    : "text-slate-600 hover:text-[#0A504A]"
+                    }`}
                 >
                   <span>Yearly</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#00A86B] text-white font-bold">
@@ -1089,11 +1087,10 @@ export function LandingPage({
               {/* Individual / Starter */}
               <div
                 onClick={() => setSelectedPricing("hobby")}
-                className={`p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${
-                  selectedPricing === "hobby"
-                    ? "bg-white border-[#00A86B] shadow-xl scale-[1.02] ring-2 ring-[#00A86B]/20"
-                    : "bg-white/70 border-slate-200 opacity-75 hover:opacity-100"
-                }`}
+                className={`p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${selectedPricing === "hobby"
+                  ? "bg-white border-[#00A86B] shadow-xl scale-[1.02] ring-2 ring-[#00A86B]/20"
+                  : "bg-white/70 border-slate-200 opacity-75 hover:opacity-100"
+                  }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
@@ -1138,11 +1135,10 @@ export function LandingPage({
               {/* Pro / Recommended */}
               <div
                 onClick={() => setSelectedPricing("pro")}
-                className={`p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${
-                  selectedPricing === "pro"
-                    ? "bg-[#0A504A] text-white shadow-2xl scale-[1.04] ring-2 ring-[#00A86B]"
-                    : "bg-[#0A504A]/90 text-white/90"
-                }`}
+                className={`p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${selectedPricing === "pro"
+                  ? "bg-[#0A504A] text-white shadow-2xl scale-[1.04] ring-2 ring-[#00A86B]"
+                  : "bg-[#0A504A]/90 text-white/90"
+                  }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
@@ -1194,11 +1190,10 @@ export function LandingPage({
               {/* Enterprise */}
               <div
                 onClick={() => setSelectedPricing("ent")}
-                className={`p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${
-                  selectedPricing === "ent"
-                    ? "bg-white border-[#00A86B] shadow-xl scale-[1.02] ring-2 ring-[#00A86B]/20"
-                    : "bg-white/70 border-slate-200 opacity-75 hover:opacity-100"
-                }`}
+                className={`p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${selectedPricing === "ent"
+                  ? "bg-white border-[#00A86B] shadow-xl scale-[1.02] ring-2 ring-[#00A86B]/20"
+                  : "bg-white/70 border-slate-200 opacity-75 hover:opacity-100"
+                  }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
