@@ -236,41 +236,61 @@ export async function deleteClientAccount(clientId: string): Promise<boolean> {
 // ==================== DATA FETCHING ====================
 
 export async function fetchContacts(userId: string = "client-1"): Promise<Contact[]> {
-  const { data, error } = await supabase
-    .from("contacts")
-    .select("*")
-    .or(`user_id.eq.${userId},user_id.eq.default`)
-    .order("created_at", { ascending: false });
+  try {
+    const cleanUserId = (userId && typeof userId === "string" && userId.trim()) ? userId.trim() : "client-1";
+    const { data, error } = await supabase
+      .from("contacts")
+      .select("*")
+      .or(`user_id.eq.${cleanUserId},user_id.eq.default`)
+      .order("created_at", { ascending: false });
 
-  if (error || !Array.isArray(data)) {
-    console.error("Error fetching contacts from Supabase:", error);
+    if (error) {
+      console.warn("Could not fetch contacts from Supabase:", error.message || error.details || error.code || "Network error");
+      return [];
+    }
+
+    if (!Array.isArray(data)) {
+      return [];
+    }
+
+    return data.map(mapContactFromRow);
+  } catch (err: any) {
+    console.warn("fetchContacts network error:", err?.message || "Failed to reach Supabase");
     return [];
   }
-
-  return data.map(mapContactFromRow);
 }
 
 export async function fetchMessages(userId: string = "client-1"): Promise<Record<string, Message[]>> {
-  const { data, error } = await supabase
-    .from("messages")
-    .select("*")
-    .or(`user_id.eq.${userId},user_id.eq.default`)
-    .order("created_at", { ascending: true });
+  try {
+    const cleanUserId = (userId && typeof userId === "string" && userId.trim()) ? userId.trim() : "client-1";
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*")
+      .or(`user_id.eq.${cleanUserId},user_id.eq.default`)
+      .order("created_at", { ascending: true });
 
-  if (error || !Array.isArray(data)) {
-    console.error("Error fetching messages from Supabase:", error);
+    if (error) {
+      console.warn("Could not fetch messages from Supabase:", error.message || error.details || error.code || "Network error");
+      return {};
+    }
+
+    if (!Array.isArray(data)) {
+      return {};
+    }
+
+    const grouped: Record<string, Message[]> = {};
+    for (const row of data) {
+      const msg = mapMessageFromRow(row);
+      const cid = row.contact_id;
+      if (!grouped[cid]) grouped[cid] = [];
+      grouped[cid].push(msg);
+    }
+
+    return grouped;
+  } catch (err: any) {
+    console.warn("fetchMessages network error:", err?.message || "Failed to reach Supabase");
     return {};
   }
-
-  const grouped: Record<string, Message[]> = {};
-  for (const row of data) {
-    const msg = mapMessageFromRow(row);
-    const cid = row.contact_id;
-    if (!grouped[cid]) grouped[cid] = [];
-    grouped[cid].push(msg);
-  }
-
-  return grouped;
 }
 
 export async function fetchFlowNodes(userId: string = "client-1"): Promise<FlowNode[]> {
