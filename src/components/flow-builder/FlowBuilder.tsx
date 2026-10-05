@@ -67,6 +67,7 @@ import {
   FolderPlus,
   Star,
   Wand2,
+  Code2,
 } from "lucide-react";
 
 // =========================================================================
@@ -1057,6 +1058,7 @@ function FlowBuilderInner({
   const [isFlowDropdownOpen, setIsFlowDropdownOpen] = useState(false);
   const [flowSearchQuery, setFlowSearchQuery] = useState("");
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [aiModalInitialTab, setAiModalInitialTab] = useState<"instruction" | "import" | "export">("instruction");
 
   // Professional Modals (Zero window.alert/prompt/confirm)
   const [flowToDelete, setFlowToDelete] = useState<BotFlow | null>(null);
@@ -1586,6 +1588,65 @@ function FlowBuilderInner({
   const onNodeDragStop = useCallback(() => {
     pushHistorySnapshot(rfNodesRef.current, rfEdgesRef.current);
   }, [pushHistorySnapshot]);
+
+  // Helper to extract clean FlowNode[] from current canvas state (for Save, Simulator & AI Export)
+  const getCurrentFlowNodes = (): FlowNode[] => {
+    const currentNodes = rfNodesRef.current;
+    const currentEdges = rfEdgesRef.current;
+
+    return currentNodes.map((node) => {
+      const matchingEdge = currentEdges.find((e) => e.source === node.id && !e.sourceHandle);
+
+      const nodeButtons = node.data.buttons
+        ? node.data.buttons.map((btn, idx) => {
+            const btnEdge = currentEdges.find(
+              (e) => e.source === node.id && e.sourceHandle === (btn.id || `btn-${idx}`)
+            );
+            return {
+              ...btn,
+              nextNodeId: btnEdge ? btnEdge.target : undefined,
+            };
+          })
+        : undefined;
+
+      const nodeListItems = node.data.listItems
+        ? node.data.listItems.map((li, idx) => {
+            const liEdge = currentEdges.find(
+              (e) => e.source === node.id && e.sourceHandle === (li.id || `list-${idx}`)
+            );
+            return {
+              ...li,
+              nextNodeId: liEdge ? liEdge.target : undefined,
+            };
+          })
+        : undefined;
+
+      return {
+        id: node.id,
+        type: (node.type || "message") as FlowNodeType,
+        title: String(node.data.title || "Custom Node"),
+        content: String(node.data.content || ""),
+        triggerKeywords: node.data.triggerKeywords || undefined,
+        contactType: node.data.contactType,
+        triggerType: node.data.triggerType,
+        buttons: nodeButtons,
+        listItems: nodeListItems,
+        mediaUrl: node.data.mediaUrl,
+        caption: node.data.caption,
+        delayDuration: node.data.delayDuration,
+        templateName: node.data.templateName,
+        url: node.data.url,
+        urlButtonText: node.data.urlButtonText,
+        location: node.data.location,
+        targetFlowId: node.data.targetFlowId,
+        notifyChannel: node.data.notifyChannel,
+        notifyTarget: node.data.notifyTarget,
+        catalog: node.data.catalog as CatalogPayload | undefined,
+        nextNodeId: matchingEdge ? matchingEdge.target : undefined,
+        position: { x: Math.round(node.position.x), y: Math.round(node.position.y) },
+      };
+    });
+  };
 
   // Sync React Flow state back to FlowNode[] and save
   const handleSaveAllNodes = async () => {
@@ -2269,12 +2330,29 @@ function FlowBuilderInner({
           {/* AI FLOW ARCHITECT BUTTON */}
           <button
             type="button"
-            onClick={() => setIsAiModalOpen(true)}
+            onClick={() => {
+              setAiModalInitialTab("instruction");
+              setIsAiModalOpen(true);
+            }}
             className="px-3.5 py-2 bg-gradient-to-r from-[#0A504A] via-[#00A86B] to-[#0A504A] hover:brightness-110 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer transition-all border border-emerald-400/30 group"
             title="Open AI Flow Architect (Copy instruction prompts & generate flows from code)"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#A2E4B8] group-hover:rotate-12 transition-transform" />
             <span className="tracking-wide">AI Flow Assistant</span>
+          </button>
+
+          {/* EXPORT FLOW CODE BUTTON */}
+          <button
+            type="button"
+            onClick={() => {
+              setAiModalInitialTab("export");
+              setIsAiModalOpen(true);
+            }}
+            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-[#0A504A] border border-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
+            title="Export flow code in AI-compatible JSON format to copy or download"
+          >
+            <Code2 className="w-3.5 h-3.5 text-[#00A86B]" />
+            <span className="hidden sm:inline">Export Code</span>
           </button>
 
           {/* Add a Step Drawer Toggle */}
@@ -3496,12 +3574,15 @@ function FlowBuilderInner({
         )}
       </div>
 
-      {/* AI FLOW ARCHITECT MODAL (System Prompt & Flow Generator) */}
+      {/* AI FLOW ARCHITECT & EXPORT MODAL */}
       <AiFlowGeneratorModal
         isOpen={isAiModalOpen}
         onClose={() => setIsAiModalOpen(false)}
         onApplyFlow={handleApplyAiFlow}
         currentFlowCount={flows ? flows.length : 1}
+        initialTab={aiModalInitialTab}
+        currentFlowName={currentFlow?.name || flowName}
+        currentNodes={getCurrentFlowNodes()}
       />
 
       {/* ========================================================================= */}

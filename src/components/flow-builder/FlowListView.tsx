@@ -19,6 +19,7 @@ import {
   X,
   AlertCircle,
   HelpCircle,
+  Code2,
 } from "lucide-react";
 
 interface FlowListViewProps {
@@ -61,6 +62,8 @@ export function FlowListView({
 
   const [flowToDelete, setFlowToDelete] = useState<BotFlow | null>(null);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [aiModalInitialTab, setAiModalInitialTab] = useState<"instruction" | "import" | "export">("instruction");
+  const [flowToExport, setFlowToExport] = useState<BotFlow | null>(null);
 
   // Toast state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -220,7 +223,11 @@ export function FlowListView({
             {/* AI Flow Assistant Button */}
             <button
               type="button"
-              onClick={() => setIsAiModalOpen(true)}
+              onClick={() => {
+                setFlowToExport(null);
+                setAiModalInitialTab("instruction");
+                setIsAiModalOpen(true);
+              }}
               className="px-3.5 py-2 rounded-xl text-xs font-light text-emerald-800 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-200/80 transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
@@ -430,6 +437,20 @@ export function FlowListView({
                       <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                     </button>
 
+                    {/* Export AI Code button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFlowToExport(flow);
+                        setAiModalInitialTab("export");
+                        setIsAiModalOpen(true);
+                      }}
+                      className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100/70 flex items-center justify-center transition-colors cursor-pointer"
+                      title="Export AI code format (JSON)"
+                    >
+                      <Code2 className="w-3.5 h-3.5" />
+                    </button>
+
                     {/* Duplicate button */}
                     <button
                       type="button"
@@ -626,9 +647,15 @@ export function FlowListView({
       {/* AI FLOW ARCHITECT MODAL */}
       <AiFlowGeneratorModal
         isOpen={isAiModalOpen}
-        onClose={() => setIsAiModalOpen(false)}
+        onClose={() => {
+          setIsAiModalOpen(false);
+          setFlowToExport(null);
+        }}
         onApplyFlow={handleApplyAiFlow}
         currentFlowCount={flows.length}
+        initialTab={aiModalInitialTab}
+        currentFlowName={flowToExport?.name}
+        currentNodes={flowToExport?.nodes}
       />
 
       {/* MINIMAL TOAST NOTIFICATION */}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { FlowNode } from "@/types/whatsapp";
 import {
   Sparkles,
@@ -25,6 +25,7 @@ import {
   Building2,
   Briefcase,
   Headphones,
+  Download,
 } from "lucide-react";
 
 interface AiFlowGeneratorModalProps {
@@ -36,6 +37,9 @@ interface AiFlowGeneratorModalProps {
     mode: "replace" | "append" | "new_flow"
   ) => void;
   currentFlowCount: number;
+  initialTab?: "instruction" | "import" | "export";
+  currentFlowName?: string;
+  currentNodes?: FlowNode[];
 }
 
 const AI_MASTER_PROMPT = `You are an expert WhatsApp Flow Architect for the WAPPX WhatsApp Business Platform.
@@ -190,13 +194,143 @@ export function AiFlowGeneratorModal({
   onClose,
   onApplyFlow,
   currentFlowCount,
+  initialTab,
+  currentFlowName,
+  currentNodes,
 }: AiFlowGeneratorModalProps) {
-  const [activeTab, setActiveTab] = useState<"instruction" | "import">("instruction");
+  const [activeTab, setActiveTab] = useState<"instruction" | "import" | "export">(initialTab || "instruction");
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [copiedTemplateId, setCopiedTemplateId] = useState<string | null>(null);
   const [aiCodeInput, setAiCodeInput] = useState("");
   const [importMode, setImportMode] = useState<"replace" | "append" | "new_flow">("replace");
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [includeMarkdownFences, setIncludeMarkdownFences] = useState(true);
+  const [copiedExportCode, setCopiedExportCode] = useState(false);
+
+  useEffect(() => {
+    if (initialTab && isOpen) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab, isOpen]);
+
+  // Formatted export code
+  const formattedExportCode = useMemo(() => {
+    const nodesToExport = currentNodes && currentNodes.length > 0 ? currentNodes : [];
+
+    // Find trigger keywords from trigger node(s)
+    const triggerNode = nodesToExport.find((n) => n.type === "trigger");
+    const keywords = triggerNode?.triggerKeywords || ["hi", "hello", "menu"];
+
+    // Clean nodes to conform strictly to AI format
+    const cleanedNodes = nodesToExport.map((node) => {
+      const obj: Record<string, any> = {
+        id: node.id,
+        type: node.type,
+        title: node.title,
+      };
+
+      if (node.content) obj.content = node.content;
+      if (node.triggerKeywords && node.triggerKeywords.length > 0) obj.triggerKeywords = node.triggerKeywords;
+      if (node.contactType) obj.contactType = node.contactType;
+      if (node.triggerType) obj.triggerType = node.triggerType;
+
+      if (node.buttons && node.buttons.length > 0) {
+        obj.buttons = node.buttons.map((b) => ({
+          id: b.id,
+          title: b.title,
+          ...(b.nextNodeId ? { nextNodeId: b.nextNodeId } : {}),
+        }));
+      }
+
+      if (node.listItems && node.listItems.length > 0) {
+        obj.listItems = node.listItems.map((li) => ({
+          id: li.id,
+          title: li.title,
+          ...(li.description ? { description: li.description } : {}),
+          ...(li.nextNodeId ? { nextNodeId: li.nextNodeId } : {}),
+        }));
+      }
+
+      if (node.mediaUrl) obj.mediaUrl = node.mediaUrl;
+      if (node.caption) obj.caption = node.caption;
+      if (node.delayDuration) obj.delayDuration = node.delayDuration;
+      if (node.templateName) obj.templateName = node.templateName;
+      if (node.url) obj.url = node.url;
+      if (node.urlButtonText) obj.urlButtonText = node.urlButtonText;
+      if (node.location) obj.location = node.location;
+      if (node.notifyChannel) obj.notifyChannel = node.notifyChannel;
+      if (node.notifyTarget) obj.notifyTarget = node.notifyTarget;
+      if (node.targetFlowId) obj.targetFlowId = node.targetFlowId;
+      if (node.catalog) obj.catalog = node.catalog;
+      if (node.nextNodeId) obj.nextNodeId = node.nextNodeId;
+
+      return obj;
+    });
+
+    const exportPayload = {
+      flowName: currentFlowName || "WAPPX Bot Flow",
+      description: "Interactive WhatsApp bot flow exported from WAPPX Flow Builder",
+      triggerKeywords: keywords,
+      nodes: cleanedNodes,
+    };
+
+    const rawJson = JSON.stringify(exportPayload, null, 2);
+    if (includeMarkdownFences) {
+      return "```json\n" + rawJson + "\n```";
+    }
+    return rawJson;
+  }, [currentNodes, currentFlowName, includeMarkdownFences]);
+
+  const handleCopyExportCode = async () => {
+    try {
+      await navigator.clipboard.writeText(formattedExportCode);
+      setCopiedExportCode(true);
+      setTimeout(() => setCopiedExportCode(false), 2500);
+    } catch (e) {
+      console.error("Failed to copy export code:", e);
+    }
+  };
+
+  const handleDownloadExportJson = () => {
+    const rawJson = formattedExportCode.replace(/^```json\n/, "").replace(/\n```$/, "");
+    const blob = new Blob([rawJson], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const filename = `${(currentFlowName || "flow").toLowerCase().replace(/[^a-z0-9_-]/g, "-")}.json`;
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePasteToImporter = () => {
+    setAiCodeInput(formattedExportCode);
+    setActiveTab("import");
+  };
+
+  const handleCopyPromptWithCode = async () => {
+    const rawJson = formattedExportCode.replace(/^```json\n/, "").replace(/\n```$/, "");
+    const fullText =
+`You are an expert WhatsApp Flow Architect for WAPPX.
+Here is my current WhatsApp bot flow code in JSON format:
+
+\`\`\`json
+${rawJson}
+\`\`\`
+
+### MY MODIFICATION INSTRUCTION:
+[Please explain what you want to add or change in this flow, e.g. "Add a team notification step", "Add another option button", "Add a catalog showcase"]
+
+Please respond ONLY with the updated JSON code wrapped in a \`\`\`json ... \`\`\` block according to the WAPPX Flow schema.`;
+
+    try {
+      await navigator.clipboard.writeText(fullText);
+      setCopiedExportCode(true);
+      setTimeout(() => setCopiedExportCode(false), 2500);
+    } catch {}
+  };
 
   // Copy master prompt
   const handleCopyMasterPrompt = async (customAddition?: string) => {
@@ -519,6 +653,20 @@ export function AiFlowGeneratorModal({
             {parsedAnalysis?.valid && (
               <span className="w-2 h-2 rounded-full bg-[#00A86B] animate-ping" />
             )}
+          </button>
+          <button
+            onClick={() => setActiveTab("export")}
+            className={`px-4 py-2.5 text-xs font-bold rounded-t-xl flex items-center gap-2 transition-all cursor-pointer border-t border-x ${
+              activeTab === "export"
+                ? "bg-white text-[#0A504A] border-slate-200 shadow-xs -mb-[1px]"
+                : "bg-transparent text-slate-500 border-transparent hover:text-slate-800"
+            }`}
+          >
+            <FileCode className="w-4 h-4 text-[#00A86B]" />
+            <span>3. Export Flow Code (AI Format)</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 font-semibold">
+              {currentNodes?.length || 0} steps
+            </span>
           </button>
         </div>
 
@@ -850,6 +998,157 @@ export function AiFlowGeneratorModal({
               </div>
             </div>
           )}
+
+          {/* ========================================================================= */}
+          {/* TAB 3: EXPORT FLOW CODE (AI JSON FORMAT)                                  */}
+          {/* ========================================================================= */}
+          {activeTab === "export" && (
+            <div className="space-y-6">
+              {/* Informative Header Banner */}
+              <div className="p-4 rounded-xl bg-[#00A86B]/5 border border-[#00A86B]/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#00A86B]/15 text-[#00A86B] flex items-center justify-center shrink-0 font-bold text-xs mt-0.5">
+                    <FileCode className="w-4 h-4" />
+                  </div>
+                  <div className="text-xs text-slate-600 space-y-1">
+                    <p className="font-bold text-[#0A504A]">AI-Compatible Export Format:</p>
+                    <p>
+                      This code is formatted in the exact JSON schema that AI models (ChatGPT, Claude, Gemini) generate and that our system imports.
+                      You can copy it, download it as a <strong>.json</strong> file, or feed it into ChatGPT to modify or extend your flow.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleDownloadExportJson}
+                    className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Download .json</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCopyExportCode}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+                      copiedExportCode
+                        ? "bg-[#00A86B] text-white"
+                        : "bg-[#0A504A] hover:bg-[#00A86B] text-white"
+                    }`}
+                  >
+                    {copiedExportCode ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span>Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        <span>Copy Code</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Format Options & Flow Stats */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 text-slate-600">
+                  <span className="font-semibold text-slate-900">{currentFlowName || "Current Flow"}:</span>
+                  <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-mono">
+                    {currentNodes?.length || 0} nodes
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px]">
+                    100% AI Schema Compatible
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-slate-600 select-none">
+                    <input
+                      type="checkbox"
+                      checked={includeMarkdownFences}
+                      onChange={(e) => setIncludeMarkdownFences(e.target.checked)}
+                      className="rounded text-[#00A86B] focus:ring-[#00A86B]"
+                    />
+                    <span>Wrap in ```json codeblock</span>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={handlePasteToImporter}
+                    className="text-[#00A86B] hover:text-[#0A504A] font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Load this exported code directly into Tab 2 Importer"
+                  >
+                    <Wand2 className="w-3.5 h-3.5" />
+                    <span>Paste into Importer (Tab 2)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Code Display Area */}
+              <div className="relative rounded-2xl border border-slate-200 bg-slate-900 text-slate-100 overflow-hidden shadow-md">
+                <div className="px-4 py-2.5 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80 inline-block" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80 inline-block" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block" />
+                    <span className="ml-2 font-mono text-[11px] text-slate-300">
+                      {(currentFlowName || "flow").toLowerCase().replace(/[^a-z0-9_-]/g, "-")}.json
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={handleCopyExportCode}
+                    className="hover:text-white flex items-center gap-1 text-[11px] cursor-pointer"
+                  >
+                    {copiedExportCode ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-emerald-400">Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copy Code</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="p-4 max-h-[360px] overflow-y-auto no-scrollbar font-mono text-[11.5px] leading-relaxed select-all">
+                  <pre className="text-emerald-300 whitespace-pre font-mono">
+                    {formattedExportCode}
+                  </pre>
+                </div>
+              </div>
+
+              {/* AI Modification Assistant Helper */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#00A86B]" />
+                    <span>How to use this code with AI (ChatGPT / Claude / Gemini)</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyPromptWithCode}
+                    className="text-xs font-bold text-[#0A504A] hover:text-[#00A86B] flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy Full AI Prompt + Code</span>
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Want to modify or expand this flow with AI? Copy the code and ask ChatGPT:
+                  <span className="block mt-1 p-2 rounded-lg bg-white border border-slate-200 font-mono text-[11px] text-slate-700">
+                    &quot;Here is my existing WhatsApp bot flow JSON. Please add a product feedback rating step with buttons after the order tracking message, then return the complete updated JSON.&quot;
+                  </span>
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* MODAL FOOTER */}
@@ -870,6 +1169,38 @@ export function AiFlowGeneratorModal({
                 <span>Continue to Import & Generate</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
+            ) : activeTab === "export" ? (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleDownloadExportJson}
+                  className="px-4 py-2 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                >
+                  <Download className="w-4 h-4 text-emerald-600" />
+                  <span>Download .json</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopyExportCode}
+                  className={`px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer ${
+                    copiedExportCode
+                      ? "bg-emerald-600 text-white"
+                      : "bg-[#0A504A] hover:bg-[#00A86B] text-white"
+                  }`}
+                >
+                  {copiedExportCode ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Copied AI Code!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      <span>Copy AI Code to Clipboard</span>
+                    </>
+                  )}
+                </button>
+              </div>
             ) : (
               <button
                 onClick={handleApply}

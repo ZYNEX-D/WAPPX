@@ -387,27 +387,73 @@ export async function POST(req: NextRequest) {
             });
 
               if (botResult) {
-                const { replyMessage, updatedContact } = botResult;
+                const { replyMessage, additionalMessages, updatedContact } = botResult;
+                const allMessagesToSend = [replyMessage, ...(additionalMessages || [])];
 
-                // Save bot response to messages
-                await supabaseAdmin.from("messages").insert({
-                  id: replyMessage.id,
-                  user_id: targetUserId,
-                  contact_id: existingContact.id,
-                  sender: "bot",
-                  sender_name: replyMessage.senderName || "Automated Bot",
-                  text: replyMessage.text,
-                  timestamp: replyMessage.timestamp,
-                  status: "delivered",
-                  buttons: replyMessage.buttons ? (replyMessage.buttons as any) : null,
-                  catalog: replyMessage.catalog ? (replyMessage.catalog as any) : null,
-                  is_internal_note: false,
-                });
+                // Dispatch out to Meta Cloud API using this user's token and phone number ID
+                const activeToken = targetConfig?.access_token;
+                const activePhoneId = targetConfig?.phone_number_id || incomingPhoneNumberId;
 
-                // Update contact state (status, is_bot_active, snippet)
-                const snippet = replyMessage.catalog
-                  ? `🛍️ ${replyMessage.catalog.catalogName || "WhatsApp Catalog"}`
-                  : replyMessage.text;
+                for (const msgToSend of allMessagesToSend) {
+                  // Save bot response to messages
+                  await supabaseAdmin.from("messages").insert({
+                    id: msgToSend.id,
+                    user_id: targetUserId,
+                    contact_id: existingContact.id,
+                    sender: msgToSend.isInternalNote ? "agent" : "bot",
+                    sender_name: msgToSend.senderName || (msgToSend.isInternalNote ? "Team Alert" : "Automated Bot"),
+                    text: msgToSend.text,
+                    timestamp: msgToSend.timestamp,
+                    status: "delivered",
+                    buttons: msgToSend.buttons ? (msgToSend.buttons as any) : null,
+                    catalog: msgToSend.catalog ? (msgToSend.catalog as any) : null,
+                    media_url: msgToSend.mediaUrl || null,
+                    media_type: msgToSend.mediaType || null,
+                    is_internal_note: !!msgToSend.isInternalNote,
+                  });
+
+                  if (!msgToSend.isInternalNote && activePhoneId && activeToken && !activeToken.startsWith("EAA...")) {
+                    try {
+                      if (msgToSend.catalog) {
+                        await sendMetaCatalogOrShowcase({
+                          phoneNumberId: activePhoneId,
+                          accessToken: activeToken,
+                          recipientPhone: normalizedPhone,
+                          catalog: msgToSend.catalog,
+                          fallbackText: msgToSend.text || "View our product catalog",
+                        });
+                      } else if (msgToSend.buttons && msgToSend.buttons.length > 0) {
+                        await sendMetaInteractiveButtons({
+                          phoneNumberId: activePhoneId,
+                          accessToken: activeToken,
+                          recipientPhone: normalizedPhone,
+                          bodyText: msgToSend.text || "Please select an option:",
+                          buttons: msgToSend.buttons,
+                        });
+                      } else if (msgToSend.text && msgToSend.text.trim().length > 0) {
+                        await sendMetaTextMessage({
+                          phoneNumberId: activePhoneId,
+                          accessToken: activeToken,
+                          recipientPhone: normalizedPhone,
+                          text: msgToSend.text,
+                        });
+                      }
+                    } catch (dispatchErr) {
+                      console.error("[Meta Webhook] Error sending outbound message to Meta:", dispatchErr);
+                    }
+
+                    // Small pause between outbound messages to ensure correct arrival sequence on client's WhatsApp
+                    if (allMessagesToSend.length > 1) {
+                      await new Promise((resolve) => setTimeout(resolve, 600));
+                    }
+                  }
+                }
+
+                // Update contact state (status, is_bot_active, snippet, notes, tags)
+                const lastMsg = allMessagesToSend.filter((m) => !m.isInternalNote).slice(-1)[0] || allMessagesToSend[allMessagesToSend.length - 1];
+                const snippet = lastMsg?.catalog
+                  ? `🛍️ ${lastMsg.catalog.catalogName || "WhatsApp Catalog"}`
+                  : lastMsg?.text || "Interactive Flow";
 
                 await supabaseAdmin
                   .from("contacts")
@@ -415,43 +461,14 @@ export async function POST(req: NextRequest) {
                     status: updatedContact.status,
                     is_bot_active: updatedContact.isBotActive,
                     assigned_agent: updatedContact.assignedAgent || null,
+                    tags: updatedContact.tags || [],
                     last_message_snippet: snippet,
-                    last_message_time: replyMessage.timestamp,
+                    last_message_time: lastMsg?.timestamp || replyMessage.timestamp,
                     current_flow_node_id: updatedContact.currentFlowNodeId || null,
+                    notes: updatedContact.notes || [],
                     updated_at: new Date().toISOString(),
                   })
                   .eq("id", existingContact.id);
-
-                // Dispatch out to Meta Cloud API using this user's token and phone number ID
-                const activeToken = targetConfig?.access_token;
-                const activePhoneId = targetConfig?.phone_number_id || incomingPhoneNumberId;
-
-                if (activePhoneId && activeToken && !activeToken.startsWith("EAA...")) {
-                  if (replyMessage.catalog) {
-                    await sendMetaCatalogOrShowcase({
-                      phoneNumberId: activePhoneId,
-                      accessToken: activeToken,
-                      recipientPhone: normalizedPhone,
-                      catalog: replyMessage.catalog,
-                      fallbackText: replyMessage.text,
-                    });
-                  } else if (replyMessage.buttons && replyMessage.buttons.length > 0) {
-                    await sendMetaInteractiveButtons({
-                      phoneNumberId: activePhoneId,
-                      accessToken: activeToken,
-                      recipientPhone: normalizedPhone,
-                      bodyText: replyMessage.text,
-                      buttons: replyMessage.buttons,
-                    });
-                  } else {
-                    await sendMetaTextMessage({
-                      phoneNumberId: activePhoneId,
-                      accessToken: activeToken,
-                      recipientPhone: normalizedPhone,
-                      text: replyMessage.text,
-                    });
-                  }
-                }
               }
             }
           }

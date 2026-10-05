@@ -14,6 +14,7 @@ import {
   UserCheck,
   Bot,
   AlertCircle,
+  Bell,
   Check,
   CheckCheck,
   Tag,
@@ -351,7 +352,14 @@ export function LiveInbox({
 
     if (!matchesSearch) return false;
 
-    if (filterTab === "human") return c.status === "pending_human";
+    if (filterTab === "human") {
+      const isUnassigned =
+        !c.assignedAgent ||
+        c.assignedAgent === "Unassigned" ||
+        c.assignedAgent.toLowerCase().includes("unassigned") ||
+        c.assignedAgent.startsWith("Team");
+      return (c.status === "pending_human" || c.tags?.includes("Team Alert")) && isUnassigned;
+    }
     if (filterTab === "bot") return c.isBotActive;
     if (filterTab === "mine") return c.assignedAgent?.includes("You");
     return true;
@@ -648,7 +656,14 @@ export function LiveInbox({
               <span>Needs Human</span>
               <span className={`text-[10px] px-1 rounded-full ${filterTab === "human" ? "bg-white/25" : "bg-rose-200/60"
                 }`}>
-                {contacts.filter((c) => c.status === "pending_human").length}
+                {contacts.filter((c) => {
+                  const isUnassigned =
+                    !c.assignedAgent ||
+                    c.assignedAgent === "Unassigned" ||
+                    c.assignedAgent.toLowerCase().includes("unassigned") ||
+                    c.assignedAgent.startsWith("Team");
+                  return (c.status === "pending_human" || c.tags?.includes("Team Alert")) && isUnassigned;
+                }).length}
               </span>
             </button>
             <button
@@ -682,23 +697,51 @@ export function LiveInbox({
           ) : (
             filteredContacts.map((contact) => {
               const isSelected = selectedContact?.id === contact.id;
-              const isNeedsHuman = contact.status === "pending_human";
+              const isUnassigned =
+                !contact.assignedAgent ||
+                contact.assignedAgent === "Unassigned" ||
+                contact.assignedAgent.toLowerCase().includes("unassigned") ||
+                contact.assignedAgent.startsWith("Team");
+              const isTeamAlert =
+                (contact.tags?.includes("Team Alert") ||
+                  contact.tags?.some((t) => t.toLowerCase() === "team alert")) &&
+                isUnassigned;
+              const isNeedsHuman = contact.status === "pending_human" && isUnassigned;
+              const isHighlightAlert = isTeamAlert || isNeedsHuman;
 
               return (
                 <div
                   key={contact.id}
                   onClick={() => handleSelectContactMobile(contact.id)}
-                  className={`px-3.5 py-3 flex items-start gap-3 cursor-pointer transition-all ${isSelected
-                    ? "bg-emerald-50/70 border-l-[3px] border-emerald-600"
-                    : "hover:bg-slate-50/80"
-                    }`}
+                  className={`px-3.5 py-3 flex items-start gap-3 cursor-pointer transition-all ${
+                    isSelected
+                      ? isHighlightAlert
+                        ? "bg-amber-50/90 border-l-[3.5px] border-amber-500 ring-1 ring-amber-300/60 shadow-xs"
+                        : "bg-emerald-50/70 border-l-[3px] border-emerald-600"
+                      : isHighlightAlert
+                      ? "bg-amber-50/40 border-l-[3.5px] border-amber-400 hover:bg-amber-100/50 ring-1 ring-amber-200/50"
+                      : "hover:bg-slate-50/80"
+                  }`}
                 >
                   {/* Avatar */}
                   <div className="relative shrink-0 mt-0.5">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-100/80 to-emerald-200/60 text-emerald-900 border border-emerald-200 flex items-center justify-center font-medium text-xs select-none">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs select-none ${
+                        isHighlightAlert
+                          ? "bg-gradient-to-br from-amber-100 to-amber-200 text-amber-900 border border-amber-300 shadow-2xs"
+                          : "bg-gradient-to-br from-emerald-100/80 to-emerald-200/60 text-emerald-900 border border-emerald-200"
+                      }`}
+                    >
                       {contact.name.slice(0, 2).toUpperCase()}
                     </div>
-                    {contact.isBotActive ? (
+                    {isHighlightAlert ? (
+                      <span
+                        className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] ring-2 ring-white shadow-2xs animate-bounce"
+                        title="Team Alert: Needs Agent Assignment"
+                      >
+                        <Bell className="w-2.5 h-2.5 fill-current" />
+                      </span>
+                    ) : contact.isBotActive ? (
                       <span
                         className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] ring-2 ring-white"
                         title="Bot engine active"
@@ -716,11 +759,22 @@ export function LiveInbox({
                   {/* Info Column */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
-                      <h2 className="text-[13.5px] font-medium text-slate-900 truncate">
-                        {contact.name}
-                      </h2>
-                      <span className={`text-[11px] shrink-0 font-medium ${isNeedsHuman ? "text-rose-600 font-bold" : "text-slate-400"
-                        }`}>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <h2 className="text-[13.5px] font-medium text-slate-900 truncate">
+                          {contact.name}
+                        </h2>
+                        {isHighlightAlert && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-extrabold bg-amber-500 text-white shadow-2xs tracking-wide shrink-0">
+                            <Bell className="w-2.5 h-2.5 fill-current" />
+                            {isTeamAlert ? "Team Alert" : "Needs Agent"}
+                          </span>
+                        )}
+                      </div>
+                      <span
+                        className={`text-[11px] shrink-0 font-medium ${
+                          isHighlightAlert ? "text-amber-700 font-bold" : "text-slate-400"
+                        }`}
+                      >
                         {contact.lastMessageTime}
                       </span>
                     </div>
@@ -731,10 +785,10 @@ export function LiveInbox({
 
                     {/* Status & Tag Chips */}
                     <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                      {isNeedsHuman ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
-                          Handoff
+                      {isHighlightAlert ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 shadow-2xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                          Unassigned
                         </span>
                       ) : contact.isBotActive ? (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
@@ -749,7 +803,11 @@ export function LiveInbox({
                       {contact.tags.slice(0, 2).map((t) => (
                         <span
                           key={t}
-                          className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-50 text-slate-500 border border-slate-200/60 truncate"
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-medium border truncate ${
+                            t === "Team Alert"
+                              ? "bg-amber-100/70 text-amber-800 border-amber-300 font-bold"
+                              : "bg-slate-50 text-slate-500 border-slate-200/60"
+                          }`}
                         >
                           {t}
                         </span>
@@ -848,6 +906,34 @@ export function LiveInbox({
                 </button>
               </div>
             </div>
+
+            {/* Team Alert / Needs Agent Highlight Banner */}
+            {((selectedContact.tags?.includes("Team Alert") || selectedContact.status === "pending_human") &&
+              (!selectedContact.assignedAgent ||
+                selectedContact.assignedAgent === "Unassigned" ||
+                selectedContact.assignedAgent.toLowerCase().includes("unassigned") ||
+                selectedContact.assignedAgent.startsWith("Team"))) && (
+              <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-orange-500 text-white px-4 py-2.5 flex items-center justify-between text-xs shadow-xs animate-in slide-in-from-top-1 shrink-0 z-20">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                    <Bell className="w-3.5 h-3.5 text-white animate-pulse" />
+                  </span>
+                  <div className="min-w-0">
+                    <span className="font-bold">Team Alert Active:</span>{" "}
+                    <span className="text-amber-100 truncate">
+                      This conversation triggered a notify team step and needs an assigned agent.
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => onAssignAgent(selectedContact.id, myAgentName)}
+                  className="ml-3 px-3 py-1.5 bg-white text-amber-900 rounded-lg font-bold hover:bg-amber-50 transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0 text-xs"
+                >
+                  <UserCheck className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Assign to Me</span>
+                </button>
+              </div>
+            )}
 
             {/* Clean Solid Chat Background + Drag-and-Drop Zone */}
             <div

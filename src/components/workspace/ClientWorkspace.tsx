@@ -396,7 +396,14 @@ export function ClientWorkspace({
     verifyToken: c.verifyToken,
   }));
 
-  const pendingHumanCount = contacts.filter((c) => c.status === "pending_human").length;
+  const pendingHumanCount = contacts.filter((c) => {
+    const isUnassigned =
+      !c.assignedAgent ||
+      c.assignedAgent === "Unassigned" ||
+      c.assignedAgent.toLowerCase().includes("unassigned") ||
+      c.assignedAgent.startsWith("Team");
+    return (c.status === "pending_human" || c.tags?.includes("Team Alert")) && isUnassigned;
+  }).length;
 
   const handleSendMessage = async (
     contactId: string,
@@ -507,13 +514,37 @@ export function ClientWorkspace({
   };
 
   const handleAssignAgent = async (contactId: string, agentName: string) => {
+    const isRealAgent =
+      agentName &&
+      agentName !== "Unassigned" &&
+      !agentName.startsWith("Team") &&
+      agentName !== "WAPPX Bot Engine";
+
     setContacts((prev) =>
-      prev.map((c) =>
-        c.id === contactId ? { ...c, assignedAgent: agentName } : c
-      )
+      prev.map((c) => {
+        if (c.id !== contactId) return c;
+        const newTags = isRealAgent ? (c.tags || []).filter((t) => t !== "Team Alert") : c.tags;
+        return {
+          ...c,
+          assignedAgent: agentName,
+          tags: newTags,
+          status: isRealAgent && c.status === "pending_human" ? "active" : c.status,
+        };
+      })
     );
 
-    await updateContactFields(contactId, { assigned_agent: agentName }, currentClientId);
+    const target = contacts.find((c) => c.id === contactId);
+    const newTags = isRealAgent && target ? (target.tags || []).filter((t) => t !== "Team Alert") : undefined;
+
+    await updateContactFields(
+      contactId,
+      {
+        assigned_agent: agentName,
+        ...(newTags !== undefined ? { tags: newTags } : {}),
+        ...(isRealAgent && target?.status === "pending_human" ? { status: "active" } : {}),
+      },
+      currentClientId
+    );
   };
 
   const handleAddTag = async (contactId: string, tag: string) => {
@@ -929,6 +960,8 @@ export function ClientWorkspace({
               messages={messages}
               metaConfig={metaConfig}
               onNavigateTab={handleTabChange}
+              onAssignAgent={handleAssignAgent}
+              onSelectContact={setSelectedContactId}
             />
           )}
 
