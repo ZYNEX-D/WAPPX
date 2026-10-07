@@ -29,6 +29,9 @@ import {
   Radio,
   Clock,
   ArrowRight,
+  CreditCard,
+  HelpCircle,
+  BookOpen,
 } from "lucide-react";
 import { DiagnosticsResponse, DiagnosticCheckItem } from "@/app/api/whatsapp/diagnostics/route";
 
@@ -534,6 +537,7 @@ export function MetaSettings({ config, clientId = "client-1", onUpdateConfig }: 
                               {item.category === "auth" && <Key className="w-4 h-4" />}
                               {item.category === "phone" && <Smartphone className="w-4 h-4" />}
                               {item.category === "waba" && <ShieldCheck className="w-4 h-4" />}
+                              {item.category === "billing" && <CreditCard className="w-4 h-4" />}
                               {item.category === "profile" && <Globe className="w-4 h-4" />}
                               {item.category === "webhook" && <Radio className="w-4 h-4" />}
                               {item.category === "catalog" && <ShoppingBag className="w-4 h-4" />}
@@ -636,6 +640,87 @@ export function MetaSettings({ config, clientId = "client-1", onUpdateConfig }: 
                 })}
               </div>
             )}
+
+            {/* WhatsApp Billing & Payment Method Explanatory Guide Box */}
+            <div className="p-5 bg-gradient-to-r from-emerald-50/60 via-white to-teal-50/40 border border-emerald-200/80 rounded-2xl space-y-4 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-emerald-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-[#00A86B]/15 text-[#0A504A] flex items-center justify-center shrink-0">
+                    <CreditCard className="w-4 h-4 text-[#00A86B]" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-[#0A504A]">
+                      Meta WhatsApp Payment Method & Conversation Tier Guide
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Why does WhatsApp Manager show &quot;Missing valid payment method&quot; and how to link it?
+                    </p>
+                  </div>
+                </div>
+
+                <a
+                  href={`https://business.facebook.com/latest/whatsapp_manager/overview/?asset_id=${formData.wabaId || ""}&nav_ref=whatsapp_manager`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0A504A] hover:bg-[#00A86B] text-white rounded-xl text-[11px] font-bold transition-colors w-fit shrink-0"
+                >
+                  <span>Open WhatsApp Manager</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <div className="p-3 bg-white rounded-xl border border-slate-100 shadow-2xs space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[11px]">
+                    <span className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] text-slate-600 font-mono">1</span>
+                    Two Different Payment Places
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Meta has <strong>Meta Ad Account Payment</strong> (for Facebook/Instagram Ads) and <strong>WhatsApp WABA Payment</strong>. Adding a card for Ads does <em>not</em> auto-link to WhatsApp.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-slate-100 shadow-2xs space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[11px]">
+                    <span className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] text-slate-600 font-mono">2</span>
+                    Why is it currently working?
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    When customers message you first, Meta opens a <strong>free 24-hr service window</strong>. However, initiating outbound broadcasts or sending templates after 24 hrs requires a card.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-slate-100 shadow-2xs space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[11px]">
+                    <span className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] text-slate-600 font-mono">3</span>
+                    1,000 Free Conversations / Mo
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Adding a card does not charge you upfront. Every WABA receives <strong>1,000 free customer-service conversations</strong> monthly. Only paid template categories incur billing.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-slate-600 border-t border-emerald-50">
+                <div className="flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-[#00A86B]" />
+                  <span>
+                    <strong>Quick Fix:</strong> WhatsApp Manager &gt; Settings &gt; Payment Methods &gt; Select existing Business Card or enter new card.
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href="https://developers.facebook.com/docs/whatsapp/updates-to-pricing"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[#00A86B] hover:underline font-bold flex items-center gap-1"
+                  >
+                    <span>Meta Pricing Docs</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+            </div>
 
             {/* Quick Action Navigation Strip */}
             <div className="p-4 bg-white border border-[#dee3e9] rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shadow-xs">

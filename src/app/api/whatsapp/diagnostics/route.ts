@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 
 export interface DiagnosticCheckItem {
   id: string;
-  category: "auth" | "phone" | "waba" | "webhook" | "catalog" | "database" | "profile";
+  category: "auth" | "phone" | "waba" | "billing" | "webhook" | "catalog" | "database" | "profile";
   name: string;
   status: "success" | "warning" | "error" | "pending";
   summary: string;
@@ -317,6 +317,31 @@ export async function GET(req: NextRequest) {
         });
       }
     }
+
+    // 4b. Meta WABA Payment Method & Conversation Tier Check
+    const wabaOverviewUrl = wabaId
+      ? `https://business.facebook.com/latest/whatsapp_manager/overview/?asset_id=${wabaId}&nav_ref=whatsapp_manager`
+      : "https://business.facebook.com/latest/whatsapp_manager/overview/";
+    const wabaPaymentUrl = wabaId
+      ? `https://business.facebook.com/wa/manage/payment/?waba_id=${wabaId}`
+      : "https://business.facebook.com/wa/manage/payment/";
+
+    checks.push({
+      id: "waba_payment_method",
+      category: "billing",
+      name: "WhatsApp Account Payment Method",
+      status: "warning",
+      summary: "WABA requires a direct payment method on file to initiate conversations & send broadcast templates.",
+      details: {
+        freeMonthlyTier: "1,000 Service / User-Initiated Conversations",
+        paidCategories: "Marketing, Utility, Authentication Templates",
+        note: "Meta Ad Account card does not automatically link to WhatsApp WABA.",
+      },
+      recommendation:
+        "If you see 'Missing valid payment method' in WhatsApp Manager, link a card to this WABA to unlock outbound messaging & template broadcasts.",
+      actionUrl: wabaOverviewUrl,
+      actionText: "Open WhatsApp Manager Billing",
+    });
 
     // 5. WhatsApp Business Profile Check
     if (phoneId && token && !token.startsWith("EAA...")) {
