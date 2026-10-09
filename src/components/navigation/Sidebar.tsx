@@ -85,22 +85,22 @@ export function Sidebar({
     },
     {
       id: "catalog" as ActiveTab,
-      label: "Catalog & Products",
+      label: "Catalog",
       icon: ShoppingBag,
     },
     {
       id: "campaigns" as ActiveTab,
-      label: "Campaigns & Drip",
+      label: "Campaigns",
       icon: Megaphone,
     },
     {
       id: "templates" as ActiveTab,
-      label: "Meta Templates",
+      label: "Templates",
       icon: FileText,
     },
     {
       id: "integrations" as ActiveTab,
-      label: "Integrations Hub",
+      label: "Integrations",
       icon: Layers,
     },
     {
@@ -110,17 +110,17 @@ export function Sidebar({
     },
     {
       id: "simulator" as ActiveTab,
-      label: "WhatsApp Simulator",
+      label: "Simulator",
       icon: Smartphone,
     },
     {
       id: "contacts" as ActiveTab,
-      label: "Contacts CRM",
+      label: "Contacts",
       icon: Users,
     },
     {
       id: "settings" as ActiveTab,
-      label: "Meta Cloud API",
+      label: "Settings",
       icon: Settings,
     },
   ];
@@ -189,7 +189,7 @@ export function Sidebar({
       {/* SIDEBAR MAIN CONTAINER (Responsive: Fixed on desktop, Drawer on mobile)    */}
       {/* ========================================================================= */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-68 bg-[#F7F7F2] border-r border-[#0A504A]/10 flex flex-col justify-between transition-transform duration-300 ease-in-out font-secondary text-[13px] font-normal ${mobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
+        className={`fixed top-0 bottom-0 left-0 z-50 w-60 bg-white border-r border-slate-200 flex flex-col justify-between transition-transform duration-300 ease-in-out font-secondary text-[13px] font-normal ${mobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
           } lg:static lg:h-screen lg:shrink-0`}
       >
         {/* TOP SECTION */}
@@ -204,7 +204,7 @@ export function Sidebar({
                   className="w-8 h-8 object-contain"
                 />
                 <div>
-                  <span className="font-medium text-lg tracking-[13px] text-[#0A504A] block leading-none">
+                  <span className="font-semibold text-lg tracking-[3px] text-[#0A504A] block leading-none">
                     WAPPX
                   </span>
 
@@ -303,7 +303,7 @@ export function Sidebar({
               /* View Mode = Client Workspace Navigation Items */
               <>
                 <div className="px-3 py-1.5 text-[10px] font-normal text-slate-400 uppercase tracking-wider">
-                  Workspace Apps
+                  Workspace
                 </div>
 
                 {navItems.map((item) => {
@@ -311,17 +311,20 @@ export function Sidebar({
                   const isActive = activeTab === item.id;
 
                   return (
+                    <React.Fragment key={item.id}>
+                    {item.id === "catalog" && <div className="px-3 pt-5 pb-2 text-[10px] font-medium text-slate-400 uppercase tracking-wider">Engagement</div>}
+                    {item.id === "integrations" && <div className="px-3 pt-5 pb-2 text-[10px] font-medium text-slate-400 uppercase tracking-wider">Tools & settings</div>}
                     <button
-                      key={item.id}
+                      aria-current={isActive ? "page" : undefined}
                       onClick={() => handleNavClick(item.id)}
                       className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs transition-all cursor-pointer ${isActive
-                        ? "bg-[#0A504A] text-white shadow-xs font-medium"
-                        : "text-slate-600 hover:text-[#0A504A] hover:bg-white/80 font-light"
+                        ? "bg-emerald-50 text-[#0A504A] font-semibold"
+                        : "text-slate-500 hover:text-[#0A504A] hover:bg-slate-50 font-medium"
                         }`}
                     >
                       <div className="flex items-center gap-3">
                         <Icon
-                          className={`w-4 h-4 ${isActive ? "text-[#A2E4B8]" : "text-slate-400"
+                          className={`w-4 h-4 ${isActive ? "text-[#0A504A]" : "text-slate-400"
                             }`}
                         />
                         <span className="tracking-tight">{item.label}</span>
@@ -333,6 +336,7 @@ export function Sidebar({
                         </span>
                       )}
                     </button>
+                    </React.Fragment>
                   );
                 })}
               </>

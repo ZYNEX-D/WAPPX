@@ -517,7 +517,7 @@ export function ClientWorkspace({
   const isOwner = isSuperAdmin(authSession);
 
   return (
-    <div className="min-h-screen bg-[#F7F7F2] flex flex-col lg:flex-row antialiased font-secondary text-[#334155] overflow-hidden">
+    <div className="workspace-shell min-h-screen bg-[#F6F7F9] flex flex-col lg:flex-row antialiased font-secondary text-[#334155] overflow-hidden">
       {/* Responsive Navigation Sidebar */}
       <Sidebar
         viewMode="client"

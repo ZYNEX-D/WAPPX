@@ -18,6 +18,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { MetaConfig } from "@/types/whatsapp";
+import { WorkspaceListToolbar } from "@/components/ui/WorkspaceListToolbar";
 
 interface Template {
   id: string;
@@ -37,6 +38,8 @@ interface TemplateManagerProps {
 }
 
 export function TemplateManager({ metaConfig }: TemplateManagerProps) {
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [templates, setTemplates] = useState<Template[]>([
     {
       id: "tpl-1",
@@ -121,8 +124,13 @@ export function TemplateManager({ metaConfig }: TemplateManagerProps) {
     showToast(`Template "${newTpl.name}" created and approved by Meta!`);
   };
 
+  const visibleTemplates = templates.filter((template) =>
+    (statusFilter === "all" || template.status === statusFilter) &&
+    `${template.name} ${template.bodyText}`.toLowerCase().includes(query.trim().toLowerCase())
+  );
+
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F8FAFC] font-secondary text-slate-800 p-4 sm:p-6 lg:p-8 space-y-6 no-scrollbar">
+    <div className="workspace-page flex-1 overflow-y-auto bg-[#F6F7F9] font-secondary text-slate-800 p-4 sm:p-6 lg:p-8 space-y-6">
       {/* Toast */}
       {toastMessage && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-full text-xs font-semibold shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
@@ -136,37 +144,39 @@ export function TemplateManager({ metaConfig }: TemplateManagerProps) {
         <div>
           <div className="flex items-center gap-2">
             <FileText className="w-6 h-6 text-emerald-600" />
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-              Meta WhatsApp Templates
+            <h1 className="text-xl sm:text-2xl font-semibold text-slate-900">
+              Message templates
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Pre-approved Meta templates required for business-initiated outbound messages outside the 24h window.
+            Create and manage approved messages for your WhatsApp campaigns.
           </p>
         </div>
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs flex items-center gap-2 transition-all cursor-pointer self-start sm:self-auto"
+          className="px-4 py-2.5 rounded-xl bg-[#0A504A] hover:bg-[#073E39] text-white font-semibold text-xs shadow-none flex items-center gap-2 transition-all cursor-pointer self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
-          <span>Create New Template</span>
+          <span>New template</span>
         </button>
       </div>
 
+      <WorkspaceListToolbar query={query} onQueryChange={setQuery} status={statusFilter} onStatusChange={setStatusFilter} statuses={["APPROVED", "PENDING", "REJECTED"]} noun="templates" count={visibleTemplates.length} />
+      {visibleTemplates.length === 0 && <div className="rounded-xl border border-dashed border-slate-300 bg-white py-12 text-center"><FileText className="w-6 h-6 mx-auto text-slate-400" /><p className="text-sm font-medium mt-3">No matching templates</p><p className="text-xs text-slate-500 mt-1">Try a different search or status.</p></div>}
       {/* Templates List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {templates.map((tpl) => (
+        {visibleTemplates.map((tpl) => (
           <div
             key={tpl.id}
-            className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 flex flex-col justify-between hover:border-emerald-300 transition-all space-y-4"
+            className="bg-white rounded-2xl border border-slate-200/80 shadow-none p-5 flex flex-col justify-between hover:border-emerald-300 transition-all space-y-4"
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="font-mono font-bold text-xs text-slate-900 truncate">
+                <span className="font-mono font-semibold text-xs text-slate-900 truncate">
                   {tpl.name}
                 </span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                   tpl.status === "APPROVED"
                     ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                     : tpl.status === "PENDING"
@@ -235,11 +245,11 @@ export function TemplateManager({ metaConfig }: TemplateManagerProps) {
       {/* Create Template Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 space-y-5 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-bold text-base text-slate-900">Create Meta WhatsApp Template</h3>
+                <h3 className="font-semibold text-base text-slate-900">Create Meta WhatsApp Template</h3>
               </div>
               <button
                 onClick={() => setShowCreateModal(false)}
@@ -252,7 +262,7 @@ export function TemplateManager({ metaConfig }: TemplateManagerProps) {
             <form onSubmit={handleCreateTemplate} className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="font-bold text-slate-700">Template Name (Lowercase & Underscores)</label>
+                  <label className="font-semibold text-slate-700">Template Name (Lowercase & Underscores)</label>
                   <input
                     type="text"
                     required
@@ -264,10 +274,10 @@ export function TemplateManager({ metaConfig }: TemplateManagerProps) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="font-bold text-slate-700">Category</label>
+                  <label className="font-semibold text-slate-700">Category</label>
                   <select
                     value={category}
-                    onChange={(e) => setCategory(e.target.value as any)}
+                    onChange={(e) => setCategory(e.target.value as Template["category"])}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 outline-none focus:border-emerald-500 font-medium cursor-pointer"
                   >
                     <option value="MARKETING">Marketing (Promotions, Offers)</option>
@@ -279,7 +289,7 @@ export function TemplateManager({ metaConfig }: TemplateManagerProps) {
 
               {/* Body Text */}
               <div className="space-y-1.5">
-                <label className="font-bold text-slate-700 flex items-center justify-between">
+                <label className="font-semibold text-slate-700 flex items-center justify-between">
                   <span>Template Body Content</span>
                   <span className="text-[10px] text-slate-400 font-normal">Use &#123;&#123;1&#125;&#125;, &#123;&#123;2&#125;&#125; for dynamic variables</span>
                 </label>
@@ -294,7 +304,7 @@ export function TemplateManager({ metaConfig }: TemplateManagerProps) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="font-bold text-slate-700">Footer Text (Optional)</label>
+                  <label className="font-semibold text-slate-700">Footer Text (Optional)</label>
                   <input
                     type="text"
                     value={footerText}
@@ -305,7 +315,7 @@ export function TemplateManager({ metaConfig }: TemplateManagerProps) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="font-bold text-slate-700">Quick Reply Button Label</label>
+                  <label className="font-semibold text-slate-700">Quick Reply Button Label</label>
                   <input
                     type="text"
                     value={buttonText}
@@ -327,7 +337,7 @@ export function TemplateManager({ metaConfig }: TemplateManagerProps) {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl bg-[#0A504A] hover:bg-[#073E39] text-white font-semibold flex items-center gap-2 cursor-pointer shadow-none disabled:opacity-50"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>{isSubmitting ? "Submitting to Meta..." : "Submit to Meta for Approval"}</span>

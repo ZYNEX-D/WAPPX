@@ -10,7 +10,6 @@ import {
   MessageSquare,
   Bot,
   ShieldAlert,
-  Clock,
   Sparkles,
   Camera,
   Upload,
@@ -20,18 +19,12 @@ import {
   Building,
   CheckCircle2,
   AlertCircle,
-  HelpCircle,
-  DollarSign,
   ArrowUpRight,
   RefreshCw,
-  Sliders,
   Calculator,
-  ChevronRight,
   Info,
   Shield,
   ShieldCheck,
-  ToggleLeft,
-  ToggleRight,
   Lock,
   Unlock,
   Megaphone,
@@ -49,8 +42,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  BarChart,
-  Bar,
   CartesianGrid,
 } from "recharts";
 import { Contact, Message, MetaConfig, UserWorkspace } from "@/types/whatsapp";
@@ -71,6 +62,7 @@ export function DashboardView({
   metaConfig,
   onNavigateTab,
 }: DashboardViewProps) {
+  const [dashboardSection, setDashboardSection] = useState<"overview" | "profile" | "billing">("overview");
   // ---------------------------------------------------------------------------
   // Profile Picture & Business Info State
   // ---------------------------------------------------------------------------
@@ -148,7 +140,7 @@ export function DashboardView({
   const botAutomationRate =
     totalContactsCount > 0
       ? Math.round((botActiveCount / totalContactsCount) * 100)
-      : 100;
+      : 0;
 
   const totalInboundMessages = useMemo(
     () => allMessagesList.filter((m) => m.sender === "customer").length,
@@ -185,57 +177,33 @@ export function DashboardView({
   // ---------------------------------------------------------------------------
   // 1. 7-Day Trend Chart
   const trendData = useMemo(() => {
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const todayIndex = new Date().getDay();
-    const orderedDays: string[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const idx = (todayIndex - i + 7) % 7;
-      orderedDays.push(days[idx]);
-    }
-
-    // Distribute actual message counts dynamically across past 7 days
-    const totalIn = totalInboundMessages;
-    const totalOut = totalOutboundMessages;
-
-    const weights = [0.08, 0.12, 0.15, 0.18, 0.14, 0.17, 0.16];
-    return orderedDays.map((day, idx) => {
-      const w = weights[idx];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return Array.from({ length: 7 }, (_, index) => {
+      const start = new Date(today);
+      start.setDate(start.getDate() - 6 + index);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 1);
+      const dayMessages = allMessagesList.filter((message) => {
+        const date = new Date(message.createdAt || message.timestamp);
+        return date >= start && date < end;
+      });
       return {
-        day,
-        inbound: Math.max(1, Math.round(totalIn * w)),
-        outbound: Math.max(1, Math.round(totalOut * w)),
+        day: start.toLocaleDateString("en", { weekday: "short" }),
+        inbound: dayMessages.filter((message) => message.sender === "customer").length,
+        outbound: dayMessages.filter((message) => message.sender !== "customer").length,
       };
     });
-  }, [totalInboundMessages, totalOutboundMessages]);
+  }, [allMessagesList]);
 
-  // 2. Meta Conversation Category Pie Chart
+  // Message counts by sender, without inferred billing categories.
   const categoryData = useMemo(() => {
-    const serviceConvos = Math.max(1, freeConversationsUsed);
-    const marketingConvos = Math.max(1, Math.round(totalOutboundMessages * 0.35));
-    const utilityConvos = Math.max(1, Math.round(totalOutboundMessages * 0.25));
-    const freeEntryConvos = Math.max(0, Math.round(totalInboundMessages * 0.15));
-
     return [
-      { name: "Service (Free Tier)", value: serviceConvos, color: "#10B981" },
-      { name: "Marketing Broadcasts", value: marketingConvos, color: "#8B5CF6" },
-      { name: "Utility & Receipts", value: utilityConvos, color: "#3B82F6" },
-      { name: "Ad Entry (72h Free)", value: freeEntryConvos, color: "#F59E0B" },
+      { name: "Customer messages", value: totalInboundMessages, color: "#0A504A" },
+      { name: "Bot replies", value: allMessagesList.filter((message) => message.sender === "bot").length, color: "#6DAA9B" },
+      { name: "Agent replies", value: allMessagesList.filter((message) => message.sender === "agent").length, color: "#CBD5E1" },
     ];
-  }, [freeConversationsUsed, totalOutboundMessages, totalInboundMessages]);
-
-  // 3. Hourly Activity Bar Chart (Peak Activity distribution)
-  const hourlyData = useMemo(() => {
-    const slots = [
-      { hour: "08:00", msgs: Math.round(totalMessagesCount * 0.08) },
-      { hour: "10:00", msgs: Math.round(totalMessagesCount * 0.16) },
-      { hour: "12:00", msgs: Math.round(totalMessagesCount * 0.22) },
-      { hour: "14:00", msgs: Math.round(totalMessagesCount * 0.19) },
-      { hour: "16:00", msgs: Math.round(totalMessagesCount * 0.18) },
-      { hour: "18:00", msgs: Math.round(totalMessagesCount * 0.12) },
-      { hour: "20:00", msgs: Math.round(totalMessagesCount * 0.05) },
-    ];
-    return slots.map((s) => ({ ...s, msgs: Math.max(1, s.msgs) }));
-  }, [totalMessagesCount]);
+  }, [allMessagesList, totalInboundMessages]);
 
   // ---------------------------------------------------------------------------
   // Cost Calculator State
@@ -309,12 +277,14 @@ export function DashboardView({
         });
       } else {
         setProfileSavedToast({
-          msg: data.error || "Profile saved locally in workspace.",
+          msg: data.error || "Could not save your profile. Please try again.",
+          isError: true,
         });
       }
     } catch (err) {
       setProfileSavedToast({
-        msg: "Profile updated and cached in local workspace.",
+        msg: "Could not reach the server. Your profile has not been saved.",
+        isError: true,
       });
     } finally {
       setIsSavingProfile(false);
@@ -322,27 +292,33 @@ export function DashboardView({
     }
   };
 
-  const handleToggleAutoCutoff = async (enabled: boolean) => {
+  const handleToggleAutoCutoff = async (enabled: boolean, threshold = cutoffThreshold) => {
+    const previousEnabled = autoCutoffEnabled;
+    const previousThreshold = cutoffThreshold;
     setAutoCutoffEnabled(enabled);
+    setCutoffThreshold(threshold);
     setIsSavingCutoff(true);
     try {
-      await fetch("/api/whatsapp/business-profile", {
+      const response = await fetch("/api/whatsapp/business-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: currentUser?.id || "client-1",
           businessName,
           autoCutoffEnabled: enabled,
-          cutoffThreshold,
+          cutoffThreshold: threshold,
         }),
       });
+      if (!response.ok) throw new Error("Could not save usage settings");
       setProfileSavedToast({
         msg: enabled
-          ? `Free Credit Auto-Cutoff Guard activated at ${cutoffThreshold}% threshold.`
-          : "Free Credit Auto-Cutoff Guard deactivated (Pay-as-you-go enabled).",
+          ? `Usage settings saved with a ${threshold}% threshold.`
+          : "Usage settings saved.",
       });
-    } catch (e) {
-      // Local fallback
+    } catch {
+      setAutoCutoffEnabled(previousEnabled);
+      setCutoffThreshold(previousThreshold);
+      setProfileSavedToast({ msg: "Could not save usage settings. Please try again.", isError: true });
     } finally {
       setIsSavingCutoff(false);
       setTimeout(() => setProfileSavedToast(null), 3000);
@@ -350,7 +326,7 @@ export function DashboardView({
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F8FAFC] font-secondary text-slate-800 p-4 sm:p-6 lg:p-8 space-y-8 no-scrollbar">
+    <div className="workspace-page flex-1 overflow-y-auto bg-[#F6F7F9] font-secondary text-slate-800 p-4 sm:p-6 lg:p-8 space-y-6">
       {/* Toast Notification */}
       {profileSavedToast && (
         <div
@@ -368,53 +344,66 @@ export function DashboardView({
       )}
 
       {/* Top Banner */}
-      <div className="bg-gradient-to-r from-[#0A504A] via-[#008069] to-[#0D6E66] rounded-3xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
-        <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-white/10 to-transparent opacity-60 pointer-events-none" />
+      <div className="pb-6 border-b border-slate-200 relative">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-xl">
 
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              {businessName} Analytics & Hub
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+              Dashboard
             </h1>
-            <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
-              Real-time message metrics, WhatsApp Business profile editor, free credit protection shield, and Meta billing analytics.
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Welcome back to {businessName}. Here&apos;s your workspace at a glance.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
             <button
               onClick={() => onNavigateTab("inbox")}
-              className="px-4 py-2.5 rounded-xl bg-white text-[#0A504A] font-bold text-xs hover:bg-emerald-50 transition-colors shadow-sm flex items-center gap-2 cursor-pointer"
+              className="px-4 py-2.5 rounded-lg bg-[#0A504A] text-white font-medium text-sm hover:bg-[#073E39] transition-colors flex items-center gap-2 cursor-pointer"
             >
               <MessageSquare className="w-4 h-4" />
               <span>Live Inbox</span>
             </button>
             <button
               onClick={() => onNavigateTab("campaigns")}
-              className="px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs border border-white/20 transition-colors flex items-center gap-2 cursor-pointer"
+              className="px-4 py-2.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 font-medium text-sm border border-slate-200 transition-colors flex items-center gap-2 cursor-pointer"
             >
-              <Megaphone className="w-4 h-4 text-emerald-300" />
+              <Megaphone className="w-4 h-4 text-emerald-600" />
               <span>Campaigns</span>
             </button>
             <button
               onClick={() => onNavigateTab("templates")}
-              className="px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs border border-white/20 transition-colors flex items-center gap-2 cursor-pointer"
+              className="px-4 py-2.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 font-medium text-sm border border-slate-200 transition-colors flex items-center gap-2 cursor-pointer"
             >
-              <FileText className="w-4 h-4 text-emerald-300" />
+              <FileText className="w-4 h-4 text-emerald-600" />
               <span>Templates</span>
             </button>
           </div>
         </div>
       </div>
 
+      <nav aria-label="Dashboard views" className="flex gap-1 p-1 bg-slate-200/60 rounded-xl w-fit max-w-full">
+        {([
+          { id: "overview", label: "Overview", icon: LayoutDashboard },
+          { id: "profile", label: "Business profile", icon: Building },
+          { id: "billing", label: "Usage & billing", icon: CreditCard },
+        ] as const).map(({ id, label, icon: Icon }) => (
+          <button key={id} type="button" aria-pressed={dashboardSection === id} onClick={() => setDashboardSection(id)}
+            className={`flex items-center gap-2 rounded-lg px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium cursor-pointer transition-colors ${dashboardSection === id ? "bg-white text-[#0A504A] shadow-none" : "text-slate-500 hover:text-slate-900"}`}>
+            <Icon className="hidden sm:block w-4 h-4" />{label}
+          </button>
+        ))}
+      </nav>
+
+      {dashboardSection === "billing" && <>
       {/* ========================================================================= */}
       {/* FREE CREDIT AUTO-SAFETY CUTOFF GUARD BANNER (Requested by User)          */}
       {/* ========================================================================= */}
       <div
         className={`rounded-2xl p-5 border transition-all ${
           autoCutoffEnabled
-            ? "bg-emerald-50/90 border-emerald-300 shadow-xs"
-            : "bg-amber-50/80 border-amber-300 shadow-xs"
+            ? "bg-emerald-50/90 border-emerald-300 shadow-none"
+            : "bg-amber-50/80 border-amber-300 shadow-none"
         }`}
       >
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -422,8 +411,8 @@ export function DashboardView({
             <div
               className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
                 autoCutoffEnabled
-                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
-                  : "bg-amber-500 text-white shadow-md shadow-amber-500/20"
+                  ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/20"
+                  : "bg-amber-500 text-white shadow-sm shadow-amber-500/20"
               }`}
             >
               {autoCutoffEnabled ? (
@@ -435,11 +424,11 @@ export function DashboardView({
 
             <div className="space-y-1">
               <div className="flex items-center gap-2.5 flex-wrap">
-                <h3 className="text-sm font-bold text-slate-900">
+                <h3 className="text-sm font-semibold text-slate-900">
                   Free Credit Auto-Safety Cutoff Guard
                 </h3>
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                     autoCutoffEnabled
                       ? "bg-emerald-200 text-emerald-900"
                       : "bg-amber-200 text-amber-900"
@@ -461,8 +450,10 @@ export function DashboardView({
                 <span className="text-slate-500 font-medium">Cutoff At:</span>
                 <select
                   value={cutoffThreshold}
-                  onChange={(e) => setCutoffThreshold(Number(e.target.value))}
-                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none cursor-pointer focus:border-emerald-500"
+                  disabled={isSavingCutoff}
+                  aria-label="Usage cutoff threshold"
+                  onChange={(e) => handleToggleAutoCutoff(autoCutoffEnabled, Number(e.target.value))}
+                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-800 outline-none cursor-pointer focus:border-emerald-500"
                 >
                   <option value={80}>80% (800 convos)</option>
                   <option value={90}>90% (900 convos)</option>
@@ -476,9 +467,9 @@ export function DashboardView({
             <button
               onClick={() => handleToggleAutoCutoff(!autoCutoffEnabled)}
               disabled={isSavingCutoff}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-semibold text-xs transition-all cursor-pointer ${
                 autoCutoffEnabled
-                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  ? "bg-[#0A504A] hover:bg-[#073E39] text-white"
                   : "bg-slate-200 hover:bg-slate-300 text-slate-700"
               }`}
             >
@@ -511,46 +502,34 @@ export function DashboardView({
       {/* ========================================================================= */}
       {/* REAL METRIC CARDS ROW                                                     */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      </>}
+      {dashboardSection === "overview" && <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {/* Card 1: Free Service Tier Usage */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs space-y-3">
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-none space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Free Monthly Tier
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Needs attention
             </span>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <Sparkles className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900">
-              {freeConversationsUsed}{" "}
-              <span className="text-xs font-normal text-slate-400">
-                / {freeConversationsLimit} used
-              </span>
+            <div className="text-2xl font-semibold text-slate-900">
+              {pendingHumanCount}
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              {1000 - freeConversationsUsed} conversations remaining free
+              Conversations waiting for your team
             </p>
           </div>
-          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-            <div
-              className={`h-2 rounded-full transition-all ${
-                freePercentageUsed > 90
-                  ? "bg-rose-500"
-                  : freePercentageUsed > 70
-                  ? "bg-amber-500"
-                  : "bg-emerald-500"
-              }`}
-              style={{ width: `${Math.max(4, freePercentageUsed)}%` }}
-            />
-          </div>
+          <button onClick={() => onNavigateTab("inbox")} className="flex items-center gap-1 text-xs font-medium text-[#0A504A] cursor-pointer hover:underline">Review inbox <ArrowUpRight className="w-3.5 h-3.5" /></button>
         </div>
 
         {/* Card 2: Total Real Messages */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs space-y-3">
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-none space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
               Total Messages
             </span>
             <div className="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center">
@@ -558,7 +537,7 @@ export function DashboardView({
             </div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900">
+            <div className="text-2xl font-semibold text-slate-900">
               {totalMessagesCount.toLocaleString()}
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -573,22 +552,22 @@ export function DashboardView({
           </div>
           <div className="flex items-center gap-1.5 text-[11px] font-semibold text-sky-700">
             <span className="w-2 h-2 rounded-full bg-sky-500" />
-            <span>Live Webhook Streaming</span>
+            <span>{metaConfig.isConnected ? "WhatsApp connected" : "Workspace message history"}</span>
           </div>
         </div>
 
         {/* Card 3: CRM Contacts & Quality */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs space-y-3">
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-none space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Active Contacts
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Total contacts
             </span>
             <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
               <Users className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900">
+            <div className="text-2xl font-semibold text-slate-900">
               {totalContactsCount}
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -597,22 +576,22 @@ export function DashboardView({
           </div>
           <div className="flex items-center gap-1.5 text-[11px] font-semibold text-purple-700">
             <span className="w-2 h-2 rounded-full bg-purple-500" />
-            <span>24-Hour Active Windows</span>
+            <span>Contacts in your workspace</span>
           </div>
         </div>
 
         {/* Card 4: Bot Automation Rate */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs space-y-3">
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-none space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Automation Health
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Bot coverage
             </span>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <Bot className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-emerald-600">
+            <div className="text-2xl font-semibold text-emerald-600">
               {botAutomationRate}%
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -621,7 +600,7 @@ export function DashboardView({
           </div>
           <div className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>High Quality Tier 1 Rating</span>
+            <span>{totalContactsCount === 0 ? "Add contacts to get started" : "Based on contact bot settings"}</span>
           </div>
         </div>
       </div>
@@ -631,15 +610,15 @@ export function DashboardView({
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Chart 1: 7-Day Conversation Volume AreaChart (8 Cols) */}
-        <div className="lg:col-span-8 bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4">
+        <div className="lg:col-span-8 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-none space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
             <div>
-              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-emerald-600" />
-                <span>7-Day Message Volume Trends (Inbound vs Outbound)</span>
+                <span>Message activity</span>
               </h2>
               <p className="text-xs text-slate-500">
-                Calculated from live WhatsApp messages in your workspace
+                Last 7 days · messages with available dates
               </p>
             </div>
             <div className="flex items-center gap-3 text-xs">
@@ -655,6 +634,12 @@ export function DashboardView({
           </div>
 
           <div className="h-64 w-full">
+            {trendData.every((day) => day.inbound === 0 && day.outbound === 0) ? (
+              <div className="h-full flex flex-col items-center justify-center gap-2 text-slate-400 text-sm">
+                <TrendingUp className="w-7 h-7" />
+                <span>No dated messages in the last 7 days</span>
+              </div>
+            ) : (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
@@ -699,22 +684,24 @@ export function DashboardView({
                 />
               </AreaChart>
             </ResponsiveContainer>
+            )}
           </div>
         </div>
 
         {/* Chart 2: Meta Conversation Categories Donut (4 Cols) */}
-        <div className="lg:col-span-4 bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4 flex flex-col justify-between">
+        <div className="lg:col-span-4 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-none space-y-4 flex flex-col justify-between">
           <div className="pb-3 border-b border-slate-100">
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
               <PieChart className="w-4 h-4 text-purple-600" />
-              <span>Conversation Pricing Mix</span>
+              <span>Message breakdown</span>
             </h2>
             <p className="text-xs text-slate-500">
-              Distribution across official Meta rate categories
+              Customer, bot, and agent messages
             </p>
           </div>
 
           <div className="h-44 w-full">
+            {totalMessagesCount === 0 ? <div className="h-full flex flex-col items-center justify-center gap-2 text-slate-400 text-sm"><MessageSquare className="w-7 h-7" /><span>No messages yet</span></div> :
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -739,7 +726,7 @@ export function DashboardView({
                   }}
                 />
               </PieChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer>}
           </div>
 
           <div className="space-y-1.5 pt-2">
@@ -752,7 +739,7 @@ export function DashboardView({
                   />
                   <span className="text-slate-600 truncate">{cat.name}</span>
                 </div>
-                <span className="font-bold text-slate-800">{cat.value}</span>
+                <span className="font-semibold text-slate-800">{cat.value}</span>
               </div>
             ))}
           </div>
@@ -762,12 +749,20 @@ export function DashboardView({
       {/* ========================================================================= */}
       {/* WHATSAPP PROFILE DETAILS & PHOTO UPDATE (Connected to Persistent API)     */}
       {/* ========================================================================= */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {([
+          { tab: "catalog", title: "Product catalog", description: "Manage products and collections", icon: Layers },
+          { tab: "builder", title: "Automations", description: "Build your conversation flows", icon: Bot },
+          { tab: "integrations", title: "Integrations", description: "Connect your workspace tools", icon: Zap },
+        ] as const).map(({ tab, title, description, icon: Icon }) => <button key={tab} onClick={() => onNavigateTab(tab)} className="group flex items-center gap-3 text-left bg-white border border-slate-200 rounded-xl p-4 hover:border-emerald-600 transition-colors cursor-pointer"><Icon className="w-5 h-5 text-[#0A504A] shrink-0" /><span className="flex-1"><span className="block text-sm font-medium">{title}</span><span className="block text-xs text-slate-500 mt-1">{description}</span></span><ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600" /></button>)}
+      </div>
+      </>}
+      {dashboardSection === "profile" && <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
           <div>
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
               <Camera className="w-5 h-5 text-emerald-600" />
-              <span>WhatsApp Business Profile & Photo Sync</span>
+              <span>Business profile</span>
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Directly updates your profile photo, business vertical, and status on WhatsApp servers via Meta Cloud API.
@@ -777,7 +772,7 @@ export function DashboardView({
           <button
             onClick={handleSaveProfile}
             disabled={isSavingProfile}
-            className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-2 cursor-pointer self-start sm:self-auto disabled:opacity-50"
+            className="px-5 py-2.5 rounded-xl bg-[#0A504A] hover:bg-[#073E39] text-white text-xs font-semibold transition-all shadow-none flex items-center gap-2 cursor-pointer self-start sm:self-auto disabled:opacity-50"
           >
             {isSavingProfile ? (
               <RefreshCw className="w-4 h-4 animate-spin" />
@@ -793,13 +788,13 @@ export function DashboardView({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left Column: Avatar & Live WhatsApp Preview */}
           <div className="lg:col-span-4 flex flex-col items-center text-center space-y-4 bg-slate-50/70 p-6 rounded-2xl border border-slate-200/70">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Profile Photo Preview
             </span>
 
             {/* Circular Profile Photo with Upload Trigger */}
             <div className="relative group">
-              <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-white shadow-md bg-slate-200 flex items-center justify-center">
+              <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-white shadow-sm bg-slate-200 flex items-center justify-center">
                 <img
                   src={profileImage}
                   alt="WhatsApp Business Avatar"
@@ -824,7 +819,7 @@ export function DashboardView({
             </div>
 
             <div className="space-y-1">
-              <h3 className="font-bold text-base text-slate-900">{businessName}</h3>
+              <h3 className="font-semibold text-base text-slate-900">{businessName}</h3>
               <span className="inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                 Official Business Account
               </span>
@@ -834,7 +829,7 @@ export function DashboardView({
             </div>
 
             <div className="text-[11px] text-slate-400 bg-white p-2.5 rounded-xl border border-slate-200 w-full text-left space-y-1">
-              <p className="font-bold text-slate-700">Meta Photo Requirements:</p>
+              <p className="font-semibold text-slate-700">Meta Photo Requirements:</p>
               <p>• Recommended: 640 x 640 px square</p>
               <p>• Max file size: 5 MB (JPG or PNG)</p>
             </div>
@@ -844,7 +839,7 @@ export function DashboardView({
           <div className="lg:col-span-8 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">
+                <label className="text-xs font-semibold text-slate-700">
                   Business Display Name
                 </label>
                 <input
@@ -857,7 +852,7 @@ export function DashboardView({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">
+                <label className="text-xs font-semibold text-slate-700">
                   Business Category (Vertical)
                 </label>
                 <select
@@ -877,7 +872,7 @@ export function DashboardView({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">
+              <label className="text-xs font-semibold text-slate-700">
                 WhatsApp About / Status Text (Max 139 chars)
               </label>
               <input
@@ -895,7 +890,7 @@ export function DashboardView({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5 text-slate-400" />
                   <span>Public Business Email</span>
                 </label>
@@ -908,7 +903,7 @@ export function DashboardView({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                   <Globe className="w-3.5 h-3.5 text-slate-400" />
                   <span>Business Website</span>
                 </label>
@@ -922,7 +917,7 @@ export function DashboardView({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                 <MapPin className="w-3.5 h-3.5 text-slate-400" />
                 <span>Business Physical Address</span>
               </label>
@@ -935,16 +930,16 @@ export function DashboardView({
             </div>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* ========================================================================= */}
       {/* SECTION 4: META BILLING & INTERACTIVE COST ESTIMATOR                      */}
       {/* ========================================================================= */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
+      {dashboardSection === "billing" && <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 space-y-6">
         <div className="pb-5 border-b border-slate-100 space-y-1">
           <div className="flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-lg font-bold text-slate-900">
+            <h2 className="text-lg font-semibold text-slate-900">
               How Meta Charges & Credit Limits Work
             </h2>
           </div>
@@ -958,14 +953,14 @@ export function DashboardView({
           {/* Category 1: Service */}
           <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-emerald-950 uppercase tracking-wide">
+              <span className="text-xs font-semibold text-emerald-950 uppercase tracking-wide">
                 1. Service Convos
               </span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-600 text-white">
                 1,000 Free / mo
               </span>
             </div>
-            <div className="text-xl font-bold text-emerald-900">
+            <div className="text-xl font-semibold text-emerald-900">
               $0.015 <span className="text-xs font-normal text-slate-500">/ convo</span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
@@ -976,14 +971,14 @@ export function DashboardView({
           {/* Category 2: Marketing */}
           <div className="p-4 rounded-2xl bg-purple-50/60 border border-purple-200/80 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-purple-950 uppercase tracking-wide">
+              <span className="text-xs font-semibold text-purple-950 uppercase tracking-wide">
                 2. Marketing Convos
               </span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-600 text-white">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-600 text-white">
                 Outbound
               </span>
             </div>
-            <div className="text-xl font-bold text-purple-900">
+            <div className="text-xl font-semibold text-purple-900">
               $0.052 <span className="text-xs font-normal text-slate-500">/ convo</span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
@@ -994,14 +989,14 @@ export function DashboardView({
           {/* Category 3: Utility */}
           <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200/80 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-blue-950 uppercase tracking-wide">
+              <span className="text-xs font-semibold text-blue-950 uppercase tracking-wide">
                 3. Utility Convos
               </span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-600 text-white">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-600 text-white">
                 Transactional
               </span>
             </div>
-            <div className="text-xl font-bold text-blue-900">
+            <div className="text-xl font-semibold text-blue-900">
               $0.014 <span className="text-xs font-normal text-slate-500">/ convo</span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
@@ -1012,14 +1007,14 @@ export function DashboardView({
           {/* Category 4: Free Entry Points */}
           <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-amber-950 uppercase tracking-wide">
+              <span className="text-xs font-semibold text-amber-950 uppercase tracking-wide">
                 4. Free Entry Points
               </span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-600 text-white">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-600 text-white">
                 72h Free
               </span>
             </div>
-            <div className="text-xl font-bold text-amber-900">
+            <div className="text-xl font-semibold text-amber-900">
               $0.00 <span className="text-xs font-normal text-slate-500">Zero Charge</span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
@@ -1032,7 +1027,7 @@ export function DashboardView({
         <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200/80 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
                 <Calculator className="w-4 h-4 text-emerald-600" />
                 <span>Interactive Monthly Meta Billing Estimator</span>
               </h3>
@@ -1043,7 +1038,7 @@ export function DashboardView({
 
             <div className="text-right">
               <span className="text-xs text-slate-400 block">Estimated Monthly Meta Cost:</span>
-              <span className="text-2xl font-bold text-emerald-700">
+              <span className="text-2xl font-semibold text-emerald-700">
                 ${estTotalCostUSD.toFixed(2)}{" "}
                 <span className="text-xs font-semibold text-slate-500">
                   (~Rs. {Math.round(estTotalCostLKR).toLocaleString()} LKR)
@@ -1056,8 +1051,8 @@ export function DashboardView({
             {/* Slider 1: Marketing */}
             <div className="space-y-2 bg-white p-4 rounded-xl border border-slate-200/70">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-800">Marketing Convos</span>
-                <span className="font-mono font-bold text-purple-700">{calcMarketingConvos}</span>
+                <span className="font-semibold text-slate-800">Marketing Convos</span>
+                <span className="font-mono font-semibold text-purple-700">{calcMarketingConvos}</span>
               </div>
               <input
                 type="range"
@@ -1078,8 +1073,8 @@ export function DashboardView({
             {/* Slider 2: Utility */}
             <div className="space-y-2 bg-white p-4 rounded-xl border border-slate-200/70">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-800">Utility (Orders/Tracking)</span>
-                <span className="font-mono font-bold text-blue-700">{calcUtilityConvos}</span>
+                <span className="font-semibold text-slate-800">Utility (Orders/Tracking)</span>
+                <span className="font-mono font-semibold text-blue-700">{calcUtilityConvos}</span>
               </div>
               <input
                 type="range"
@@ -1100,8 +1095,8 @@ export function DashboardView({
             {/* Slider 3: Service */}
             <div className="space-y-2 bg-white p-4 rounded-xl border border-slate-200/70">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-800">Service (Customer Inquiries)</span>
-                <span className="font-mono font-bold text-emerald-700">{calcServiceConvos}</span>
+                <span className="font-semibold text-slate-800">Service (Customer Inquiries)</span>
+                <span className="font-mono font-semibold text-emerald-700">{calcServiceConvos}</span>
               </div>
               <input
                 type="range"
@@ -1120,7 +1115,7 @@ export function DashboardView({
             </div>
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }
