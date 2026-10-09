@@ -146,16 +146,17 @@ export function WhatsAppSimulator({ nodes, onHandoffAlert }: WhatsAppSimulatorPr
         nodes,
       });
       if (result) {
+        const allMsgs = [result.replyMessage, ...(result.additionalMessages || [])];
         setMessages((p) => [
           ...p,
-          {
-            id: result.replyMessage.id,
-            sender: result.replyMessage.sender,
-            text: result.replyMessage.text,
-            timestamp: result.replyMessage.timestamp,
-            buttons: result.replyMessage.buttons,
-            catalog: result.replyMessage.catalog,
-          },
+          ...allMsgs.map((m) => ({
+            id: m.id,
+            sender: m.sender,
+            text: m.text,
+            timestamp: m.timestamp,
+            buttons: m.buttons,
+            catalog: m.catalog,
+          })),
         ]);
         if (result.handoffTriggered) { setIsBotPaused(true); onHandoffAlert?.("User requested Human Agent transfer."); }
       }

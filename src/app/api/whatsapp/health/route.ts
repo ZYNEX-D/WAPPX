@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPhoneNumberHealth } from "@/lib/meta-client";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const clientId = searchParams.get("clientId") || "client-1";
+
     const { data: config } = await supabaseAdmin
       .from("meta_config")
       .select("*")
-      .eq("id", "default")
+      .or(`id.eq.${clientId},user_id.eq.${clientId}`)
+      .limit(1)
       .maybeSingle();
 
     if (!config || !config.phone_number_id || !config.access_token || config.access_token.startsWith("EAA...")) {

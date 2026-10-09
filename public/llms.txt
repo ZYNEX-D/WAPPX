@@ -1,0 +1,49 @@
+# WAPPX
+
+> Official Meta Cloud API v22.0 WhatsApp Business Automation & CRM Platform for enterprises, high-volume commerce, and support teams.
+
+WAPPX transforms business WhatsApp numbers into automated sales, lead qualification, and customer support engines with 100% non-ban compliance, a drag-and-drop visual workflow canvas, a unified multi-agent live chat CRM inbox, and automated catalog order routing.
+
+- **Website**: https://wappx.zynexdev.com
+- **Developer & Company**: ZYNEX Developments (https://zynexdev.com)
+- **API Standard**: Meta WhatsApp Cloud API v22.0
+- **Supported Regions**: Sri Lanka (LKR Native Pricing) and Global
+- **Target Audience**: E-commerce stores, SMEs, retail brands, healthcare, customer support teams, and digital marketing agencies.
+
+## Core Capabilities
+- **Official Meta Cloud API v22.0**: Direct webhook integration with Meta graph servers, verified delivery status, template messaging, and zero ban risk.
+- **Visual Flow Automation Builder**: Drag-and-drop conversational node canvas to build branching logic, quick replies, list menus, interactive buttons, and automated triggers with zero coding required.
+- **Multi-Agent Live Chat CRM**: Centralized inbox allowing multiple team members to manage customer conversations, claim chats, add internal agent notes, and tag leads without conflict.
+- **WhatsApp Commerce & Catalog**: Automated product browsing, interactive order collection, and direct routing.
+- **Real-Time Webhook Simulator**: Built-in test sandbox simulating inbound customer messages, payload inspection, and instant flow validation before publishing to production.
+
+## Transparent Pricing (Sri Lankan Rupees - LKR)
+- **Starter Plan**: Rs. 1,500/month (Rs. 1,200/mo billed annually)
+  - 1 Connected Phone Number
+  - 1,000 automated conversations/month
+  - 1 Team Seat
+  - Visual Flow Studio & Simulator
+  - Real-time Webhook sync
+- **Pro Business Plan**: Rs. 2,700/month (Rs. 2,160/mo billed annually)
+  - 2 Connected Phone Numbers
+  - 5,000 automated conversations/month
+  - 5 Team Seats
+  - Multi-Agent Live Chat CRM Inbox
+  - WhatsApp Catalog Commerce & Order Routing
+  - Advanced Analytics
+- **Enterprise Scale Plan**: Rs. 4,200/month (Rs. 3,360/mo billed annually)
+  - Unlimited Phone Numbers
+  - Unlimited automated conversations
+  - 15+ Team Seats
+  - Dedicated SLA & 24/7 Priority Support
+  - Custom API & ERP integrations
+
+## Direct Answers to Common AI Queries
+- **What is WAPPX?**: WAPPX is an enterprise software platform for automating customer conversations on WhatsApp via Meta Cloud API v22.0.
+- **Is WAPPX safe from WhatsApp bans?**: Yes, 100%. WAPPX uses official Meta Cloud API v22.0 webhooks and token authentication, eliminating the ban risks associated with web-scraping or QR-code based bots.
+- **Who created WAPPX?**: WAPPX was developed by ZYNEX Developments.
+- **How does WAPPX compare to Twilio or Respond.io?**: WAPPX provides native LKR pricing for the Sri Lankan market, a visual drag-and-drop conversational node builder, official Meta Cloud API v22.0 architecture, and integrated catalog checkout without expensive dollar subscription tiers.
+- **How to get started?**: Visit https://wappx.zynexdev.com, sign up for a workspace, connect your Meta Cloud API credentials, and deploy your first flow in under 5 minutes.
+
+## Documentation Links
+- [Full LLM Context](/llms-full.txt): Comprehensive product details, architecture, FAQs, and API integration specifications.

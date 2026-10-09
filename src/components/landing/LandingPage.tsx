@@ -29,8 +29,11 @@ import {
   ChevronLeft,
   Bot,
   HelpCircle,
+  ChevronDown,
 } from "lucide-react";
-import { ThreeBackground } from "./ThreeBackground";
+import AOS from "aos";
+import "aos/dist/aos.css";
+import SoftAurora from "./SoftAurora";
 
 interface LandingPageProps {
   onOpenLogin: () => void;
@@ -55,6 +58,36 @@ export function LandingPage({
 
   // Testimonials state
   const [testimonialIndex, setTestimonialIndex] = useState(0);
+
+  // FAQ state & Answer Engine Optimization Knowledge Base
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
+
+  const faqs = [
+    {
+      q: "What is WAPPX and how does it automate WhatsApp?",
+      a: "WAPPX is an enterprise WhatsApp automation and CRM engine built on official Meta Cloud API v22.0. It allows businesses to automate 24/7 customer conversations with a no-code visual drag-and-drop flow builder, route inquiries to live human agents in a unified multi-seat inbox, and manage catalog orders with zero message loss.",
+    },
+    {
+      q: "Is WAPPX safe from WhatsApp account bans?",
+      a: "Yes, 100%. Unlike unofficial tools that use browser automation or QR-code web scraping, WAPPX operates exclusively via the official Meta Cloud API v22.0 with cryptographically signed webhooks and verified token authentication. Your phone numbers remain 100% compliant with Meta Business Policies.",
+    },
+    {
+      q: "What are the subscription plans and pricing for WAPPX in Sri Lanka?",
+      a: "WAPPX offers simple, transparent pricing in Sri Lankan Rupees (LKR): Starter at Rs. 1,500/month (1 Phone, 1k conversations), Pro Business at Rs. 2,700/month (2 Phones, 5k conversations, CRM Inbox, Catalog), and Enterprise Scale at Rs. 4,200/month (unlimited numbers and conversations, 15+ seats, dedicated SLA). Annual plans receive an instant 20% discount.",
+    },
+    {
+      q: "Do I need coding or technical knowledge to build workflows?",
+      a: "No coding skills are required. WAPPX features an intuitive visual drag-and-drop canvas where you can configure branching logic, interactive buttons, list menus, conditional routes, and catalog checkouts with zero code.",
+    },
+    {
+      q: "Can multiple team members manage customer chats simultaneously?",
+      a: "Yes. WAPPX includes a unified multi-agent live chat CRM inbox with conversation claiming, agent assignment, automated routing, customer tags, and internal agent notes.",
+    },
+    {
+      q: "How fast can I connect my WhatsApp Business number?",
+      a: "You can connect your WhatsApp number in under 5 minutes. Enter your Meta App ID, Phone Number ID, and Permanent System User Access Token in your workspace or follow our interactive step-by-step onboarding guide.",
+    },
+  ];
 
   const testimonials = [
     {
@@ -100,16 +133,24 @@ export function LandingPage({
   // 1. LENIS SMOOTH SCROLL & MESSAGE LIFECYCLE CONTROLLER
   useEffect(() => {
     const lenis = new Lenis({
-      duration: 1.2,
+      duration: 1.0,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       orientation: "vertical",
       gestureOrientation: "vertical",
       smoothWheel: true,
-      wheelMultiplier: 1.0,
-      touchMultiplier: 1.5,
+      syncTouch: false,
     });
     lenisRef.current = lenis;
     (window as any).lenis = lenis;
+
+    // Initialize AOS Animate On Scroll (disabled on mobile to ensure buttery 60-120fps native touch scrolling)
+    AOS.init({
+      duration: 600,
+      easing: "ease-out-cubic",
+      once: true,
+      offset: 30,
+      disable: "mobile",
+    });
 
     let rafId: number;
     function raf(time: number) {
@@ -121,7 +162,6 @@ export function LandingPage({
     // Lifecycle Animation Elements
     const section = document.getElementById("decision-lifecycle");
     const line = document.getElementById("lifecycle-line");
-    const beacon = document.getElementById("lifecycle-beacon");
     const steps = section?.querySelectorAll<HTMLElement>(".lifecycle-step");
     const pills = section?.querySelectorAll<HTMLElement>(".lifecycle-nav-pill");
 
@@ -134,61 +174,62 @@ export function LandingPage({
       { start: 0.83, end: 1.01 },
     ];
 
+    let isLifecycleTicking = false;
     function updateLifecycle() {
       if (!section || !line) return;
-      const rect = section.getBoundingClientRect();
-      const windowH = window.innerHeight;
-      const travel = rect.height - windowH;
-      if (travel <= 0) return;
+      if (isLifecycleTicking) return;
+      isLifecycleTicking = true;
 
-      const scrolled = -rect.top;
-      let progress = scrolled / travel;
-      progress = Math.max(0, Math.min(1, progress));
+      requestAnimationFrame(() => {
+        isLifecycleTicking = false;
+        if (!section || !line) return;
+        const rect = section.getBoundingClientRect();
+        const windowH = window.innerHeight;
+        const travel = rect.height - windowH;
+        if (travel <= 0) return;
 
-      // Line fill
-      line.style.height = `${progress * 100}%`;
+        const scrolled = -rect.top;
+        let progress = scrolled / travel;
+        progress = Math.max(0, Math.min(1, progress));
 
-      // Signal Beacon
-      if (beacon) {
-        beacon.style.top = `${progress * 100}%`;
-        beacon.style.opacity = progress > 0.01 && progress < 0.99 ? "1" : progress >= 0.99 ? "1" : "0";
-      }
+        // Line fill
+        line.style.height = `${progress * 100}%`;
 
-      // Step Active / Past Classes
-      steps?.forEach((step, idx) => {
-        const t = thresholds[idx];
-        if (!t) return;
-        const pill = pills?.[idx];
+        // Step Active / Past Classes
+        steps?.forEach((step, idx) => {
+          const t = thresholds[idx];
+          if (!t) return;
+          const pill = pills?.[idx];
 
-        if (progress >= t.start && progress < t.end) {
-          step.classList.add("active");
-          step.classList.remove("past");
-          if (pill) {
-            pill.classList.add("bg-[#00A86B]", "text-white", "shadow-xs");
-            pill.classList.remove("text-slate-500", "text-[#00A86B]");
+          if (progress >= t.start && progress < t.end) {
+            step.classList.add("active");
+            step.classList.remove("past");
+            if (pill) {
+              pill.classList.add("bg-[#00A86B]", "text-white", "shadow-xs");
+              pill.classList.remove("text-slate-500", "text-[#00A86B]");
+            }
+          } else if (progress >= t.end) {
+            step.classList.remove("active");
+            step.classList.add("past");
+            if (pill) {
+              pill.classList.remove("bg-[#00A86B]", "text-white", "shadow-xs");
+              pill.classList.add("text-[#00A86B]");
+            }
+          } else {
+            step.classList.remove("active");
+            step.classList.remove("past");
+            if (pill) {
+              pill.classList.remove("bg-[#00A86B]", "text-white", "shadow-xs", "text-[#00A86B]");
+              pill.classList.add("text-slate-500");
+            }
           }
-        } else if (progress >= t.end) {
-          step.classList.remove("active");
-          step.classList.add("past");
-          if (pill) {
-            pill.classList.remove("bg-[#00A86B]", "text-white", "shadow-xs");
-            pill.classList.add("text-[#00A86B]");
-          }
-        } else {
-          step.classList.remove("active");
-          step.classList.remove("past");
-          if (pill) {
-            pill.classList.remove("bg-[#00A86B]", "text-white", "shadow-xs", "text-[#00A86B]");
-            pill.classList.add("text-slate-500");
-          }
-        }
+        });
       });
     }
 
-    // Attach to Lenis scroll AND native window scroll
+    // Attach to Lenis scroll and resize
     lenis.on("scroll", updateLifecycle);
-    window.addEventListener("scroll", updateLifecycle, { passive: true });
-    window.addEventListener("resize", updateLifecycle);
+    window.addEventListener("resize", updateLifecycle, { passive: true });
     updateLifecycle();
 
     // Smooth navigation anchor interception
@@ -208,7 +249,6 @@ export function LandingPage({
     return () => {
       cancelAnimationFrame(rafId);
       lenis.off("scroll", updateLifecycle);
-      window.removeEventListener("scroll", updateLifecycle);
       window.removeEventListener("resize", updateLifecycle);
       document.removeEventListener("click", handleAnchorClick);
       lenis.destroy();
@@ -299,110 +339,181 @@ export function LandingPage({
     <div className="w-full relative bg-[#F7F7F2] text-[#111111] font-secondary selection:bg-[#A2E4B8] selection:text-[#0A504A] overflow-x-clip min-h-screen">
       {/* 1. BACKGROUND LAYERS */}
       <div className="fixed inset-0 z-0 technical-grid pointer-events-none" />
-      <ThreeBackground />
+      <div
+        className="fixed inset-0 z-0 pointer-events-none opacity-45 overflow-hidden transition-opacity duration-1000"
+        style={{
+          maskImage: "radial-gradient(ellipse 85% 70% at 50% 30%, black 25%, transparent 85%)",
+          WebkitMaskImage: "radial-gradient(ellipse 85% 70% at 50% 30%, black 25%, transparent 85%)",
+        }}
+      >
+        <SoftAurora
+          speed={0.4}
+          scale={1.4}
+          brightness={0.65}
+          color1="#00A86B"
+          color2="#0A504A"
+          noiseFrequency={2.4}
+          noiseAmplitude={0.9}
+          bandHeight={0.45}
+          bandSpread={1.1}
+          octaveDecay={0.12}
+          layerOffset={0}
+          colorSpeed={0.8}
+          enableMouseInteraction={true}
+          mouseInfluence={0.2}
+          lightMode={true}
+        />
+      </div>
 
-      {/* 2. FIXED HEADER */}
-      <header className="fixed top-0 left-0 right-0 z-50 w-full px-6 py-4 md:px-12 flex justify-between items-center bg-[#F7F7F2]/90 backdrop-blur-md border-b border-[#0A504A]/10 transition-all duration-300">
-        {/* Brand: Raw transparent icon without background or shadow, generous letter spacing */}
-        <Link href="/" className="flex items-center gap-3 group">
-          <img
-            src="/icon.png"
-            alt="WAPPX"
-            className="w-7 h-7 object-contain group-hover:scale-105 transition-transform"
+      {/* 2. FIXED HEADER WITH PROGRESSIVE BLUR */}
+      <header className="fixed top-0 left-0 right-0 z-50 w-full transition-all duration-300">
+        {/* Progressive Blur Layering (Gradient Depth Blur) */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden ">
+          {/* Base gradient tint */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#F7F7F2]/95 via-[#F7F7F2]/80 to-[#F7F7F2]/40" />
+
+          {/* Progressive blur tier 1: Deep blur at the top */}
+          <div
+            className="absolute inset-0 backdrop-blur-[20px]"
+            style={{
+              maskImage: "linear-gradient(to bottom, black 0%, black 50%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 50%, transparent 100%)",
+            }}
           />
-          <span className="font-primary text-lg font-semibold tracking-[-0.01em] text-[#0A504A] pl-1">
-            WAPP<span className="text-[#00A86B]">X</span>
-          </span>
-        </Link>
+          {/* Progressive blur tier 2: Medium blur spanning further down */}
+          <div
+            className="absolute inset-0 backdrop-blur-[10px]"
+            style={{
+              maskImage: "linear-gradient(to bottom, black 25%, black 75%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to bottom, black 25%, black 75%, transparent 100%)",
+            }}
+          />
+          {/* Progressive blur tier 3: Feathered edge at the bottom */}
+          <div
+            className="absolute inset-0 backdrop-blur-[4px]"
+            style={{
+              maskImage: "linear-gradient(to bottom, transparent 40%, black 85%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to bottom, transparent 40%, black 85%, transparent 100%)",
+            }}
+          />
 
-        {/* Navigation Links with Lenis Smooth Scrolling */}
-        <nav className="hidden md:flex items-center gap-8">
-          <button
-            onClick={() => handleNavTo("#features")}
-            className="text-xs font-semibold text-slate-500 hover:text-[#0A504A] transition-colors cursor-pointer"
-          >
-            Platform
-          </button>
-          <button
-            onClick={() => handleNavTo("#decision-lifecycle")}
-            className="text-xs font-semibold text-slate-500 hover:text-[#0A504A] transition-colors cursor-pointer"
-          >
-            Lifecycle
-          </button>
-          <button
-            onClick={() => handleNavTo("#architecture")}
-            className="text-xs font-semibold text-slate-500 hover:text-[#0A504A] transition-colors cursor-pointer"
-          >
-            Architecture
-          </button>
-          <button
-            onClick={() => handleNavTo("#pricing")}
-            className="text-xs font-semibold text-slate-500 hover:text-[#0A504A] transition-colors cursor-pointer"
-          >
-            Pricing
-          </button>
-        </nav>
+          {/* Subtle bottom gradient boundary line */}
+          <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#0A504A]/10 to-transparent pointer-events-none" />
+        </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-3">
+        {/* Navigation Content Bar */}
+        <div className="relative z-10 w-full px-6 py-4 md:px-12 flex justify-between items-center">
+          {/* Brand: Raw transparent icon without background or shadow, generous letter spacing */}
+          <Link href="/" className="flex items-center gap-3 group">
+            <img
+              src="/icon.png"
+              alt="WAPPX WhatsApp Automation & CRM Platform Logo"
+              className="w-7 h-7 object-contain group-hover:scale-105 transition-transform"
+            />
+            <span className="font-primary text-lg font-semibold tracking-[-0.01em] text-[#0A504A] pl-1">
+              WAPP<span className="text-[#00A86B]">X</span>
+            </span>
+          </Link>
 
-          {authSession ? (
+          {/* Navigation Links with Lenis Smooth Scrolling */}
+          <nav className="hidden md:flex items-center gap-8">
             <button
-              onClick={onGoToDashboard || onOpenLogin}
-              className="flex items-center gap-2 bg-[#0A504A] hover:bg-[#00A86B] text-white text-xs font-bold px-4 py-2 rounded-full transition-all shadow-sm cursor-pointer"
+              onClick={() => handleNavTo("#features")}
+              className="text-xs font-semibold text-slate-500 hover:text-[#0A504A] transition-colors cursor-pointer"
             >
-              <span>{authSession.role === "admin" ? "Admin Console" : "Open Workspace"}</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              Platform
             </button>
-          ) : (
-            <>
-              <button
-                onClick={onOpenLogin}
-                className="hidden sm:block text-xs font-bold text-[#0A504A] hover:text-[#00A86B] transition-colors px-3 py-1.5 cursor-pointer"
-              >
-                Sign In
-              </button>
+            <button
+              onClick={() => handleNavTo("#decision-lifecycle")}
+              className="text-xs font-semibold text-slate-500 hover:text-[#0A504A] transition-colors cursor-pointer"
+            >
+              Lifecycle
+            </button>
+            <button
+              onClick={() => handleNavTo("#architecture")}
+              className="text-xs font-semibold text-slate-500 hover:text-[#0A504A] transition-colors cursor-pointer"
+            >
+              Architecture
+            </button>
+            <button
+              onClick={() => handleNavTo("#pricing")}
+              className="text-xs font-semibold text-slate-500 hover:text-[#0A504A] transition-colors cursor-pointer"
+            >
+              Pricing
+            </button>
+            <button
+              onClick={() => handleNavTo("#faq")}
+              className="text-xs font-semibold text-slate-500 hover:text-[#0A504A] transition-colors cursor-pointer"
+            >
+              FAQ
+            </button>
+          </nav>
 
+          {/* Action Controls */}
+          <div className="flex items-center gap-3">
+            {authSession ? (
               <button
-                onClick={onOpenLogin}
-                className="group relative isolate overflow-hidden bg-[#0A504A] text-xs font-bold px-5 py-2.5 rounded-full shadow-sm ring-1 ring-white/10 transition-all duration-300 hover:scale-[1.03] hover:bg-[#00A86B] text-white cursor-pointer"
+                onClick={onGoToDashboard || onOpenLogin}
+                className="flex items-center gap-2 bg-[#0A504A] hover:bg-[#00A86B] text-white text-xs font-bold px-4 py-2 rounded-full transition-all shadow-sm cursor-pointer"
               >
-                <div className="shimmer-layer absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent z-10" />
-                <span className="relative z-20">Start Free</span>
+                <span>{authSession.role === "admin" ? "Admin Console" : "Open Workspace"}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
-            </>
-          )}
+            ) : (
+              <>
+                <button
+                  onClick={onOpenLogin}
+                  className="hidden sm:block text-xs font-bold text-[#0A504A] hover:text-[#00A86B] transition-colors px-3 py-1.5 cursor-pointer"
+                >
+                  Sign In
+                </button>
+
+                <button
+                  onClick={onOpenLogin}
+                  className="group relative isolate overflow-hidden bg-[#0A504A] text-xs font-bold px-5 py-2.5 rounded-full shadow-sm ring-1 ring-white/10 transition-all duration-300 hover:scale-[1.03] hover:bg-[#00A86B] text-white cursor-pointer"
+                >
+                  <div className="shimmer-layer absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent z-10" />
+                  <span className="relative z-20">Start Free</span>
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
-      {/* 3. CONTENT WRAPPER */}
-      <div className="z-10 flex flex-col w-full relative">
+      {/* 3. MAIN CONTENT */}
+      <main id="main-content" className="z-10 flex flex-col w-full relative">
         {/* ========================================================================= */}
         {/* HERO SECTION                                                             */}
         {/* ========================================================================= */}
         <section className="relative min-h-[90vh] flex flex-col lg:flex-row items-center justify-between px-6 md:px-12 lg:px-20 pt-32 pb-20 gap-16">
           <div className="max-w-2xl space-y-8 relative z-10">
             <div className="space-y-6">
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#0A504A]/15 shadow-2xs bg-white">
-                <span className="w-2 h-2 rounded-full bg-[#00A86B] animate-pulse" />
-                <span className="text-[11px] font-bold text-[#0A504A] tracking-tight">
-                  Official WhatsApp Cloud Business Platform
-                </span>
-              </div>
-
               {/* Main Headline */}
-              <h1 className="font-primary text-5xl md:text-7xl lg:text-8xl font-medium tracking-tight text-[#0A504A] leading-[1.05]">
-                WAPP
-                <span className="text-[#00A86B]">X</span>
-                <br />
-                <span className="text-slate-400 font-light text-4xl md:text-6xl lg:text-7xl tracking-tight">
-                  Automation.
+              <h1 id="hero-heading" className="font-primary text-[#0A504A]">
+                <span
+                  data-aos="fade-up"
+                  data-aos-delay="100"
+                  className="block text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-medium tracking-[14px] sm:tracking-[22px] md:tracking-[32px] -mr-[14px] sm:-mr-[22px] md:-mr-[32px] leading-none uppercase"
+                >
+                  WAPP<span className="text-[#00A86B]">X</span>
+                </span>
+                <span
+                  data-aos="fade-up"
+                  data-aos-delay="200"
+                  className="block font-secondary text-slate-400 font-light tracking-[1.5px] sm:tracking-[3px] md:tracking-[5px] text-[11px] sm:text-xs md:text-sm mt-2.5 sm:mt-3 leading-snug"
+                >
+                  Whatsapp Business Automation & CRM
                 </span>
               </h1>
 
               {/* Description */}
-              <p className="max-w-xl text-sm md:text-base text-slate-600 leading-relaxed font-normal">
+              <p
+                id="hero-description"
+                data-aos="fade-up"
+                data-aos-delay="300"
+                className="max-w-xl text-xs sm:text-sm text-slate-600 leading-relaxed font-normal"
+              >
                 The visual flow builder and live customer intelligence platform for WhatsApp.
                 Connect your business phone in minutes, automate 24/7 customer journeys, and
                 escalate to live human agents with zero message loss.
@@ -410,7 +521,7 @@ export function LandingPage({
             </div>
 
             {/* CTAs */}
-            <div className="flex flex-wrap items-center gap-4">
+            <div data-aos="fade-up" data-aos-delay="400" className="flex flex-wrap items-center gap-4">
               <button
                 onClick={authSession ? onGoToDashboard : onOpenLogin}
                 className="group relative isolate overflow-hidden bg-[#0A504A] text-xs md:text-sm font-bold px-7 py-3.5 rounded-full shadow-md transition-all duration-300 hover:scale-[1.03] hover:bg-[#00A86B] active:scale-[0.98] flex items-center gap-2 text-white cursor-pointer"
@@ -432,7 +543,7 @@ export function LandingPage({
             </div>
 
             {/* Trust Pill */}
-            <div className="pt-2 flex items-center gap-3 text-xs text-slate-500">
+            <div data-aos="fade-up" data-aos-delay="500" className="pt-2 flex items-center gap-3 text-xs text-slate-500">
               <div className="flex -space-x-2">
                 <span className="w-6 h-6 rounded-full bg-[#0A504A] text-white flex items-center justify-center font-bold text-[9px] border-2 border-white">
                   AD
@@ -536,12 +647,20 @@ export function LandingPage({
         {/* ========================================================================= */}
         {/* LOGOS / INTEGRATION PARTNERS                                              */}
         {/* ========================================================================= */}
-        <section className="border-y border-[#0A504A]/10 py-12 bg-white">
+        <section className="border-y border-[#0A504A]/10 py-12 bg-white" data-aos="fade-up">
           <div className="max-w-7xl mx-auto px-6 md:px-12 flex flex-col md:flex-row items-center justify-between gap-8">
-            <p className="text-xs font-bold text-[#0A504A] uppercase tracking-wider whitespace-nowrap md:w-auto w-full text-center md:text-left">
+            <p
+              className="text-xs font-bold text-[#0A504A] uppercase tracking-wider whitespace-nowrap md:w-auto w-full text-center md:text-left"
+              data-aos="fade-right"
+              data-aos-delay="100"
+            >
               INTEGRATED ARCHITECTURE
             </p>
-            <div className="flex flex-wrap justify-center md:justify-end gap-x-10 gap-y-6 opacity-65 hover:opacity-100 transition-opacity">
+            <div
+              className="flex flex-wrap justify-center md:justify-end gap-x-10 gap-y-6 opacity-65 hover:opacity-100 transition-opacity"
+              data-aos="fade-left"
+              data-aos-delay="200"
+            >
               <span className="text-sm font-bold text-[#0A504A] tracking-tight">META CLOUD PLATFORM</span>
               <span className="text-sm font-bold text-[#0A504A] tracking-tight">SHOPIFY COMMERCE</span>
               <span className="text-sm font-bold text-[#0A504A] tracking-tight">STRIPE PAYMENTS</span>
@@ -560,55 +679,50 @@ export function LandingPage({
           className="relative w-full bg-[#F7F7F2] border-b border-[#0A504A]/10"
           style={{ height: "300vh" }}
         >
-          <div className="sticky top-0 left-0 w-full h-screen overflow-hidden flex flex-col items-center justify-between pt-20 pb-6 px-4 md:px-8">
+          <div className="sticky top-0 left-0 w-full h-screen overflow-hidden flex flex-col items-center justify-between pt-14 sm:pt-16 md:pt-20 pb-3 sm:pb-4 md:pb-6 px-2.5 sm:px-4 md:px-8">
             {/* Background Dot Pattern */}
             <div className="absolute inset-0 bg-[radial-gradient(#0A504A0a_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
 
             {/* Header: Crisp, prominent and always visible */}
-            <div id="lifecycle-header" className="text-center shrink-0 mb-1 md:mb-3 z-20">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00A86B]/10 border border-[#00A86B]/30 text-[#00A86B] text-[11px] font-bold tracking-wider uppercase mb-1 shadow-2xs">
-                <Radio className="w-3.5 h-3.5 text-[#00A86B] animate-pulse" />
+            <div id="lifecycle-header" className="text-center shrink-0 mb-1 sm:mb-2 md:mb-3 z-20 max-w-xl">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#00A86B]/10 border border-[#00A86B]/30 text-[#00A86B] text-[9px] sm:text-[10px] md:text-[11px] font-bold tracking-wider uppercase mb-0.5 sm:mb-1 shadow-2xs">
+                <Radio className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#00A86B] animate-pulse" />
                 <span>Traceability Lifecycle Engine</span>
               </div>
-              <h2 className="font-primary text-2xl md:text-3xl font-medium text-[#0A504A] tracking-tight">
+              <h2 className="font-primary text-lg sm:text-2xl md:text-3xl font-medium text-[#0A504A] tracking-tight leading-tight">
                 Message Automation Lifecycle
               </h2>
-              <p className="text-slate-500 text-xs md:text-sm max-w-lg mx-auto mt-0.5">
+              <p className="text-slate-500 text-[10px] sm:text-xs md:text-sm max-w-lg mx-auto mt-0.5 line-clamp-1 sm:line-clamp-none">
                 From initial customer inquiry to verified enterprise delivery in milliseconds.
               </p>
             </div>
 
             {/* Central Track & Steps Container */}
             <div className="relative w-full max-w-3xl flex-1 flex flex-col justify-center my-auto">
-              {/* Static Background Conduit Track */}
-              <div className="absolute left-1/2 top-3 bottom-3 w-[2px] bg-slate-200/90 -translate-x-1/2 rounded-full" />
+              {/* 6 Lifecycle Steps with responsive spacing & widths */}
+              <div className="space-y-3 sm:space-y-4 md:space-y-6 py-2 relative">
+                {/* Static Background Conduit Track & Glowing Fill Line (Strictly bounded between Step 1 and Step 6) */}
+                <div className="absolute left-1/2 top-4 bottom-4 -translate-x-1/2 w-[2.5px] pointer-events-none z-0">
+                  {/* Static track */}
+                  <div className="w-full h-full bg-slate-200/90 rounded-full" />
+                  {/* Animated Glowing Fill Line */}
+                  <div
+                    id="lifecycle-line"
+                    className="absolute top-0 left-0 w-full bg-gradient-to-b from-[#00A86B] via-[#00A86B] to-[#0A504A] rounded-full transition-all duration-75 ease-out shadow-[0_0_8px_rgba(0,168,107,0.4)]"
+                    style={{ height: "0%" }}
+                  />
+                </div>
 
-              {/* Animated Glowing Fill Line */}
-              <div
-                id="lifecycle-line"
-                className="absolute left-1/2 top-3 w-[2.5px] bg-gradient-to-b from-[#00A86B] via-[#00A86B] to-[#0A504A] -translate-x-1/2 rounded-full transition-all duration-75 ease-out shadow-[0_0_8px_rgba(0,168,107,0.4)]"
-                style={{ height: "0%" }}
-              />
-
-              {/* Signal Beacon that travels down the conduit */}
-              <div
-                id="lifecycle-beacon"
-                className="absolute left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-[#00A86B] ring-4 ring-[#A2E4B8]/60 shadow-[0_0_16px_#00A86B] transition-all duration-75 z-20 -mt-2 opacity-0 pointer-events-none"
-                style={{ top: "0%" }}
-              />
-
-              {/* 6 Lifecycle Steps with explicit CSS class hooks */}
-              <div className="space-y-5 md:space-y-6 py-2 relative">
                 {/* Step 1 */}
                 <div
                   className="lifecycle-step group flex items-center justify-between w-full"
                   data-threshold="0.04"
                 >
-                  <div className="w-[42%] text-right pr-6">
-                    <span className="step-num font-mono text-[10px] uppercase tracking-wider block mb-0.5">
+                  <div className="w-[46%] md:w-[42%] text-right pr-2.5 sm:pr-4 md:pr-6">
+                    <span className="step-num font-mono text-[9px] sm:text-[10px] uppercase tracking-wider block mb-0.5">
                       01 Context
                     </span>
-                    <h3 className="step-title text-sm md:text-base font-bold">
+                    <h3 className="step-title text-[11px] sm:text-xs md:text-base font-bold leading-tight">
                       Inbound Customer Message
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5 hidden md:block">
@@ -618,9 +732,9 @@ export function LandingPage({
                   <div className="relative shrink-0 z-10">
                     <div className="step-dot" />
                   </div>
-                  <div className="w-[42%] pl-6">
-                    <div className="step-card p-2.5 rounded-xl shadow-2xs inline-block text-left">
-                      <span className="text-xs font-semibold text-[#0A504A]">
+                  <div className="w-[46%] md:w-[42%] pl-2.5 sm:pl-4 md:pl-6">
+                    <div className="step-card p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl shadow-2xs inline-block text-left">
+                      <span className="text-[10px] sm:text-xs font-semibold text-[#0A504A] leading-snug block">
                         &ldquo;Can I upgrade to the enterprise plan today?&rdquo;
                       </span>
                     </div>
@@ -632,10 +746,10 @@ export function LandingPage({
                   className="lifecycle-step group flex items-center justify-between w-full"
                   data-threshold="0.19"
                 >
-                  <div className="w-[42%] text-right pr-6">
-                    <div className="step-card p-2.5 rounded-xl shadow-2xs inline-block text-left">
-                      <span className="text-[10px] text-slate-400 block mb-0.5">Requirement Detected</span>
-                      <span className="text-xs font-semibold text-[#0A504A]">
+                  <div className="w-[46%] md:w-[42%] text-right pr-2.5 sm:pr-4 md:pr-6">
+                    <div className="step-card p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl shadow-2xs inline-block text-left">
+                      <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">Requirement Detected</span>
+                      <span className="text-[10px] sm:text-xs font-semibold text-[#0A504A] leading-snug block">
                         High-volume automated catalog support
                       </span>
                     </div>
@@ -643,11 +757,11 @@ export function LandingPage({
                   <div className="relative shrink-0 z-10">
                     <div className="step-dot" />
                   </div>
-                  <div className="w-[42%] pl-6">
-                    <span className="step-num font-mono text-[10px] uppercase tracking-wider block mb-0.5">
+                  <div className="w-[46%] md:w-[42%] pl-2.5 sm:pl-4 md:pl-6">
+                    <span className="step-num font-mono text-[9px] sm:text-[10px] uppercase tracking-wider block mb-0.5">
                       02 Input
                     </span>
-                    <h3 className="step-title text-sm md:text-base font-bold">
+                    <h3 className="step-title text-[11px] sm:text-xs md:text-base font-bold leading-tight">
                       Intent Categorization
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5 hidden md:block">
@@ -661,11 +775,11 @@ export function LandingPage({
                   className="lifecycle-step group flex items-center justify-between w-full"
                   data-threshold="0.35"
                 >
-                  <div className="w-[42%] text-right pr-6">
-                    <span className="step-num font-mono text-[10px] uppercase tracking-wider block mb-0.5">
+                  <div className="w-[46%] md:w-[42%] text-right pr-2.5 sm:pr-4 md:pr-6">
+                    <span className="step-num font-mono text-[9px] sm:text-[10px] uppercase tracking-wider block mb-0.5">
                       03 Data
                     </span>
-                    <h3 className="step-title text-sm md:text-base font-bold">
+                    <h3 className="step-title text-[11px] sm:text-xs md:text-base font-bold leading-tight">
                       Live CRM & Inventory Sync
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5 hidden md:block">
@@ -675,10 +789,10 @@ export function LandingPage({
                   <div className="relative shrink-0 z-10">
                     <div className="step-dot" />
                   </div>
-                  <div className="w-[42%] pl-6">
-                    <div className="step-card p-2.5 rounded-xl shadow-2xs inline-flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#00A86B] animate-pulse" />
-                      <span className="text-xs font-bold text-[#0A504A]">Customer CRM: Active VIP</span>
+                  <div className="w-[46%] md:w-[42%] pl-2.5 sm:pl-4 md:pl-6">
+                    <div className="step-card p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl shadow-2xs inline-flex items-center gap-1.5 sm:gap-2">
+                      <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#00A86B] animate-pulse shrink-0" />
+                      <span className="text-[10px] sm:text-xs font-bold text-[#0A504A]">Customer CRM: Active VIP</span>
                     </div>
                   </div>
                 </div>
@@ -688,9 +802,9 @@ export function LandingPage({
                   className="lifecycle-step group flex items-center justify-between w-full"
                   data-threshold="0.51"
                 >
-                  <div className="w-[42%] text-right pr-6">
-                    <div className="step-card p-2.5 rounded-xl shadow-2xs inline-block text-left">
-                      <span className="text-xs font-semibold text-[#0A504A]">
+                  <div className="w-[46%] md:w-[42%] text-right pr-2.5 sm:pr-4 md:pr-6">
+                    <div className="step-card p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl shadow-2xs inline-block text-left">
+                      <span className="text-[10px] sm:text-xs font-semibold text-[#0A504A] leading-snug block">
                         Tailored catalog cards with instant checkout buttons
                       </span>
                     </div>
@@ -698,11 +812,11 @@ export function LandingPage({
                   <div className="relative shrink-0 z-10">
                     <div className="step-dot" />
                   </div>
-                  <div className="w-[42%] pl-6">
-                    <span className="step-num font-mono text-[10px] uppercase tracking-wider block mb-0.5">
+                  <div className="w-[46%] md:w-[42%] pl-2.5 sm:pl-4 md:pl-6">
+                    <span className="step-num font-mono text-[9px] sm:text-[10px] uppercase tracking-wider block mb-0.5">
                       04 Logic
                     </span>
-                    <h3 className="step-title text-sm md:text-base font-bold">
+                    <h3 className="step-title text-[11px] sm:text-xs md:text-base font-bold leading-tight">
                       Flow Decision Branching
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5 hidden md:block">
@@ -716,11 +830,11 @@ export function LandingPage({
                   className="lifecycle-step group flex items-center justify-between w-full"
                   data-threshold="0.67"
                 >
-                  <div className="w-[42%] text-right pr-6">
-                    <span className="step-num font-mono text-[10px] uppercase tracking-wider block mb-0.5">
+                  <div className="w-[46%] md:w-[42%] text-right pr-2.5 sm:pr-4 md:pr-6">
+                    <span className="step-num font-mono text-[9px] sm:text-[10px] uppercase tracking-wider block mb-0.5">
                       05 Result
                     </span>
-                    <h3 className="step-title text-sm md:text-base font-bold">
+                    <h3 className="step-title text-[11px] sm:text-xs md:text-base font-bold leading-tight">
                       Instant Delivery
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5 hidden md:block">
@@ -730,10 +844,10 @@ export function LandingPage({
                   <div className="relative shrink-0 z-10">
                     <div className="step-dot" />
                   </div>
-                  <div className="w-[42%] pl-6">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0A504A] text-xs font-bold shadow-md text-white">
+                  <div className="w-[46%] md:w-[42%] pl-2.5 sm:pl-4 md:pl-6">
+                    <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#0A504A] text-[10px] sm:text-xs font-bold shadow-md text-white">
                       <span>Delivered (&lt; 250ms)</span>
-                      <Check className="w-3.5 h-3.5 text-[#A2E4B8]" />
+                      <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#A2E4B8]" />
                     </span>
                   </div>
                 </div>
@@ -743,19 +857,19 @@ export function LandingPage({
                   className="lifecycle-step group flex items-center justify-between w-full"
                   data-threshold="0.83"
                 >
-                  <div className="w-[42%] text-right pr-6">
-                    <span className="font-mono text-[10px] text-slate-600 px-2.5 py-1 rounded-lg bg-slate-100 inline-block font-semibold">
+                  <div className="w-[46%] md:w-[42%] text-right pr-2.5 sm:pr-4 md:pr-6">
+                    <span className="font-mono text-[9px] sm:text-[10px] text-slate-600 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md sm:rounded-lg bg-slate-100 inline-block font-semibold">
                       TRACE: WAPPX-9821
                     </span>
                   </div>
                   <div className="relative shrink-0 z-10">
                     <div className="step-dot" />
                   </div>
-                  <div className="w-[42%] pl-6">
-                    <span className="step-num font-mono text-[10px] uppercase tracking-wider block mb-0.5">
+                  <div className="w-[46%] md:w-[42%] pl-2.5 sm:pl-4 md:pl-6">
+                    <span className="step-num font-mono text-[9px] sm:text-[10px] uppercase tracking-wider block mb-0.5">
                       06 Audit
                     </span>
-                    <h3 className="step-title text-sm md:text-base font-bold">
+                    <h3 className="step-title text-[11px] sm:text-xs md:text-base font-bold leading-tight">
                       Immutable Record
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5 hidden md:block">
@@ -767,21 +881,22 @@ export function LandingPage({
             </div>
 
             {/* Quick Interactive Stage Jump Pills */}
-            <div className="shrink-0 z-20 flex flex-wrap justify-center items-center gap-1.5 md:gap-2 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-200/80 shadow-xs max-w-full">
+            <div className="shrink-0 z-20 flex flex-wrap justify-center items-center gap-1 sm:gap-1.5 md:gap-2 bg-white/90 backdrop-blur-md px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border border-slate-200/80 shadow-xs max-w-full">
               {[
-                { label: "01 Inbound", idx: 0 },
-                { label: "02 Intent", idx: 1 },
-                { label: "03 CRM Sync", idx: 2 },
-                { label: "04 Flow Logic", idx: 3 },
-                { label: "05 Instant Pay", idx: 4 },
-                { label: "06 Audit Trail", idx: 5 },
+                { label: "01 Inbound", short: "01", idx: 0 },
+                { label: "02 Intent", short: "02", idx: 1 },
+                { label: "03 CRM Sync", short: "03", idx: 2 },
+                { label: "04 Flow Logic", short: "04", idx: 3 },
+                { label: "05 Instant Pay", short: "05", idx: 4 },
+                { label: "06 Audit Trail", short: "06", idx: 5 },
               ].map((stage) => (
                 <button
                   key={stage.idx}
                   onClick={() => scrollToLifecycleStage(stage.idx)}
-                  className="lifecycle-nav-pill text-[10px] md:text-xs px-2.5 py-1 rounded-full font-semibold transition-all cursor-pointer text-slate-500 hover:text-[#0A504A]"
+                  className="lifecycle-nav-pill text-[9px] sm:text-[10px] md:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full font-semibold transition-all cursor-pointer text-slate-500 hover:text-[#0A504A]"
                 >
-                  {stage.label}
+                  <span className="hidden xs:inline sm:inline">{stage.label}</span>
+                  <span className="xs:hidden sm:hidden">{stage.short}</span>
                 </button>
               ))}
             </div>
@@ -791,22 +906,24 @@ export function LandingPage({
         {/* ========================================================================= */}
         {/* BENTO GRID: STRUCTURED AUTOMATION FEATURES                                */}
         {/* ========================================================================= */}
-        <section id="features" className="py-28 px-6 md:px-12 lg:px-20 bg-white">
+        <section id="features" className="py-16 md:py-28 px-4 sm:px-6 md:px-12 lg:px-20 bg-white">
           <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
-              <div className="max-w-xl">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 md:mb-16 gap-6 md:gap-8">
+              <div className="max-w-xl" data-aos="fade-up">
                 <span className="text-[11px] font-bold text-[#00A86B] uppercase tracking-wider block mb-2">
                   Engine Architecture
                 </span>
-                <h2 className="font-primary text-3xl md:text-5xl font-medium text-[#0A504A] tracking-tight leading-[1.1]">
+                <h2 className="font-primary text-2xl sm:text-3xl md:text-5xl font-medium text-[#0A504A] tracking-tight leading-[1.1]">
                   Visual Automation.
-                  <span className="text-slate-400 block font-light text-2xl md:text-4xl mt-1">
+                  <span className="text-slate-400 block font-light text-xl sm:text-2xl md:text-4xl mt-1">
                     Defensible & Scalable.
                   </span>
                 </h2>
               </div>
               <button
                 onClick={onQuickStartSimulator}
+                data-aos="fade-left"
+                data-aos-delay="100"
                 className="pb-1 border-b-2 border-[#0A504A] text-xs font-bold text-[#0A504A] hover:text-[#00A86B] hover:border-[#00A86B] transition-colors cursor-pointer flex items-center gap-1.5"
               >
                 <span>Launch Interactive Demo</span>
@@ -816,12 +933,16 @@ export function LandingPage({
 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               {/* Card 1: Visual Flow Lineage (Span 8) */}
-              <div className="md:col-span-8 group relative border border-slate-200 rounded-2xl overflow-hidden hover:border-[#00A86B] transition-all duration-500 bg-[#F7F7F2]/50 p-8 flex flex-col justify-between">
+              <div
+                data-aos="fade-up"
+                data-aos-delay="100"
+                className="md:col-span-8 group relative border border-slate-200 rounded-2xl overflow-hidden hover:border-[#00A86B] transition-all duration-500 bg-[#F7F7F2]/50 p-5 sm:p-6 md:p-8 flex flex-col justify-between"
+              >
                 <div>
                   <div className="w-10 h-10 bg-white border border-[#0A504A]/10 rounded-xl flex items-center justify-center mb-6 text-[#0A504A] shadow-xs">
                     <GitBranch className="w-5 h-5 text-[#00A86B]" />
                   </div>
-                  <h3 className="text-2xl font-semibold text-[#0A504A] mb-2 font-primary">
+                  <h3 className="text-xl sm:text-2xl font-semibold text-[#0A504A] mb-2 font-primary">
                     Visual Flow Builder
                   </h3>
                   <p className="text-xs md:text-sm text-slate-600 max-w-lg leading-relaxed">
@@ -836,34 +957,38 @@ export function LandingPage({
                     <span>NODE ENGINE TRACE</span>
                     <span className="text-[#00A86B] font-bold">CONNECTED</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
-                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase">
-                        <span className="w-2 h-2 rounded-full bg-[#00A86B]" />
-                        Start Node
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-white border border-slate-200 shadow-2xs">
+                      <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">
+                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#00A86B] shrink-0" />
+                        <span className="truncate">Start Node</span>
                       </div>
-                      <p className="text-xs font-bold text-[#0A504A] mt-1">Order Query</p>
+                      <p className="text-[11px] sm:text-xs font-bold text-[#0A504A] mt-0.5 sm:mt-1 truncate">Order Query</p>
                     </div>
-                    <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
-                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase">
-                        <span className="w-2 h-2 rounded-full bg-[#0A504A]" />
-                        Catalog Step
+                    <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-white border border-slate-200 shadow-2xs">
+                      <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">
+                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#0A504A] shrink-0" />
+                        <span className="truncate">Catalog Step</span>
                       </div>
-                      <p className="text-xs font-bold text-[#0A504A] mt-1">Show 3 Items</p>
+                      <p className="text-[11px] sm:text-xs font-bold text-[#0A504A] mt-0.5 sm:mt-1 truncate">Show 3 Items</p>
                     </div>
-                    <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
-                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase">
-                        <span className="w-2 h-2 rounded-full bg-[#A2E4B8]" />
-                        Checkout
+                    <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-white border border-slate-200 shadow-2xs">
+                      <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">
+                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#A2E4B8] shrink-0" />
+                        <span className="truncate">Checkout</span>
                       </div>
-                      <p className="text-xs font-bold text-[#0A504A] mt-1">Instant Pay</p>
+                      <p className="text-[11px] sm:text-xs font-bold text-[#0A504A] mt-0.5 sm:mt-1 truncate">Instant Pay</p>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Card 2: Immutable Audit & Realtime CRM (Span 4) */}
-              <div className="md:col-span-4 group relative border border-slate-200 rounded-2xl overflow-hidden hover:border-[#00A86B] transition-all duration-500 bg-[#F7F7F2]/50 p-8 flex flex-col justify-between">
+              <div
+                data-aos="fade-up"
+                data-aos-delay="200"
+                className="md:col-span-4 group relative border border-slate-200 rounded-2xl overflow-hidden hover:border-[#00A86B] transition-all duration-500 bg-[#F7F7F2]/50 p-5 sm:p-6 md:p-8 flex flex-col justify-between"
+              >
                 <div>
                   <div className="w-10 h-10 bg-white border border-[#0A504A]/10 rounded-xl flex items-center justify-center mb-6 text-[#0A504A] shadow-xs">
                     <ShieldCheck className="w-5 h-5 text-[#00A86B]" />
@@ -890,7 +1015,11 @@ export function LandingPage({
               </div>
 
               {/* Card 3: Multi-Agent Dispatch (Span 12) */}
-              <div className="md:col-span-12 group relative border border-slate-200 rounded-2xl overflow-hidden hover:border-[#00A86B] transition-all duration-500 bg-[#F7F7F2]/50 p-8">
+              <div
+                data-aos="fade-up"
+                data-aos-delay="150"
+                className="md:col-span-12 group relative border border-slate-200 rounded-2xl overflow-hidden hover:border-[#00A86B] transition-all duration-500 bg-[#F7F7F2]/50 p-5 sm:p-6 md:p-8"
+              >
                 <div className="flex flex-col md:flex-row items-center justify-between gap-8">
                   <div className="max-w-xl">
                     <div className="w-10 h-10 bg-white border border-[#0A504A]/10 rounded-xl flex items-center justify-center mb-4 text-[#0A504A] shadow-xs">
@@ -930,7 +1059,7 @@ export function LandingPage({
         {/* ========================================================================= */}
         <section id="architecture" className="py-24 px-6 md:px-12 lg:px-20 border-b border-[#0A504A]/10 bg-[#F7F7F2]">
           <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-8">
+            <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-8" data-aos="fade-up">
               <div className="max-w-2xl">
                 <h2 className="font-primary text-3xl font-medium text-[#0A504A] tracking-tight mb-3">
                   How WhatsApp Messaging Becomes Flawless
@@ -956,7 +1085,13 @@ export function LandingPage({
                   { num: "05", title: "Instant Delivery", desc: "Delivered directly into customer's WhatsApp app." },
                   { num: "06", title: "Live Audited", desc: "Delivery receipts stored in real-time CRM audit history." },
                 ].map((item, idx) => (
-                  <div key={idx} className="def-step group flex flex-col gap-4 def-inactive cursor-pointer" data-index={idx}>
+                  <div
+                    key={idx}
+                    className="def-step group flex flex-col gap-4 def-inactive cursor-pointer"
+                    data-index={idx}
+                    data-aos="fade-up"
+                    data-aos-delay={idx * 100}
+                  >
                     <div className="flex items-center gap-4">
                       <div className="def-num w-9 h-9 border border-slate-300 rounded-lg flex items-center justify-center text-[10px] font-mono font-bold text-slate-500 shadow-2xs transition-all duration-500 z-10 bg-white">
                         {item.num}
@@ -979,8 +1114,9 @@ export function LandingPage({
         </section>
 
         {/* ========================================================================= */}
-        {/* TESTIMONIALS & STATS (DARK SECTION)                                      */}
+        {/* TESTIMONIALS & STATS (HIDDEN FOR INITIAL LAUNCH)                         */}
         {/* ========================================================================= */}
+        {/* Hidden for early-stage platform launch:
         <section className="py-28 bg-[#0A504A] relative overflow-hidden text-white">
           <div
             className="absolute inset-0 opacity-10 pointer-events-none"
@@ -996,7 +1132,7 @@ export function LandingPage({
                 <span className="text-[11px] font-bold text-[#A2E4B8] uppercase tracking-wider block mb-4">
                   Customer Success Stories
                 </span>
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-8 leading-snug">
+                <h2 className="font-primary text-3xl md:text-4xl font-bold tracking-tight mb-8 leading-snug">
                   &ldquo;{currentTestimonial.quote}&rdquo;
                 </h2>
 
@@ -1016,7 +1152,6 @@ export function LandingPage({
                   </div>
                 </div>
 
-                {/* Slider Controls */}
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() =>
@@ -1037,7 +1172,6 @@ export function LandingPage({
                 </div>
               </div>
 
-              {/* Dynamic Stats Column */}
               <div className="flex flex-row md:flex-col justify-between gap-6 md:gap-0 md:space-y-12 border-t md:border-t-0 md:border-l pt-8 md:pt-0 md:pl-16 border-white/15">
                 {currentTestimonial.stats.map((stat, i) => (
                   <div key={i}>
@@ -1053,20 +1187,21 @@ export function LandingPage({
             </div>
           </div>
         </section>
+        */}
 
         {/* ========================================================================= */}
         {/* TRANSPARENT PRICING                                                       */}
         {/* ========================================================================= */}
-        <section id="pricing" className="py-28 px-6 md:px-12 lg:px-20 border-b border-[#0A504A]/10 bg-[#F7F7F2]">
+        <section id="pricing" className="py-16 md:py-28 px-4 sm:px-6 md:px-12 lg:px-20 border-b border-[#0A504A]/10 bg-[#F7F7F2]">
           <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-12">
+            <div className="text-center mb-10 md:mb-12" data-aos="fade-up">
               <span className="text-[11px] font-bold text-[#00A86B] uppercase tracking-wider block mb-2">
                 Transparent SaaS Plans
               </span>
-              <h2 className="font-primary text-3xl md:text-4xl font-medium text-[#0A504A] tracking-tight mb-4">
+              <h2 className="font-primary text-2xl sm:text-3xl md:text-4xl font-medium text-[#0A504A] tracking-tight mb-3 sm:mb-4">
                 Scale Your WhatsApp Engine
               </h2>
-              <p className="text-slate-600 text-sm max-w-md mx-auto">
+              <p className="text-slate-600 text-xs sm:text-sm max-w-md mx-auto">
                 Connect your business phone today. Choose a plan tailored for your message volume.
               </p>
 
@@ -1074,21 +1209,19 @@ export function LandingPage({
               <div className="mt-6 inline-flex items-center p-1 rounded-full bg-slate-200/80 border border-slate-300">
                 <button
                   onClick={() => setIsYearlyBilling(false)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                    !isYearlyBilling
-                      ? "bg-[#0A504A] text-white shadow-xs"
-                      : "text-slate-600 hover:text-[#0A504A]"
-                  }`}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${!isYearlyBilling
+                    ? "bg-[#0A504A] text-white shadow-xs"
+                    : "text-slate-600 hover:text-[#0A504A]"
+                    }`}
                 >
                   Monthly
                 </button>
                 <button
                   onClick={() => setIsYearlyBilling(true)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    isYearlyBilling
-                      ? "bg-[#0A504A] text-white shadow-xs"
-                      : "text-slate-600 hover:text-[#0A504A]"
-                  }`}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${isYearlyBilling
+                    ? "bg-[#0A504A] text-white shadow-xs"
+                    : "text-slate-600 hover:text-[#0A504A]"
+                    }`}
                 >
                   <span>Yearly</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#00A86B] text-white font-bold">
@@ -1102,41 +1235,43 @@ export function LandingPage({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
               {/* Individual / Starter */}
               <div
+                data-aos="fade-up"
+                data-aos-delay="100"
                 onClick={() => setSelectedPricing("hobby")}
-                className={`p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${
-                  selectedPricing === "hobby"
-                    ? "bg-white border-[#00A86B] shadow-xl scale-[1.02] ring-2 ring-[#00A86B]/20"
-                    : "bg-white/70 border-slate-200 opacity-75 hover:opacity-100"
-                }`}
+                className={`p-6 sm:p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${selectedPricing === "hobby"
+                  ? "bg-white border-[#00A86B] shadow-xl scale-[1.02] ring-2 ring-[#00A86B]/20"
+                  : "bg-white/70 border-slate-200 opacity-75 hover:opacity-100"
+                  }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm font-bold text-[#0A504A]">Starter</span>
+                    <span className="font-primary text-xs sm:text-sm font-bold uppercase tracking-wider text-[#0A504A]">Starter</span>
                   </div>
-                  <div className="mb-4 flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-[#0A504A]">
-                      {isYearlyBilling ? "$39" : "$49"}
+                  <div className="mb-4 flex items-baseline gap-1.5">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">LKR</span>
+                    <span className="font-secondary text-3xl sm:text-4xl font-extrabold tracking-tight text-[#0A504A]">
+                      {isYearlyBilling ? "1,200" : "1,500"}
                     </span>
-                    <span className="text-xs text-slate-400">/mo</span>
+                    <span className="text-xs text-slate-400 font-medium">/mo</span>
                   </div>
                   <p className="text-xs text-slate-500 mb-6 leading-relaxed">
                     Ideal for small businesses and stores automating first customer responses.
                   </p>
                   <ul className="space-y-3 mb-8 text-xs text-slate-600">
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#00A86B]" />
+                      <Check className="w-4 h-4 text-[#00A86B] shrink-0" />
                       <span>1 WhatsApp Business Number</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#00A86B]" />
+                      <Check className="w-4 h-4 text-[#00A86B] shrink-0" />
                       <span>Up to 5 Visual Flow Nodes</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#00A86B]" />
+                      <Check className="w-4 h-4 text-[#00A86B] shrink-0" />
                       <span>Live Inbox (1 Agent Seat)</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#00A86B]" />
+                      <Check className="w-4 h-4 text-[#00A86B] shrink-0" />
                       <span>WhatsApp Simulator</span>
                     </li>
                   </ul>
@@ -1151,48 +1286,50 @@ export function LandingPage({
 
               {/* Pro / Recommended */}
               <div
+                data-aos="fade-up"
+                data-aos-delay="200"
                 onClick={() => setSelectedPricing("pro")}
-                className={`p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${
-                  selectedPricing === "pro"
-                    ? "bg-[#0A504A] text-white shadow-2xl scale-[1.04] ring-2 ring-[#00A86B]"
-                    : "bg-[#0A504A]/90 text-white/90"
-                }`}
+                className={`p-6 sm:p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${selectedPricing === "pro"
+                  ? "bg-[#0A504A] text-white shadow-2xl scale-[1.04] ring-2 ring-[#00A86B]"
+                  : "bg-[#0A504A]/90 text-white/90"
+                  }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm font-bold text-[#A2E4B8]">Growth Pro</span>
+                    <span className="font-primary text-xs sm:text-sm font-bold uppercase tracking-wider text-[#A2E4B8]">Growth Pro</span>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#00A86B] text-white">
                       Popular
                     </span>
                   </div>
-                  <div className="mb-4 flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-white">
-                      {isYearlyBilling ? "$119" : "$149"}
+                  <div className="mb-4 flex items-baseline gap-1.5">
+                    <span className="text-xs font-bold text-white/70 uppercase tracking-wider">LKR</span>
+                    <span className="font-secondary text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
+                      {isYearlyBilling ? "2,160" : "2,700"}
                     </span>
-                    <span className="text-xs text-white/60">/mo</span>
+                    <span className="text-xs text-white/60 font-medium">/mo</span>
                   </div>
                   <p className="text-xs text-white/75 mb-6 leading-relaxed">
                     For growing brands needing high-volume catalog routing, webhooks & multi-agent support.
                   </p>
                   <ul className="space-y-3 mb-8 text-xs text-white/90">
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#A2E4B8]" />
+                      <Check className="w-4 h-4 text-[#A2E4B8] shrink-0" />
                       <span>Unlimited WhatsApp Numbers</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#A2E4B8]" />
+                      <Check className="w-4 h-4 text-[#A2E4B8] shrink-0" />
                       <span>Unlimited Visual Flow Nodes</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#A2E4B8]" />
+                      <Check className="w-4 h-4 text-[#A2E4B8] shrink-0" />
                       <span>Multi-Agent Live Inbox (5 Seats)</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#A2E4B8]" />
+                      <Check className="w-4 h-4 text-[#A2E4B8] shrink-0" />
                       <span>Custom Inbound Webhook Verify Token</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#A2E4B8]" />
+                      <Check className="w-4 h-4 text-[#A2E4B8] shrink-0" />
                       <span>Priority Support & SLA</span>
                     </li>
                   </ul>
@@ -1207,38 +1344,43 @@ export function LandingPage({
 
               {/* Enterprise */}
               <div
+                data-aos="fade-up"
+                data-aos-delay="300"
                 onClick={() => setSelectedPricing("ent")}
-                className={`p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${
-                  selectedPricing === "ent"
-                    ? "bg-white border-[#00A86B] shadow-xl scale-[1.02] ring-2 ring-[#00A86B]/20"
-                    : "bg-white/70 border-slate-200 opacity-75 hover:opacity-100"
-                }`}
+                className={`p-6 sm:p-8 rounded-2xl border transition-all duration-300 flex flex-col justify-between cursor-pointer ${selectedPricing === "ent"
+                  ? "bg-white border-[#00A86B] shadow-xl scale-[1.02] ring-2 ring-[#00A86B]/20"
+                  : "bg-white/70 border-slate-200 opacity-75 hover:opacity-100"
+                  }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm font-bold text-[#0A504A]">Enterprise / Agency</span>
+                    <span className="font-primary text-xs sm:text-sm font-bold uppercase tracking-wider text-[#0A504A]">Enterprise</span>
                   </div>
-                  <div className="mb-4 flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-[#0A504A]">Custom</span>
+                  <div className="mb-4 flex items-baseline gap-1.5">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">LKR</span>
+                    <span className="font-secondary text-3xl sm:text-4xl font-extrabold tracking-tight text-[#0A504A]">
+                      {isYearlyBilling ? "3,360" : "4,200"}
+                    </span>
+                    <span className="text-xs text-slate-400 font-medium">/mo</span>
                   </div>
                   <p className="text-xs text-slate-500 mb-6 leading-relaxed">
                     White-label tenant provisioning, dedicated cloud database cluster, and custom CRM integration.
                   </p>
                   <ul className="space-y-3 mb-8 text-xs text-slate-600">
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#00A86B]" />
+                      <Check className="w-4 h-4 text-[#00A86B] shrink-0" />
                       <span>Multi-Tenant White-Label Workspaces</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#00A86B]" />
+                      <Check className="w-4 h-4 text-[#00A86B] shrink-0" />
                       <span>Dedicated Webhook Endpoints</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#00A86B]" />
+                      <Check className="w-4 h-4 text-[#00A86B] shrink-0" />
                       <span>Unlimited Agent Seats</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#00A86B]" />
+                      <Check className="w-4 h-4 text-[#00A86B] shrink-0" />
                       <span>Dedicated Technical Account Manager</span>
                     </li>
                   </ul>
@@ -1255,14 +1397,76 @@ export function LandingPage({
         </section>
 
         {/* ========================================================================= */}
-        {/* FOOTER & CREATOR CREDITS                                                  */}
+        {/* FREQUENTLY ASKED QUESTIONS (FAQ) & AEO SECTION                           */}
         {/* ========================================================================= */}
-        <footer className="py-16 px-6 md:px-12 lg:px-20 bg-white">
-          <div className="max-w-7xl mx-auto flex flex-col gap-12">
+        <section id="faq" className="py-24 px-6 md:px-12 lg:px-20 relative z-10 border-t border-[#0A504A]/5">
+          <div className="max-w-4xl mx-auto space-y-12">
+            <div className="text-center space-y-4" data-aos="fade-up">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0A504A]/5 border border-[#0A504A]/10 text-xs font-semibold text-[#0A504A]">
+                <HelpCircle className="w-3.5 h-3.5 text-[#00A86B]" />
+                <span>FREQUENTLY ASKED QUESTIONS</span>
+              </div>
+              <h2 className="font-primary text-2xl sm:text-3xl md:text-4xl font-medium text-[#0A504A] tracking-tight">
+                Got Questions? <span className="text-[#00A86B]">We Have Answers.</span>
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto">
+                Direct, transparent answers regarding Meta Cloud compliance, local LKR pricing, and enterprise workflow capabilities.
+              </p>
+            </div>
+
+            <div className="space-y-4" data-aos="fade-up" data-aos-delay="100">
+              {faqs.map((faq, index) => {
+                const isOpen = openFaq === index;
+                return (
+                  <div
+                    key={index}
+                    className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#0A504A]/10 overflow-hidden transition-all duration-200 shadow-2xs hover:shadow-xs"
+                    itemScope
+                    itemType="https://schema.org/Question"
+                  >
+                    <button
+                      onClick={() => setOpenFaq(isOpen ? null : index)}
+                      className="w-full text-left px-6 py-5 flex items-center justify-between gap-4 cursor-pointer"
+                      aria-expanded={isOpen}
+                    >
+                      <span className="font-primary text-sm sm:text-base font-medium text-[#0A504A]" itemProp="name">
+                        {faq.q}
+                      </span>
+                      <div
+                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-transform duration-300 ${
+                          isOpen ? "rotate-180 bg-[#0A504A] text-white" : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </div>
+                    </button>
+                    {isOpen && (
+                      <div
+                        className="px-6 pb-6 pt-1 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-[#0A504A]/5 faq-answer"
+                        itemProp="acceptedAnswer"
+                        itemScope
+                        itemType="https://schema.org/Answer"
+                      >
+                        <p itemProp="text">{faq.a}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* ========================================================================= */}
+      {/* FOOTER & CREATOR CREDITS                                                  */}
+      {/* ========================================================================= */}
+      <footer className="relative pt-16 pb-0 bg-white overflow-hidden z-10">
+          <div className="max-w-7xl mx-auto flex flex-col gap-12 px-6 md:px-12 lg:px-20 relative z-10" data-aos="fade-up">
             <div className="flex flex-col md:flex-row justify-between gap-12">
               <div className="max-w-xs space-y-4">
                 <div className="flex items-center gap-3">
-                  <img src="/icon.png" alt="WAPPX" className="w-7 h-7 object-contain" />
+                  <img src="/icon.png" alt="WAPPX WhatsApp Automation Platform Logo" className="w-7 h-7 object-contain" />
                   <span className="font-primary font-semibold text-lg tracking-[-0.01em] text-[#0A504A] pl-1">
                     WAPP<span className="text-[#00A86B]">X</span>
                   </span>
@@ -1320,6 +1524,16 @@ export function LandingPage({
                       </button>
                     </li>
                     <li>
+                      <button onClick={() => handleNavTo("#faq")} className="hover:text-[#0A504A] cursor-pointer text-left">
+                        FAQ &amp; Knowledge Base
+                      </button>
+                    </li>
+                    <li>
+                      <a href="/llms.txt" target="_blank" rel="noopener noreferrer" className="hover:text-[#0A504A] cursor-pointer text-left inline-flex items-center gap-1">
+                        <span>AI Reference (llms.txt)</span>
+                      </a>
+                    </li>
+                    <li>
                       <button onClick={() => handleNavTo("#architecture")} className="hover:text-[#0A504A] cursor-pointer">
                         Architecture
                       </button>
@@ -1333,16 +1547,54 @@ export function LandingPage({
             <div className="pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
               <p>&copy; {new Date().getFullYear()} WAPPX Inc. All rights reserved.</p>
 
-              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#A2E4B8]/20 border border-[#A2E4B8]/40 text-[#0A504A] text-xs font-medium shadow-2xs">
-                <Sparkles className="w-3.5 h-3.5 text-[#00A86B]" />
-                <span>
-                  Designed and developed by <strong className="font-bold text-[#0A504A]">THARUUX</strong> , with <strong className="font-bold text-[#0A504A]">ZYNEX Developments</strong>
-                </span>
-              </div>
+              <span>
+                Designed and developed by <strong className="font-bold text-[#0A504A]">ZYNEX Developments</strong>
+              </span>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* FULL-WIDTH GIANT WATERMARK BRANDING WITH PROGRESSIVE BLUR                */}
+          {/* ========================================================================= */}
+          <div className="relative w-full overflow-hidden select-none pointer-events-none mt-8 -mb-2 sm:-mb-4 md:-mb-8 lg:-mb-12">
+            {/* Giant Full-Width Typography */}
+            <div className="w-full text-center flex items-center justify-center leading-none">
+              <span className="font-primary font-bold text-[18vw] leading-[0.78] tracking-[0.06em] text-[#0A504A]/[0.07] uppercase whitespace-nowrap">
+                WAPP<span className="text-[#00A86B]/[0.12]">X</span>
+              </span>
+            </div>
+
+            {/* Progressive Blur Layering (Gradually blurs from top to bottom) */}
+            <div className="absolute inset-0 pointer-events-none">
+              {/* Blur Level 1: Subtle initial blur */}
+              <div
+                className="absolute inset-0 backdrop-blur-[2px]"
+                style={{
+                  maskImage: "linear-gradient(to bottom, transparent 15%, black 45%, black 100%)",
+                  WebkitMaskImage: "linear-gradient(to bottom, transparent 15%, black 45%, black 100%)",
+                }}
+              />
+              {/* Blur Level 2: Medium depth blur */}
+              <div
+                className="absolute inset-0 backdrop-blur-[6px]"
+                style={{
+                  maskImage: "linear-gradient(to bottom, transparent 35%, black 70%, black 100%)",
+                  WebkitMaskImage: "linear-gradient(to bottom, transparent 35%, black 70%, black 100%)",
+                }}
+              />
+              {/* Blur Level 3: Deep atmospheric blur */}
+              <div
+                className="absolute inset-0 backdrop-blur-[14px]"
+                style={{
+                  maskImage: "linear-gradient(to bottom, transparent 60%, black 100%)",
+                  WebkitMaskImage: "linear-gradient(to bottom, transparent 60%, black 100%)",
+                }}
+              />
+              {/* Soft progressive fade gradient */}
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/20 to-white/95" />
             </div>
           </div>
         </footer>
-      </div>
     </div>
   );
 }

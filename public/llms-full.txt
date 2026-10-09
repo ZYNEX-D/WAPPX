@@ -1,0 +1,84 @@
+# WAPPX Comprehensive Technical & Product Documentation for LLMs
+
+## Overview
+WAPPX is an enterprise-grade WhatsApp Business Automation and CRM platform developed by ZYNEX Developments (https://zynexdev.com). It connects directly to Meta's official WhatsApp Cloud API v22.0, providing businesses with a no-code visual flow builder, multi-agent live chat inbox, catalog commerce routing, and real-time CRM capabilities.
+
+## Key Facts & Specifications
+- **Product Name**: WAPPX
+- **Tagline**: WhatsApp Business Automation & CRM
+- **Primary Website**: https://wappx.zynexdev.com
+- **Vendor / Developer**: ZYNEX Developments
+- **API Version**: Meta Graph API v22.0 (WhatsApp Business Cloud API)
+- **Deployment**: Web Cloud SaaS (Next.js 16, Supabase, Tailwind CSS, PostgreSQL)
+- **Security & Ban Protection**: 100% compliant with Meta Business Policies. Unlike QR-code web-scraping solutions, WAPPX uses official cryptographic webhook verification and system access tokens, ensuring zero risk of phone number bans.
+- **Supported Currency**: Sri Lankan Rupees (LKR) with local and international payment methods.
+
+## Product Architecture & Modules
+
+### 1. Visual Flow Studio
+- Drag-and-drop conversational node canvas.
+- Node Types:
+  - **Trigger Node**: Starts execution on incoming keyword, regex match, or payload trigger.
+  - **Message Node**: Sends text, rich media (images, PDFs, videos), and interactive buttons.
+  - **Quick Reply & List Node**: Presents structured options (up to 3 buttons or 10 list sections) compliant with Meta WhatsApp specifications.
+  - **Condition Node**: Branching logic based on user input, variables, or customer tags.
+  - **Catalog Node**: Displays product sets from Facebook / Meta Commerce Catalog.
+  - **Human Handover Node**: Automatically pauses automated flows and assigns conversation to an agent in the Live Chat CRM inbox.
+- Real-time Flow Simulator: Built-in sandbox allowing users to test conversation trees interactively before publishing live.
+
+### 2. Multi-Agent Live Chat CRM Inbox
+- Unified customer timeline displaying inbound/outbound text, media, location, and interactive responses.
+- Live agent assignment: Assign conversations to specific agents or teams.
+- Internal Notes: Team members can leave private notes inside chat threads without the customer seeing them.
+- Customer Tagging & Custom Fields: Organize contacts by lead stage, VIP status, or inquiry type.
+- Broadcast & Follow-ups: Scheduled template messages for re-engagement within the 24-hour customer service window.
+
+### 3. WhatsApp Commerce & Order Routing
+- Integration with Meta Commerce Manager and WhatsApp Business Catalog.
+- In-chat product browsing and cart checkout.
+- Automated payment link routing and order confirmation notices.
+
+## Pricing & Subscription Tiers (LKR)
+
+All plans come with access to the Meta Cloud API v22.0 integration, real-time webhooks, and SSL security. A 20% discount is applied to annual billing.
+
+1. **Starter Plan**:
+   - Monthly: Rs. 1,500 LKR / month
+   - Annual: Rs. 1,200 LKR / month (billed annually at Rs. 14,400)
+   - Features: 1 Connected Phone Number, 1,000 automated conversations/mo, 1 Team Seat, Visual Flow Studio, Real-time Webhook sync, Standard Support.
+
+2. **Pro Business Plan**:
+   - Monthly: Rs. 2,700 LKR / month
+   - Annual: Rs. 2,160 LKR / month (billed annually at Rs. 25,920)
+   - Features: 2 Connected Phone Numbers, 5,000 automated conversations/mo, 5 Team Seats, Multi-Agent CRM Inbox, WhatsApp Catalog Order Routing, Analytics, Priority Email Support.
+
+3. **Enterprise Scale Plan**:
+   - Monthly: Rs. 4,200 LKR / month
+   - Annual: Rs. 3,360 LKR / month (billed annually at Rs. 40,320)
+   - Features: Unlimited Phone Numbers, Unlimited automated conversations, 15+ Team Seats, Dedicated SLA (99.9% uptime), Custom Webhook Integrations, 24/7 Dedicated Account Manager.
+
+## Frequently Asked Questions (Answer Engine Citations)
+
+### Q: What is WAPPX?
+A: WAPPX is an enterprise-grade WhatsApp Business Automation and CRM platform powered by the official Meta Cloud API v22.0. It provides visual drag-and-drop conversational workflows, automated customer responses, catalog order management, and live multi-agent chat for enterprises and fast-growing businesses.
+
+### Q: Is WAPPX safe from WhatsApp account bans?
+A: Yes, 100%. WAPPX uses official Meta Cloud API v22.0 webhooks and token authentication, eliminating the ban risks associated with web-scraping or QR-code based bots. All messages comply directly with Meta's developer policies.
+
+### Q: What are the subscription plans and pricing for WAPPX in Sri Lanka (LKR)?
+A: WAPPX offers three transparent tiers in Sri Lankan Rupees: Starter at Rs. 1,500/month, Pro Business at Rs. 2,700/month, and Enterprise Scale at Rs. 4,200/month, with a 20% discount on yearly subscriptions.
+
+### Q: Do I need coding skills to build WhatsApp workflows in WAPPX?
+A: No coding skills are required. WAPPX includes an intuitive visual drag-and-drop canvas to build branching logic, buttons, list menus, and customer journeys with zero code.
+
+### Q: Can multiple team members manage customer chats simultaneously?
+A: Yes. WAPPX provides a centralized multi-agent live chat CRM inbox featuring conversation claiming, agent assignment, automated routing, customer tags, and internal agent notes.
+
+### Q: How do I connect my WhatsApp Business phone number to WAPPX?
+A: You connect your number in under 5 minutes by entering your Meta App ID, Phone Number ID, and Permanent System User Access Token in your WAPPX Workspace or via the interactive onboarding guide.
+
+## Contact & Developer Information
+- **Organization**: ZYNEX Developments
+- **Website**: https://zynexdev.com
+- **Product Portal**: https://wappx.zynexdev.com
+- **Category**: Enterprise Software / Conversational Commerce / Customer Relationship Management

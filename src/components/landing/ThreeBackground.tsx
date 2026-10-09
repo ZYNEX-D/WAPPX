@@ -12,8 +12,10 @@ export function ThreeBackground() {
 
     let animationFrameId: number;
 
+    // 1. Scene & Camera Setup
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0xF7F7F2, 0.035);
+    // Seamless atmospheric fog matching page background (#F7F7F2)
+    scene.fog = new THREE.FogExp2(0xf7f7f2, 0.032);
 
     const camera = new THREE.PerspectiveCamera(
       45,
@@ -21,156 +23,156 @@ export function ThreeBackground() {
       0.1,
       100
     );
-    camera.position.set(0, 0, 20);
+    camera.position.set(0, 0, 19);
 
+    // 2. High Quality Antialiased WebGL Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
     container.appendChild(renderer.domElement);
 
-    const objectGroup = new THREE.Group();
-    scene.add(objectGroup);
+    // 3. Studio Lighting (Crisp highlights on curved surfaces)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.3);
+    scene.add(ambientLight);
+
+    // Directional Key Light (Top-Right specular highlight)
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
+    keyLight.position.set(10, 14, 12);
+    scene.add(keyLight);
+
+    // Signature Electric Emerald Rim Light (Backlight)
+    const rimLight = new THREE.DirectionalLight(0x00a86b, 3.8);
+    rimLight.position.set(-12, -8, -10);
+    scene.add(rimLight);
+
+    // Deep Pine Accent Light (Bottom Fill)
+    const fillLight = new THREE.DirectionalLight(0xa2e4b8, 1.4);
+    fillLight.position.set(-6, 8, 8);
+    scene.add(fillLight);
+
+    // Main Abstract Group
+    const abstractGroup = new THREE.Group();
+    scene.add(abstractGroup);
 
     // =========================================================================
-    // 3D ISOMETRIC PARTICLE CUBE (Original design from design.example)
+    // 4. ELEGANT SCULPTURAL TORUS KNOT (Kinetic Abstract Core)
     // =========================================================================
-    const geometry = new THREE.BoxGeometry(9, 9, 9, 38, 38, 38);
+    // Smooth, fluid mathematical ribbon (TorusKnot p=2, q=3)
+    const knotGeo = new THREE.TorusKnotGeometry(2.3, 0.44, 220, 36, 2, 3);
 
-    // Inner wireframe lattice for high-tech holographic depth
-    const edgesGeometry = new THREE.EdgesGeometry(new THREE.BoxGeometry(8.95, 8.95, 8.95));
-    const edgesMaterial = new THREE.LineBasicMaterial({
-      color: 0x00A86B,
-      transparent: true,
-      opacity: 0.15,
-    });
-    const wireframeBox = new THREE.LineSegments(edgesGeometry, edgesMaterial);
-    objectGroup.add(wireframeBox);
-
-    const vertexShader = `
-      uniform float uTime;
-      uniform float uDistortion;
-      uniform float uSize;
-      uniform vec2 uMouse;
-      varying float vNoise;
-
-      vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-      vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-      vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
-      vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
-
-      float snoise(vec3 v) {
-        const vec2 C = vec2(1.0/6.0, 1.0/3.0);
-        const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
-        vec3 i = floor(v + dot(v, C.yyy));
-        vec3 x0 = v - i + dot(i, C.xxx);
-        vec3 g = step(x0.yzx, x0.xyz);
-        vec3 l = 1.0 - g;
-        vec3 i1 = min(g.xyz, l.zxy);
-        vec3 i2 = max(g.xyz, l.zxy);
-        vec3 x1 = x0 - i1 + 1.0 * C.xxx;
-        vec3 x2 = x0 - i2 + 2.0 * C.xxx;
-        vec3 x3 = x0 - 1.0 + 3.0 * C.xxx;
-        i = mod289(i);
-        vec4 p = permute(permute(permute(
-                  i.z + vec4(0.0, i1.z, i2.z, 1.0))
-                + i.y + vec4(0.0, i1.y, i2.y, 1.0))
-                + i.x + vec4(0.0, i1.x, i2.x, 1.0));
-        float n_ = 1.0/7.0;
-        vec3 ns = n_ * D.wyz - D.xzx;
-        vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
-        vec4 x_ = floor(j * ns.z);
-        vec4 y_ = floor(j - 7.0 * x_);
-        vec4 x = x_ * ns.x + ns.yyyy;
-        vec4 y = y_ * ns.x + ns.yyyy;
-        vec4 h = 1.0 - abs(x) - abs(y);
-        vec4 b0 = vec4(x.xy, y.xy);
-        vec4 b1 = vec4(x.zw, y.zw);
-        vec4 s0 = floor(b0)*2.0 + 1.0;
-        vec4 s1 = floor(b1)*2.0 + 1.0;
-        vec4 sh = -step(h, vec4(0.0));
-        vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
-        vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
-        vec3 p0 = vec3(a0.xy, h.x);
-        vec3 p1 = vec3(a0.zw, h.y);
-        vec3 p2 = vec3(a1.xy, h.z);
-        vec3 p3 = vec3(a1.zw, h.w);
-        vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
-        p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
-        vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
-        m = m * m;
-        return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
-      }
-
-      void main() {
-        vec3 pos = position;
-        float noise = snoise(vec3(pos.x * 0.4 + uTime * 0.15, pos.y * 0.4, pos.z * 0.4));
-        vNoise = noise;
-        vec3 newPos = pos + (normal * noise * uDistortion);
-        float dist = distance(uMouse * 10.0, newPos.xy);
-        float interaction = smoothstep(5.0, 0.0, dist);
-        newPos.z += interaction * 1.5;
-        vec4 mvPosition = modelViewMatrix * vec4(newPos, 1.0);
-        gl_Position = projectionMatrix * mvPosition;
-        gl_PointSize = uSize * (22.0 / -mvPosition.z);
-      }
-    `;
-
-    const fragmentShader = `
-      uniform vec3 uColor;
-      uniform vec3 uColor2;
-      varying float vNoise;
-      void main() {
-        vec2 center = gl_PointCoord - vec2(0.5);
-        float dist = length(center);
-        if (dist > 0.45) discard;
-        float alpha = smoothstep(0.45, 0.15, dist) * 0.88;
-        vec3 finalColor = mix(uColor, uColor2, vNoise * 0.5 + 0.5);
-        gl_FragColor = vec4(finalColor, alpha);
-      }
-    `;
-
-    const uniforms = {
-      uTime: { value: 0 },
-      uDistortion: { value: 0.1 },
-      uSize: { value: 2.0 },
-      uColor: { value: new THREE.Color("#0A504A") }, // Deep obsidian teal
-      uColor2: { value: new THREE.Color("#00A86B") }, // Electric jade green
-      uMouse: { value: new THREE.Vector2(0, 0) },
-    };
-
-    const material = new THREE.ShaderMaterial({
-      vertexShader,
-      fragmentShader,
-      uniforms,
-      transparent: true,
-      blending: THREE.NormalBlending,
+    // Glossy Emerald Material with clearcoat specular sheen
+    const knotMat = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color("#00A86B"),
+      roughness: 0.18,
+      metalness: 0.12,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.1,
+      reflectivity: 0.85,
     });
 
-    const points = new THREE.Points(geometry, material);
-    objectGroup.add(points);
+    const knotMesh = new THREE.Mesh(knotGeo, knotMat);
+    abstractGroup.add(knotMesh);
 
-    let time = 0;
-    let mouseX = 0,
-      mouseY = 0;
+    // =========================================================================
+    // 5. INNER FACETED GLASS CRYSTAL CORE
+    // =========================================================================
+    const coreGeo = new THREE.IcosahedronGeometry(1.05, 0);
+    const coreMat = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color("#0A504A"),
+      roughness: 0.08,
+      metalness: 0.2,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.05,
+      transparent: true,
+      opacity: 0.85,
+    });
+    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+    abstractGroup.add(coreMesh);
 
-    const handleMouseMove = (e: MouseEvent) => {
-      mouseX = (e.clientX / window.innerWidth) * 2 - 1;
-      mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
-      uniforms.uMouse.value.x += (mouseX - uniforms.uMouse.value.x) * 0.03;
-      uniforms.uMouse.value.y += (mouseY - uniforms.uMouse.value.y) * 0.03;
-    };
+    // Subtle delicate wireframe cage around inner crystal
+    const wireGeo = new THREE.IcosahedronGeometry(1.2, 0);
+    const wireMat = new THREE.MeshBasicMaterial({
+      color: 0xa2e4b8,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.35,
+    });
+    const wireMesh = new THREE.Mesh(wireGeo, wireMat);
+    abstractGroup.add(wireMesh);
 
-    // Position centered directly in the middle of the viewport
+    // =========================================================================
+    // 6. MULTI-AXIS KINETIC ARCHITECTURAL RINGS
+    // =========================================================================
+    const ring1Geo = new THREE.TorusGeometry(4.2, 0.018, 16, 160);
+    const ring1Mat = new THREE.MeshBasicMaterial({
+      color: 0x0a504a,
+      transparent: true,
+      opacity: 0.32,
+    });
+    const ring1 = new THREE.Mesh(ring1Geo, ring1Mat);
+    ring1.rotation.x = Math.PI * 0.35;
+    ring1.rotation.y = Math.PI * 0.18;
+    abstractGroup.add(ring1);
+
+    const ring2Geo = new THREE.TorusGeometry(5.2, 0.015, 16, 160);
+    const ring2Mat = new THREE.MeshBasicMaterial({
+      color: 0x00a86b,
+      transparent: true,
+      opacity: 0.25,
+    });
+    const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
+    ring2.rotation.x = -Math.PI * 0.28;
+    ring2.rotation.y = Math.PI * 0.42;
+    abstractGroup.add(ring2);
+
+    const ring3Geo = new THREE.TorusGeometry(6.3, 0.012, 16, 160);
+    const ring3Mat = new THREE.MeshBasicMaterial({
+      color: 0xa2e4b8,
+      transparent: true,
+      opacity: 0.2,
+    });
+    const ring3 = new THREE.Mesh(ring3Geo, ring3Mat);
+    ring3.rotation.x = Math.PI * 0.65;
+    ring3.rotation.z = Math.PI * 0.22;
+    abstractGroup.add(ring3);
+
+    // =========================================================================
+    // 7. ORBITING DATA BEADS (SATELLITE PULSES)
+    // =========================================================================
+    const satellitesGroup = new THREE.Group();
+    abstractGroup.add(satellitesGroup);
+
+    const beadGeo = new THREE.SphereGeometry(0.1, 16, 16);
+    const beadMat1 = new THREE.MeshBasicMaterial({ color: 0x00a86b });
+    const beadMat2 = new THREE.MeshBasicMaterial({ color: 0x0a504a });
+
+    const beads: { mesh: THREE.Mesh; radius: number; speed: number; phase: number; plane: number }[] = [
+      { mesh: new THREE.Mesh(beadGeo, beadMat1), radius: 4.2, speed: 0.6, phase: 0, plane: 1 },
+      { mesh: new THREE.Mesh(beadGeo, beadMat2), radius: 4.2, speed: 0.6, phase: Math.PI, plane: 1 },
+      { mesh: new THREE.Mesh(beadGeo, beadMat1), radius: 5.2, speed: -0.45, phase: Math.PI * 0.5, plane: 2 },
+      { mesh: new THREE.Mesh(beadGeo, beadMat2), radius: 6.3, speed: 0.35, phase: Math.PI * 1.2, plane: 3 },
+    ];
+
+    beads.forEach((b) => satellitesGroup.add(b.mesh));
+
+    // =========================================================================
+    // 8. RESPONSIVE POSITIONING & SCALING
+    // =========================================================================
     const adjustLayout = () => {
       const w = window.innerWidth;
-      if (w < 1024) {
-        // Mobile / Tablet: Anchored centered slightly higher
-        objectGroup.position.set(0, 1.5, -2);
-        objectGroup.scale.set(0.6, 0.6, 0.6);
+      if (w < 768) {
+        // Mobile
+        abstractGroup.position.set(0, 1.0, -3);
+        abstractGroup.scale.set(0.65, 0.65, 0.65);
+      } else if (w < 1024) {
+        // Tablet
+        abstractGroup.position.set(0, 1.2, -1);
+        abstractGroup.scale.set(0.78, 0.78, 0.78);
       } else {
-        // Desktop: Center of hero screen
-        objectGroup.position.set(0, 1.8, 0);
-        objectGroup.scale.set(0.72, 0.72, 0.72);
+        // Desktop: Positioned elegantly in center-right of hero space
+        abstractGroup.position.set(2.2, 1.2, 0);
+        abstractGroup.scale.set(0.95, 0.95, 0.95);
       }
     };
 
@@ -181,12 +183,28 @@ export function ThreeBackground() {
       adjustLayout();
     };
 
+    // =========================================================================
+    // 9. INTERACTIVE PARALLAX & CONTINUOUS KINETIC ANIMATION
+    // =========================================================================
+    let time = 0;
+    let targetMouseX = 0;
+    let targetMouseY = 0;
+    let mouseX = 0;
+    let mouseY = 0;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      targetMouseX = (e.clientX / window.innerWidth) * 2 - 1;
+      targetMouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+    };
+
     const handleScroll = () => {
       const scrollY = window.scrollY;
-      objectGroup.rotation.z = scrollY * 0.0004;
+      abstractGroup.rotation.z = scrollY * 0.0004;
       const w = window.innerWidth;
-      const baseY = w < 1024 ? 1.5 : 1.8;
-      objectGroup.position.y = baseY + scrollY * 0.004;
+      const baseY = 1.2;
+      const baseX = w < 1024 ? 0 : 2.2;
+      abstractGroup.position.y = baseY + scrollY * 0.003;
+      abstractGroup.position.x = baseX + scrollY * 0.001;
     };
 
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
@@ -198,14 +216,56 @@ export function ThreeBackground() {
       animationFrameId = requestAnimationFrame(animate);
       time += 0.008;
 
-      // Continuous 3D rotation with gentle mouse influence
-      objectGroup.rotation.x = time * 0.16 + mouseY * 0.2;
-      objectGroup.rotation.y = time * 0.22 + mouseX * 0.2;
+      // Smooth mouse interpolation
+      mouseX += (targetMouseX - mouseX) * 0.04;
+      mouseY += (targetMouseY - mouseY) * 0.04;
 
-      uniforms.uTime.value = time;
-      camera.position.x += (mouseX * 1.5 - camera.position.x) * 0.025;
-      camera.position.y += (mouseY * 1.5 - camera.position.y) * 0.025;
+      // Gentle floating hover motion
+      const w = window.innerWidth;
+      const baseY = 1.2;
+      abstractGroup.position.y = baseY + Math.sin(time * 1.4) * 0.18;
+
+      // Elegant rotation of the central sculpture
+      knotMesh.rotation.x = time * 0.35 + mouseY * 0.25;
+      knotMesh.rotation.y = time * 0.45 + mouseX * 0.35;
+
+      // Counter-rotation of the inner faceted core
+      coreMesh.rotation.x = -time * 0.5;
+      coreMesh.rotation.y = -time * 0.65;
+      wireMesh.rotation.x = coreMesh.rotation.x;
+      wireMesh.rotation.y = coreMesh.rotation.y;
+
+      // Slow dynamic spin of the concentric architectural rings
+      ring1.rotation.z = time * 0.2;
+      ring2.rotation.z = -time * 0.15;
+      ring3.rotation.z = time * 0.1;
+
+      // Calculate bead positions along their respective rings
+      beads.forEach((b) => {
+        const theta = time * b.speed + b.phase;
+        if (b.plane === 1) {
+          // Along Ring 1
+          const v = new THREE.Vector3(Math.cos(theta) * b.radius, Math.sin(theta) * b.radius, 0);
+          v.applyEuler(ring1.rotation);
+          b.mesh.position.copy(v);
+        } else if (b.plane === 2) {
+          // Along Ring 2
+          const v = new THREE.Vector3(Math.cos(theta) * b.radius, Math.sin(theta) * b.radius, 0);
+          v.applyEuler(ring2.rotation);
+          b.mesh.position.copy(v);
+        } else {
+          // Along Ring 3
+          const v = new THREE.Vector3(Math.cos(theta) * b.radius, Math.sin(theta) * b.radius, 0);
+          v.applyEuler(ring3.rotation);
+          b.mesh.position.copy(v);
+        }
+      });
+
+      // Subtle camera parallax
+      camera.position.x += (mouseX * 1.0 - camera.position.x) * 0.03;
+      camera.position.y += (mouseY * 0.8 - camera.position.y) * 0.03;
       camera.lookAt(0, 0, 0);
+
       renderer.render(scene, camera);
     };
 
@@ -219,10 +279,21 @@ export function ThreeBackground() {
       if (container && renderer.domElement) {
         container.removeChild(renderer.domElement);
       }
-      geometry.dispose();
-      edgesGeometry.dispose();
-      edgesMaterial.dispose();
-      material.dispose();
+      knotGeo.dispose();
+      knotMat.dispose();
+      coreGeo.dispose();
+      coreMat.dispose();
+      wireGeo.dispose();
+      wireMat.dispose();
+      ring1Geo.dispose();
+      ring1Mat.dispose();
+      ring2Geo.dispose();
+      ring2Mat.dispose();
+      ring3Geo.dispose();
+      ring3Mat.dispose();
+      beadGeo.dispose();
+      beadMat1.dispose();
+      beadMat2.dispose();
       renderer.dispose();
     };
   }, []);
@@ -231,7 +302,7 @@ export function ThreeBackground() {
     <div
       ref={containerRef}
       id="canvas-container"
-      className="fixed inset-0 z-0 pointer-events-none opacity-85"
+      className="fixed inset-0 z-0 pointer-events-none opacity-90 transition-opacity duration-700"
     />
   );
 }

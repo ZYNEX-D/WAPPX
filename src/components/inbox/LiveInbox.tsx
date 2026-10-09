@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   Contact,
   Message,
@@ -14,6 +14,7 @@ import {
   UserCheck,
   Bot,
   AlertCircle,
+  Bell,
   Check,
   CheckCheck,
   Tag,
@@ -22,6 +23,7 @@ import {
   Plus,
   MessageSquare,
   Sparkles,
+  Zap,
   Lock,
   ArrowLeft,
   Smile,
@@ -43,6 +45,13 @@ import {
   MoreVertical,
   Clock,
   Timer,
+  Package,
+  ArrowUpRight,
+  Upload,
+  ImageIcon,
+  FileText as FileIcon,
+  Music,
+  ExternalLink,
 } from "lucide-react";
 import {
   transliterateSinglishToSinhala,
@@ -53,6 +62,68 @@ import {
   QUICK_REACTIONS,
 } from "@/lib/emoji-data";
 import { SendCatalogModal } from "./SendCatalogModal";
+
+export interface ProfessionalSnippet {
+  id: string;
+  title: string;
+  category: "General" | "Commerce" | "Orders" | "Support";
+  shortcut: string;
+  text: string;
+  action?: "catalog";
+}
+
+export const PROFESSIONAL_SNIPPETS: ProfessionalSnippet[] = [
+  {
+    id: "greet",
+    title: "Standard Greeting",
+    category: "General",
+    shortcut: "/greet",
+    text: "Hello! Thank you for connecting with us. How can we help you today?",
+  },
+  {
+    id: "catalog",
+    title: "Send WhatsApp Catalog",
+    category: "Commerce",
+    shortcut: "/catalog",
+    action: "catalog",
+    text: "Open verified WhatsApp Business product catalog and interactive collection cards.",
+  },
+  {
+    id: "order_check",
+    title: "Order Status Verification",
+    category: "Orders",
+    shortcut: "/order",
+    text: "Could you please confirm your order reference number (e.g. ORD-XXXXXX) or registered phone number so I can check your order status?",
+  },
+  {
+    id: "payment",
+    title: "Bank Transfer Instructions",
+    category: "Orders",
+    shortcut: "/payment",
+    text: "Please find our official bank account details below. Once completed, kindly attach the deposit slip or transaction confirmation receipt here.",
+  },
+  {
+    id: "pricing",
+    title: "Product & Solution Pricing",
+    category: "Commerce",
+    shortcut: "/pricing",
+    text: "We offer tailored plans and custom quotes. Would you like a detailed breakdown of specifications and pricing tiers?",
+  },
+  {
+    id: "agent",
+    title: "Human Support Handoff",
+    category: "Support",
+    shortcut: "/agent",
+    text: "You are now connected with a customer support representative. Please share any questions and we will gladly assist you.",
+  },
+  {
+    id: "close",
+    title: "Closing & Resolution",
+    category: "Support",
+    shortcut: "/close",
+    text: "Thank you for reaching out to us today! If you need any further assistance, feel free to contact us anytime.",
+  },
+];
 
 interface LiveInboxProps {
   contacts: Contact[];
@@ -73,6 +144,8 @@ interface LiveInboxProps {
   onAddNote: (contactId: string, note: string) => void;
   currentUser?: UserWorkspace;
   catalogProducts?: CatalogItem[];
+  defaultCatalogId?: string;
+  onNavigateToOrders?: () => void;
 }
 
 export function LiveInbox({
@@ -87,6 +160,8 @@ export function LiveInbox({
   onAddNote,
   currentUser,
   catalogProducts,
+  defaultCatalogId,
+  onNavigateToOrders,
 }: LiveInboxProps) {
   const myAgentName = currentUser?.name
     ? `${currentUser.name.split(" ")[0]} (You)`
@@ -136,6 +211,32 @@ export function LiveInbox({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const quickSnippetsRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showQuickSnippets, setShowQuickSnippets] = useState<boolean>(false);
+  const [snippetSearch, setSnippetSearch] = useState<string>("");
+  const [selectedSnippetCategory, setSelectedSnippetCategory] = useState<string>("all");
+
+  // Drag-and-drop + file upload state
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingPreview, setPendingPreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const filteredSnippets = useMemo(() => {
+    let list = PROFESSIONAL_SNIPPETS;
+    if (selectedSnippetCategory !== "all") {
+      list = list.filter((s) => s.category.toLowerCase() === selectedSnippetCategory.toLowerCase());
+    }
+    if (!snippetSearch.trim()) return list;
+    const q = snippetSearch.toLowerCase().replace(/^\//, "");
+    return list.filter(
+      (s) =>
+        s.title.toLowerCase().includes(q) ||
+        s.shortcut.toLowerCase().includes(q) ||
+        s.text.toLowerCase().includes(q)
+    );
+  }, [snippetSearch, selectedSnippetCategory]);
 
   const selectedContact = contacts.find((c) => c.id === selectedContactId) || contacts[0];
   const activeMessages = selectedContact ? messages[selectedContact.id] || [] : [];
@@ -213,10 +314,10 @@ export function LiveInbox({
     const handleGlobalClick = (e: MouseEvent) => {
       setContextMenu(null);
       if (
-        emojiPickerRef.current &&
-        !emojiPickerRef.current.contains(e.target as Node)
+        quickSnippetsRef.current &&
+        !quickSnippetsRef.current.contains(e.target as Node)
       ) {
-        // Handled inside component
+        setShowQuickSnippets(false);
       }
     };
 
@@ -224,6 +325,7 @@ export function LiveInbox({
       if (e.key === "Escape") {
         setContextMenu(null);
         setShowEmojiPicker(false);
+        setShowQuickSnippets(false);
         setShowSinhalaPhrases(false);
         setShowSinhalaCheatSheet(false);
       }
@@ -250,7 +352,14 @@ export function LiveInbox({
 
     if (!matchesSearch) return false;
 
-    if (filterTab === "human") return c.status === "pending_human";
+    if (filterTab === "human") {
+      const isUnassigned =
+        !c.assignedAgent ||
+        c.assignedAgent === "Unassigned" ||
+        c.assignedAgent.toLowerCase().includes("unassigned") ||
+        c.assignedAgent.startsWith("Team");
+      return (c.status === "pending_human" || c.tags?.includes("Team Alert")) && isUnassigned;
+    }
     if (filterTab === "bot") return c.isBotActive;
     if (filterTab === "mine") return c.assignedAgent?.includes("You");
     return true;
@@ -285,6 +394,14 @@ export function LiveInbox({
       setInputText(converted);
     } else {
       setInputText(val);
+    }
+
+    // Auto-detect slash command for quick professional snippets
+    if (val.startsWith("/")) {
+      setShowQuickSnippets(true);
+      setSnippetSearch(val.slice(1));
+    } else if (showQuickSnippets && !val.trim()) {
+      setShowQuickSnippets(false);
     }
   };
 
@@ -371,6 +488,61 @@ export function LiveInbox({
   const handleQuickResponse = (snippet: string) => {
     setInputText(snippet);
     inputRef.current?.focus();
+  };
+
+  // File selection helper
+  const handleFileSelected = (file: File) => {
+    setPendingFile(file);
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (e) => setPendingPreview(e.target?.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setPendingPreview(null);
+    }
+  };
+
+  const clearPendingFile = () => {
+    setPendingFile(null);
+    setPendingPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Upload pending file to storage and send
+  const handleUploadAndSend = async () => {
+    if (!pendingFile || !selectedContact) return;
+    setIsUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", pendingFile);
+      form.append("userId", selectedContact.userId || "shared");
+      const res = await fetch("/api/upload", { method: "POST", body: form });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "Upload failed");
+      const caption = inputText.trim() || "";
+      onSendMessage(selectedContact.id, caption || pendingFile.name, false, data.url, data.mediaType);
+      setInputText("");
+      clearPendingFile();
+      showToast("File sent!");
+    } catch (err) {
+      console.error("[Upload]", err);
+      showToast("Upload failed. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Drag-and-drop handlers for chat area
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(true);
+  };
+  const handleDragLeave = () => setIsDraggingOver(false);
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFileSelected(file);
   };
 
   const handleAddTagSubmit = (e: React.FormEvent) => {
@@ -484,7 +656,14 @@ export function LiveInbox({
               <span>Needs Human</span>
               <span className={`text-[10px] px-1 rounded-full ${filterTab === "human" ? "bg-white/25" : "bg-rose-200/60"
                 }`}>
-                {contacts.filter((c) => c.status === "pending_human").length}
+                {contacts.filter((c) => {
+                  const isUnassigned =
+                    !c.assignedAgent ||
+                    c.assignedAgent === "Unassigned" ||
+                    c.assignedAgent.toLowerCase().includes("unassigned") ||
+                    c.assignedAgent.startsWith("Team");
+                  return (c.status === "pending_human" || c.tags?.includes("Team Alert")) && isUnassigned;
+                }).length}
               </span>
             </button>
             <button
@@ -518,23 +697,51 @@ export function LiveInbox({
           ) : (
             filteredContacts.map((contact) => {
               const isSelected = selectedContact?.id === contact.id;
-              const isNeedsHuman = contact.status === "pending_human";
+              const isUnassigned =
+                !contact.assignedAgent ||
+                contact.assignedAgent === "Unassigned" ||
+                contact.assignedAgent.toLowerCase().includes("unassigned") ||
+                contact.assignedAgent.startsWith("Team");
+              const isTeamAlert =
+                (contact.tags?.includes("Team Alert") ||
+                  contact.tags?.some((t) => t.toLowerCase() === "team alert")) &&
+                isUnassigned;
+              const isNeedsHuman = contact.status === "pending_human" && isUnassigned;
+              const isHighlightAlert = isTeamAlert || isNeedsHuman;
 
               return (
                 <div
                   key={contact.id}
                   onClick={() => handleSelectContactMobile(contact.id)}
-                  className={`px-3.5 py-3 flex items-start gap-3 cursor-pointer transition-all ${isSelected
-                    ? "bg-emerald-50/70 border-l-[3px] border-emerald-600"
-                    : "hover:bg-slate-50/80"
-                    }`}
+                  className={`px-3.5 py-3 flex items-start gap-3 cursor-pointer transition-all ${
+                    isSelected
+                      ? isHighlightAlert
+                        ? "bg-amber-50/90 border-l-[3.5px] border-amber-500 ring-1 ring-amber-300/60 shadow-xs"
+                        : "bg-emerald-50/70 border-l-[3px] border-emerald-600"
+                      : isHighlightAlert
+                      ? "bg-amber-50/40 border-l-[3.5px] border-amber-400 hover:bg-amber-100/50 ring-1 ring-amber-200/50"
+                      : "hover:bg-slate-50/80"
+                  }`}
                 >
                   {/* Avatar */}
                   <div className="relative shrink-0 mt-0.5">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-100/80 to-emerald-200/60 text-emerald-900 border border-emerald-200 flex items-center justify-center font-medium text-xs select-none">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs select-none ${
+                        isHighlightAlert
+                          ? "bg-gradient-to-br from-amber-100 to-amber-200 text-amber-900 border border-amber-300 shadow-2xs"
+                          : "bg-gradient-to-br from-emerald-100/80 to-emerald-200/60 text-emerald-900 border border-emerald-200"
+                      }`}
+                    >
                       {contact.name.slice(0, 2).toUpperCase()}
                     </div>
-                    {contact.isBotActive ? (
+                    {isHighlightAlert ? (
+                      <span
+                        className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] ring-2 ring-white shadow-2xs animate-bounce"
+                        title="Team Alert: Needs Agent Assignment"
+                      >
+                        <Bell className="w-2.5 h-2.5 fill-current" />
+                      </span>
+                    ) : contact.isBotActive ? (
                       <span
                         className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] ring-2 ring-white"
                         title="Bot engine active"
@@ -552,11 +759,22 @@ export function LiveInbox({
                   {/* Info Column */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
-                      <h2 className="text-[13.5px] font-medium text-slate-900 truncate">
-                        {contact.name}
-                      </h2>
-                      <span className={`text-[11px] shrink-0 font-medium ${isNeedsHuman ? "text-rose-600 font-bold" : "text-slate-400"
-                        }`}>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <h2 className="text-[13.5px] font-medium text-slate-900 truncate">
+                          {contact.name}
+                        </h2>
+                        {isHighlightAlert && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-extrabold bg-amber-500 text-white shadow-2xs tracking-wide shrink-0">
+                            <Bell className="w-2.5 h-2.5 fill-current" />
+                            {isTeamAlert ? "Team Alert" : "Needs Agent"}
+                          </span>
+                        )}
+                      </div>
+                      <span
+                        className={`text-[11px] shrink-0 font-medium ${
+                          isHighlightAlert ? "text-amber-700 font-bold" : "text-slate-400"
+                        }`}
+                      >
                         {contact.lastMessageTime}
                       </span>
                     </div>
@@ -567,10 +785,10 @@ export function LiveInbox({
 
                     {/* Status & Tag Chips */}
                     <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                      {isNeedsHuman ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
-                          Handoff
+                      {isHighlightAlert ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 shadow-2xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                          Unassigned
                         </span>
                       ) : contact.isBotActive ? (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
@@ -585,7 +803,11 @@ export function LiveInbox({
                       {contact.tags.slice(0, 2).map((t) => (
                         <span
                           key={t}
-                          className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-50 text-slate-500 border border-slate-200/60 truncate"
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-medium border truncate ${
+                            t === "Team Alert"
+                              ? "bg-amber-100/70 text-amber-800 border-amber-300 font-bold"
+                              : "bg-slate-50 text-slate-500 border-slate-200/60"
+                          }`}
                         >
                           {t}
                         </span>
@@ -685,8 +907,53 @@ export function LiveInbox({
               </div>
             </div>
 
-            {/* Clean Solid Chat Background */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 relative z-10 bg-[#F8FAFC]">
+            {/* Team Alert / Needs Agent Highlight Banner */}
+            {((selectedContact.tags?.includes("Team Alert") || selectedContact.status === "pending_human") &&
+              (!selectedContact.assignedAgent ||
+                selectedContact.assignedAgent === "Unassigned" ||
+                selectedContact.assignedAgent.toLowerCase().includes("unassigned") ||
+                selectedContact.assignedAgent.startsWith("Team"))) && (
+              <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-orange-500 text-white px-4 py-2.5 flex items-center justify-between text-xs shadow-xs animate-in slide-in-from-top-1 shrink-0 z-20">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                    <Bell className="w-3.5 h-3.5 text-white animate-pulse" />
+                  </span>
+                  <div className="min-w-0">
+                    <span className="font-bold">Team Alert Active:</span>{" "}
+                    <span className="text-amber-100 truncate">
+                      This conversation triggered a notify team step and needs an assigned agent.
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => onAssignAgent(selectedContact.id, myAgentName)}
+                  className="ml-3 px-3 py-1.5 bg-white text-amber-900 rounded-lg font-bold hover:bg-amber-50 transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0 text-xs"
+                >
+                  <UserCheck className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Assign to Me</span>
+                </button>
+              </div>
+            )}
+
+            {/* Clean Solid Chat Background + Drag-and-Drop Zone */}
+            <div
+              className={`flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 relative z-10 bg-[#F8FAFC] transition-colors ${
+                isDraggingOver ? "bg-emerald-50 ring-2 ring-inset ring-emerald-400" : ""
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              {/* Drop overlay hint */}
+              {isDraggingOver && (
+                <div className="absolute inset-0 z-50 flex flex-col items-center justify-center pointer-events-none">
+                  <div className="bg-white/90 backdrop-blur-sm border-2 border-dashed border-emerald-400 rounded-2xl px-10 py-8 text-center shadow-xl">
+                    <Upload className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
+                    <p className="text-sm font-semibold text-emerald-700">Drop file to attach</p>
+                    <p className="text-xs text-slate-500 mt-1">Images, documents, and audio supported</p>
+                  </div>
+                </div>
+              )}
               {/* WhatsApp 24h Window Live Timer Banner */}
               <div className="flex justify-center my-1">
                 <div
@@ -764,6 +1031,18 @@ export function LiveInbox({
                 }
 
                 // WhatsApp Message Bubble (Right-clickable!)
+                const hasMedia = !!msg.mediaUrl;
+                const hasTextContent = !!msg.text?.trim();
+                const isOrder = !!msg.order || (msg.text && msg.text.includes("🛍️ WhatsApp Catalog Order"));
+
+                // Filter out empty ghost messages
+                if (!hasMedia && !hasTextContent && !isOrder && !msg.catalog && (!msg.buttons || msg.buttons.length === 0)) {
+                  return null;
+                }
+                if (msg.sender === "bot" && !hasTextContent && !msg.catalog && (!msg.buttons || msg.buttons.length === 0)) {
+                  return null;
+                }
+
                 return (
                   <div
                     key={msg.id}
@@ -771,44 +1050,137 @@ export function LiveInbox({
                   >
                     <div
                       onContextMenu={(e) => handleOpenContextMenu(e, msg)}
-                      className={`relative max-w-[85%] sm:max-w-[68%] rounded-2xl p-3 sm:px-4 sm:py-3 space-y-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all cursor-context-menu ${isIncoming
+                      className={`relative w-fit max-w-[85%] sm:max-w-[65%] rounded-2xl shadow-[0_1px_1.5px_rgba(0,0,0,0.06)] transition-all cursor-context-menu overflow-hidden ${
+                        hasMedia && !hasTextContent
+                          ? "p-0"
+                          : isOrder
+                          ? "p-1.5"
+                          : "px-3 py-1.5 sm:px-3.5 sm:py-2"
+                      } ${isIncoming
                         ? "bg-white text-slate-900 border border-slate-200/70 rounded-tl-xs"
                         : "bg-[#DCFCE7] text-slate-900 border border-[#86EFAC]/50 rounded-tr-xs"
                         }`}
                     >
-                      {/* Sender Tag */}
-                      {/* <div className="flex items-center justify-between gap-3 text-[11px] font-semibold">
-                        <span className={isIncoming ? "text-slate-700" : "text-emerald-800"}>
-                          {isIncoming ? (
-                            selectedContact.name
-                          ) : msg.sender === "bot" ? (
-                            <span className="flex items-center gap-1">
-                              <Bot className="w-3 h-3 text-emerald-600" /> WAPPX Bot Engine
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1">
-                              <User className="w-3 h-3 text-emerald-600" /> {msg.senderName || myAgentName}
-                            </span>
+                      {/* Media Content (image / audio / document) */}
+                      {msg.mediaUrl && msg.mediaType === "image" && (
+                        <div className={hasTextContent ? "mb-1.5 -mx-3 -mt-1.5 overflow-hidden" : "w-full max-w-[320px]"}>
+                          <img
+                            src={msg.mediaUrl}
+                            alt="Media"
+                            className="w-full max-h-72 object-cover block rounded-t-xl"
+                            style={{ display: "block" }}
+                          />
+                        </div>
+                      )}
+
+                      {msg.mediaUrl && msg.mediaType === "audio" && (
+                        <div className="flex items-center gap-2 bg-slate-100/60 rounded-xl px-2.5 py-1.5 my-1">
+                          <Music className="w-4 h-4 text-slate-500 shrink-0" />
+                          <audio controls src={msg.mediaUrl} className="h-7 max-w-[190px]" />
+                        </div>
+                      )}
+
+                      {msg.mediaUrl && msg.mediaType === "document" && (
+                        <a
+                          href={msg.mediaUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2.5 bg-slate-100/60 hover:bg-slate-100 rounded-xl px-3 py-2 my-1 transition-colors group/doc"
+                        >
+                          <FileIcon className="w-5 h-5 text-slate-500 shrink-0" />
+                          <div className="min-w-0">
+                            <span className="text-xs font-semibold text-slate-700 block truncate">{msg.text || "Document"}</span>
+                            <span className="text-[10px] text-slate-400">Tap to open</span>
+                          </div>
+                          <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover/doc:text-slate-700 shrink-0 ml-auto" />
+                        </a>
+                      )}
+
+                      {/* WhatsApp Catalog Order Card — Sleek WhatsApp Web style */}
+                      {isOrder && (
+                        <div className="rounded-xl bg-white border border-slate-200/90 overflow-hidden shadow-xs w-full max-w-[280px]">
+                          <div className="p-2.5 flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0 overflow-hidden">
+                              {msg.order?.items?.[0]?.imageUrl ? (
+                                <img
+                                  src={msg.order.items[0].imageUrl}
+                                  alt="Product"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <ShoppingBag className="w-5 h-5 text-emerald-600" />
+                              )}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
+                                <Package className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <span>
+                                  {msg.order?.items?.reduce((sum, i) => sum + i.quantity, 0) || 1} {
+                                    (msg.order?.items?.reduce((sum, i) => sum + i.quantity, 0) || 1) === 1 ? "item" : "items"
+                                  }
+                                </span>
+                              </div>
+                              <p className="text-xs font-bold text-slate-900 mt-0.5">
+                                {msg.order?.currency || "LKR"} {(msg.order?.subtotal || 0).toLocaleString()}{" "}
+                                <span className="text-[10px] font-normal text-slate-500">(estimated total)</span>
+                              </p>
+                              {msg.order?.customerNote && (
+                                <p className="text-[11px] text-slate-500 truncate mt-0.5 italic">
+                                  "{msg.order.customerNote}"
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="border-t border-slate-100 bg-slate-50/70 px-3 py-1.5 flex items-center justify-between">
+                            <button
+                              type="button"
+                              onClick={() => onNavigateToOrders && onNavigateToOrders()}
+                              className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer transition-colors"
+                            >
+                              <span>View details</span>
+                              <ArrowUpRight className="w-3.5 h-3.5" />
+                            </button>
+
+                            <div className="flex items-center gap-1.5 text-[10.5px] text-slate-400">
+                              <span>{msg.timestamp}</span>
+                              {!isIncoming && <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Regular Message Text with WhatsApp-like inline Timestamp */}
+                      {!isOrder && !msg.catalog && (
+                        <div className="flex flex-wrap items-baseline justify-end gap-x-2.5 gap-y-0.5">
+                          {hasTextContent && msg.mediaType !== "document" && (
+                            <p className="text-[13.5px] sm:text-[14px] leading-snug whitespace-pre-wrap break-words text-slate-900 flex-1 min-w-[40px]">
+                              {msg.text}
+                            </p>
                           )}
-                        </span>
-
-                      <button
-                        onClick={(e) => handleOpenContextMenu(e, msg)}
-                        className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-slate-700 transition-opacity"
-                        title="Message Options (Right Click)"
-                      >
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      </button>
-                    </div> */}
-
-                      {/* Message Content */}
-                      <p className="text-[13.5px] leading-relaxed whitespace-pre-wrap break-words text-slate-800">
-                        {msg.text}
-                      </p>
+                          <div className={`flex items-center gap-1 text-[10.5px] text-slate-400 select-none shrink-0 self-end ml-auto ${
+                            hasMedia && !hasTextContent ? "px-2 py-0.5 bg-black/50 text-white/90 rounded-md absolute bottom-1.5 right-1.5" : "translate-y-0.5"
+                          }`}>
+                            <span>{msg.timestamp}</span>
+                            {!isIncoming && (
+                              <span>
+                                {msg.status === "read" ? (
+                                  <CheckCheck className={`w-3.5 h-3.5 ${hasMedia && !hasTextContent ? "text-emerald-400" : "text-emerald-600"}`} />
+                                ) : msg.status === "delivered" ? (
+                                  <CheckCheck className="w-3.5 h-3.5 text-slate-400" />
+                                ) : (
+                                  <Check className="w-3.5 h-3.5 text-slate-400" />
+                                )}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                       {/* WhatsApp Interactive Catalog / Product Card */}
                       {msg.catalog && (
-                        <div className="mt-2 rounded-2xl bg-white border border-slate-200/90 overflow-hidden shadow-xs">
+                        <div className="rounded-xl bg-white border border-slate-200/90 overflow-hidden shadow-xs">
                           {/* Card Header Badge */}
                           <div className="px-3.5 py-1.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[11px] font-bold text-[#0A504A]">
                             <div className="flex items-center gap-1.5">
@@ -837,7 +1209,7 @@ export function LiveInbox({
                           )}
 
                           {/* Product / Catalog Description */}
-                          <div className="p-3.5 space-y-1">
+                          <div className="p-3 space-y-1">
                             {msg.catalog.products && msg.catalog.products[0]?.title && (
                               <p className="text-xs font-bold text-slate-800">
                                 {msg.catalog.products[0].title}
@@ -849,22 +1221,22 @@ export function LiveInbox({
                           </div>
 
                           {/* Action Button */}
-                          <div className="p-2.5 bg-slate-50 border-t border-slate-100">
+                          <div className="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
                             <button
                               type="button"
                               onClick={() => {
                                 setToastMessage("WhatsApp Catalog opened! (Simulated Meta Commerce viewer)");
                                 setTimeout(() => setToastMessage(null), 3000);
                               }}
-                              className="w-full py-2 bg-[#00A86B] hover:bg-[#0A504A] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                              className="w-full py-1.5 bg-[#00A86B] hover:bg-[#0A504A] text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                             >
                               <ShoppingBag className="w-3.5 h-3.5" />
                               <span>
                                 {msg.catalog.type === "catalog_message"
                                   ? "View Catalog"
                                   : msg.catalog.type === "product_list"
-                                  ? `View Products (${msg.catalog.products?.length || 0})`
-                                  : "View Product"}
+                                    ? `View Products (${msg.catalog.products?.length || 0})`
+                                    : "View Product"}
                               </span>
                             </button>
                           </div>
@@ -882,7 +1254,7 @@ export function LiveInbox({
                               <button
                                 key={btn.id}
                                 onClick={() => onSendMessage(selectedContact.id, btn.title)}
-                                className={`w-full py-2 px-3 rounded-lg text-xs font-semibold transition-all border flex items-center justify-center gap-1.5 cursor-pointer ${msg.selectedButtonId === btn.id
+                                className={`w-full py-1.5 px-3 rounded-lg text-xs font-semibold transition-all border flex items-center justify-center gap-1.5 cursor-pointer ${msg.selectedButtonId === btn.id
                                   ? "bg-emerald-600 text-white border-emerald-600"
                                   : "bg-white/90 text-emerald-700 border-emerald-300 hover:bg-emerald-600 hover:text-white"
                                   }`}
@@ -893,22 +1265,6 @@ export function LiveInbox({
                           </div>
                         </div>
                       )}
-
-                      {/* Timestamp & Status Ticks */}
-                      <div className="flex items-center justify-end gap-1 pt-0.5 text-[11px] text-slate-400 select-none">
-                        <span>{msg.timestamp}</span>
-                        {!isIncoming && (
-                          <span>
-                            {msg.status === "read" ? (
-                              <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
-                            ) : msg.status === "delivered" ? (
-                              <CheckCheck className="w-3.5 h-3.5 text-slate-400" />
-                            ) : (
-                              <Check className="w-3.5 h-3.5 text-slate-400" />
-                            )}
-                          </span>
-                        )}
-                      </div>
 
                       {/* Emoji Reaction Badge if reacted */}
                       {reaction && (
@@ -923,45 +1279,79 @@ export function LiveInbox({
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Canned Responses Bar */}
-            <div className="px-4 py-2 bg-white/90 backdrop-blur-xs border-t border-slate-200/70 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 z-10">
-              <span className="text-[11px] font-bold text-emerald-800 flex items-center gap-1 shrink-0">
-                <Sparkles className="w-3 h-3 text-emerald-600" /> Canned:
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowCatalogModal(true)}
-                className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300/80 rounded-full text-xs font-bold text-emerald-800 shrink-0 transition-colors cursor-pointer flex items-center gap-1"
-                title="Send WhatsApp Catalog or Products"
+            {/* Professional Quick Snippets — slash-command popover */}
+            {showQuickSnippets && (
+              <div
+                ref={quickSnippetsRef}
+                className="absolute bottom-24 left-4 right-4 z-50 bg-white rounded-2xl shadow-2xl border border-slate-200/80 overflow-hidden animate-in fade-in slide-in-from-bottom-2"
               >
-                <ShoppingBag className="w-3 h-3 text-[#00A86B]" />
-                <span>Send Catalog</span>
-              </button>
-              <button
-                onClick={() => handleQuickResponse("Hello! Thanks for reaching out to us. How can we help you today?")}
-                className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-full text-xs font-medium text-slate-700 shrink-0 transition-colors cursor-pointer"
-              >
-                👋 Greeting
-              </button>
-              <button
-                onClick={() => handleQuickResponse("Our pricing starts at $29/mo with full WhatsApp Cloud API features.")}
-                className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-full text-xs font-medium text-slate-700 shrink-0 transition-colors cursor-pointer"
-              >
-                💼 Pricing Plans
-              </button>
-              <button
-                onClick={() => handleQuickResponse("May I please have your order or tracking number to look that up?")}
-                className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-full text-xs font-medium text-slate-700 shrink-0 transition-colors cursor-pointer"
-              >
-                📦 Track Order
-              </button>
-              <button
-                onClick={() => handleQuickResponse("A human support agent has joined this conversation to assist you.")}
-                className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-full text-xs font-medium text-slate-700 shrink-0 transition-colors cursor-pointer"
-              >
-                👤 Human Agent
-              </button>
-            </div>
+                {/* Header */}
+                <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="text-xs font-semibold text-slate-600">Quick Replies</span>
+                    <span className="text-[10px] text-slate-400 font-mono bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded-md">/command</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setShowQuickSnippets(false); setSnippetSearch(""); setInputText(""); inputRef.current?.focus(); }}
+                    className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* Category tabs */}
+                <div className="px-3 pt-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                  {["all", "General", "Commerce", "Orders", "Support"].map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setSelectedSnippetCategory(cat)}
+                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition-all shrink-0 cursor-pointer ${selectedSnippetCategory === cat
+                          ? "bg-slate-900 text-white"
+                          : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+                        }`}
+                    >
+                      {cat === "all" ? "All" : cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Snippet list */}
+                <div className="max-h-52 overflow-y-auto divide-y divide-slate-100/80 p-1.5 no-scrollbar">
+                  {filteredSnippets.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-slate-400">No matching snippets</div>
+                  ) : (
+                    filteredSnippets.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => {
+                          if (s.action === "catalog") {
+                            setShowCatalogModal(true);
+                          } else {
+                            setInputText(s.text);
+                          }
+                          setShowQuickSnippets(false);
+                          setSnippetSearch("");
+                          inputRef.current?.focus();
+                        }}
+                        className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <span className="text-xs font-semibold text-slate-800 group-hover:text-slate-900 block">{s.title}</span>
+                            <span className="text-[11px] text-slate-400 mt-0.5 line-clamp-1 block">{s.action === "catalog" ? "Opens product catalog selector" : s.text}</span>
+                          </div>
+                          <span className="font-mono text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md shrink-0">{s.shortcut}</span>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Quoted Message Preview if Replying */}
             {replyingToMessage && (
@@ -1167,8 +1557,26 @@ export function LiveInbox({
             )}
 
             {/* Modern Bottom Input Bar */}
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileSelected(file);
+              }}
+            />
             <form
-              onSubmit={handleSend}
+              onSubmit={(e) => {
+                if (pendingFile) {
+                  e.preventDefault();
+                  handleUploadAndSend();
+                } else {
+                  handleSend(e);
+                }
+              }}
               className="p-3.5 bg-white border-t border-slate-200/80 flex flex-col gap-2 shrink-0 z-20"
             >
               {/* Toolbar: Mode Switcher + Sinhala Unicode Typing Controls */}
@@ -1216,8 +1624,7 @@ export function LiveInbox({
                         }`}
                       title="Toggle real-time Singlish to Sinhala Unicode typing"
                     >
-                      <span>🇱🇰</span>
-                      <span>{sinhalaTypingEnabled ? "සිංහල ON" : "සි / En"}</span>
+                      <span>{sinhalaTypingEnabled ? "සිං" : "En"}</span>
                     </button>
 
                     {/* Sinhala Quick Phrases trigger */}
@@ -1260,14 +1667,44 @@ export function LiveInbox({
                   </div>
                 </div>
 
-                <span className="text-[11px] text-slate-400 hidden sm:inline">
-                  Press <kbd className="font-semibold bg-slate-100 border border-slate-200 px-1 rounded text-slate-600">Enter</kbd> to send
-                </span>
+                <div className="hidden sm:flex items-center gap-2 text-[11px] text-slate-400">
+                  <span>Type <kbd className="font-semibold bg-slate-100 border border-slate-200 px-1 rounded text-slate-600 font-mono">/</kbd> for snippets</span>
+                  <span className="text-slate-300">·</span>
+                  <span><kbd className="font-semibold bg-slate-100 border border-slate-200 px-1 rounded text-slate-600">Enter</kbd> to send</span>
+                </div>
               </div>
 
-              {/* Input Box */}
+              {/* File Preview Bar (shows when a file is staged) */}
+              {pendingFile && (
+                <div className="flex items-center gap-2.5 px-2 py-1.5 bg-slate-50 rounded-xl border border-slate-200 text-xs animate-in fade-in slide-in-from-bottom-2">
+                  {pendingPreview ? (
+                    <img src={pendingPreview} alt="preview" className="w-10 h-10 object-cover rounded-lg shrink-0 border border-slate-200" />
+                  ) : (
+                    <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center shrink-0 border border-slate-200">
+                      <FileIcon className="w-5 h-5 text-slate-400" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-slate-800 truncate">{pendingFile.name}</p>
+                    <p className="text-slate-400 text-[10px]">{(pendingFile.size / 1024).toFixed(1)} KB · {pendingFile.type || "file"}</p>
+                  </div>
+                  {isUploading ? (
+                    <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin shrink-0" />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={clearPendingFile}
+                      className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200 transition-colors shrink-0"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Input Row */}
               <div className="flex items-center gap-2 bg-slate-50 focus-within:bg-white rounded-xl px-3 py-1.5 border border-slate-200/80 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/10 transition-all">
-                {/* Full Emoji Picker Trigger Button */}
+                {/* Emoji Picker Trigger */}
                 <button
                   type="button"
                   onClick={() => {
@@ -1284,11 +1721,15 @@ export function LiveInbox({
                   <Smile className="w-4 h-4" />
                 </button>
 
-                {/* Paperclip Icon */}
+                {/* Paperclip / File Attach */}
                 <button
                   type="button"
-                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer shrink-0"
-                  title="Attach file"
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 ${pendingFile
+                    ? "text-emerald-700 bg-emerald-50"
+                    : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                    }`}
+                  title="Attach image, document, or audio"
                 >
                   <Paperclip className="w-4 h-4" />
                 </button>
@@ -1308,11 +1749,13 @@ export function LiveInbox({
                   ref={inputRef}
                   type="text"
                   placeholder={
-                    isNoteMode
-                      ? "Write an internal team note..."
-                      : sinhalaTypingEnabled
-                        ? "සිංහලෙන් ලියන්න (Type Singlish e.g. 'ayubowan' for ආයුබෝවන්)..."
-                        : "Type a WhatsApp message to customer..."
+                    pendingFile
+                      ? "Add a caption (optional)..."
+                      : isNoteMode
+                        ? "Write an internal team note..."
+                        : sinhalaTypingEnabled
+                          ? "සිංහලෙන් ලියන්න (Type Singlish e.g. 'ayubowan' for ආයුබෝවන්)..."
+                          : "Type a WhatsApp message to customer..."
                   }
                   value={inputText}
                   onChange={handleInputChange}
@@ -1320,16 +1763,20 @@ export function LiveInbox({
                 />
 
                 {/* Send Button */}
-                {inputText.trim() ? (
+                {(inputText.trim() || pendingFile) ? (
                   <button
                     type="submit"
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs ${isNoteMode
+                    disabled={isUploading}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs disabled:opacity-60 ${isNoteMode
                       ? "bg-amber-500 hover:bg-amber-600 text-white"
                       : "bg-emerald-600 hover:bg-emerald-700 text-white"
                       }`}
                     title="Send message"
                   >
-                    <Send className="w-3.5 h-3.5" />
+                    {isUploading
+                      ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      : <Send className="w-3.5 h-3.5" />
+                    }
                   </button>
                 ) : (
                   <button
@@ -1342,6 +1789,7 @@ export function LiveInbox({
                 )}
               </div>
             </form>
+
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400">
@@ -1597,6 +2045,7 @@ export function LiveInbox({
         contactName={selectedContact?.name || "Customer"}
         businessName={currentUser?.name || "ZYNEX Developments"}
         customProducts={catalogProducts}
+        defaultCatalogId={defaultCatalogId}
         onSendCatalog={(catalog, customText) => {
           onSendMessage(
             selectedContact.id,

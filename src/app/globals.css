@@ -45,10 +45,17 @@
   }
 }
 
+@theme {
+  --font-primary: var(--font-michroma), 'Michroma', sans-serif;
+  --font-secondary: var(--font-onest), 'Onest', sans-serif;
+  --font-michroma: var(--font-michroma), 'Michroma', sans-serif;
+  --font-onest: var(--font-onest), 'Onest', sans-serif;
+}
+
 @layer base {
   :root {
     --font-onest: 'Onest', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --font-michroma: var(--font-onest);
+    --font-michroma: 'Michroma', sans-serif;
     --canvas: #F7F7F2;
     --canvas-white: #ffffff;
     --primary: #00A86B;
@@ -90,12 +97,12 @@ html {
 }
 
 .font-primary {
-  font-family: var(--font-onest), 'Onest', sans-serif;
-  letter-spacing: -0.02em;
+  font-family: var(--font-michroma), 'Michroma', sans-serif !important;
+  letter-spacing: -0.01em;
 }
 
 .font-secondary {
-  font-family: var(--font-onest), 'Onest', sans-serif;
+  font-family: var(--font-onest), 'Onest', sans-serif !important;
 }
 
 /* Ensure clean, crisp, thinner font rendering globally */
@@ -476,6 +483,19 @@ html.lenis body {
 .lifecycle-step.active .step-title {
   color: #0A504A !important;
   font-weight: 800;
+}
+
+@media (max-width: 640px) {
+  .lifecycle-step.active {
+    transform: scale(1.02) !important;
+  }
+  .lifecycle-step.active .step-dot {
+    box-shadow: 0 0 0 3px rgba(162, 228, 184, 0.6), 0 0 10px rgba(0, 168, 107, 0.7) !important;
+    transform: scale(1.15);
+  }
+  .lifecycle-step.active .step-card {
+    box-shadow: 0 4px 12px -2px rgba(0, 168, 107, 0.2) !important;
+  }
 }
 
 /* Defensibility / Architecture Grid Styles */

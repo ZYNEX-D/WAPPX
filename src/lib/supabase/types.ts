@@ -206,6 +206,45 @@ export interface Database {
         };
         Relationships: [];
       };
+      flows: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          description: string;
+          is_active: boolean;
+          is_default: boolean;
+          nodes: Json;
+          trigger_keywords: string[];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          user_id: string;
+          name: string;
+          description?: string;
+          is_active?: boolean;
+          is_default?: boolean;
+          nodes?: Json;
+          trigger_keywords?: string[];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          description?: string;
+          is_active?: boolean;
+          is_default?: boolean;
+          nodes?: Json;
+          trigger_keywords?: string[];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       meta_config: {
         Row: {
           id: string;
@@ -300,6 +339,120 @@ export interface Database {
           description?: string | null;
           items?: Json;
           is_default?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      support_tickets: {
+        Row: {
+          id: string;
+          client_id: string;
+          client_name: string;
+          business_name: string | null;
+          client_email: string;
+          subject: string;
+          category: string;
+          priority: string;
+          status: string;
+          description: string;
+          messages: Json;
+          assigned_admin: string | null;
+          resolution_notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          client_id: string;
+          client_name: string;
+          business_name?: string | null;
+          client_email: string;
+          subject: string;
+          category?: string;
+          priority?: string;
+          status?: string;
+          description: string;
+          messages?: Json;
+          assigned_admin?: string | null;
+          resolution_notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          client_id?: string;
+          client_name?: string;
+          business_name?: string | null;
+          client_email?: string;
+          subject?: string;
+          category?: string;
+          priority?: string;
+          status?: string;
+          description?: string;
+          messages?: Json;
+          assigned_admin?: string | null;
+          resolution_notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      catalog_orders: {
+        Row: {
+          id: string;
+          user_id: string;
+          contact_id: string;
+          contact_name: string;
+          contact_phone: string;
+          catalog_id: string | null;
+          catalog_name: string | null;
+          items: Json;
+          subtotal: number;
+          currency: string;
+          customer_note: string | null;
+          status: string;
+          shipping_address: string | null;
+          tracking_number: string | null;
+          whatsapp_message_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          user_id: string;
+          contact_id: string;
+          contact_name: string;
+          contact_phone: string;
+          catalog_id?: string | null;
+          catalog_name?: string | null;
+          items?: Json;
+          subtotal?: number;
+          currency?: string;
+          customer_note?: string | null;
+          status?: string;
+          shipping_address?: string | null;
+          tracking_number?: string | null;
+          whatsapp_message_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          contact_id?: string;
+          contact_name?: string;
+          contact_phone?: string;
+          catalog_id?: string | null;
+          catalog_name?: string | null;
+          items?: Json;
+          subtotal?: number;
+          currency?: string;
+          customer_note?: string | null;
+          status?: string;
+          shipping_address?: string | null;
+          tracking_number?: string | null;
+          whatsapp_message_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };

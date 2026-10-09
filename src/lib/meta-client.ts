@@ -232,6 +232,69 @@ export async function sendMetaProductMessage({
 }
 
 /**
+ * Sends a WhatsApp Multi-Product interactive message (sections of products)
+ */
+export async function sendMetaProductListMessage({
+  phoneNumberId,
+  accessToken,
+  recipientPhone,
+  catalogId,
+  headerText = "Catalog Collection",
+  bodyText,
+  footerText = "WhatsApp In-App Commerce",
+  sections,
+}: {
+  phoneNumberId: string;
+  accessToken: string;
+  recipientPhone: string;
+  catalogId: string;
+  headerText?: string;
+  bodyText: string;
+  footerText?: string;
+  sections: { title: string; productRetailerIds: string[] }[];
+}): Promise<{ success: boolean; data?: MetaSendResponse; error?: string }> {
+  try {
+    const cleanPhone = recipientPhone.replace(/[^0-9]/g, "");
+    const formattedSections = sections.map((sec) => ({
+      title: sec.title.slice(0, 24),
+      product_items: sec.productRetailerIds.map((id) => ({ product_retailer_id: id })),
+    }));
+
+    const res = await fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: cleanPhone,
+        type: "interactive",
+        interactive: {
+          type: "product_list",
+          header: { type: "text", text: headerText },
+          body: { text: bodyText },
+          footer: footerText ? { text: footerText } : undefined,
+          action: {
+            catalog_id: catalogId,
+            sections: formattedSections,
+          },
+        },
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data?.error?.message || "Failed to send product list" };
+    }
+    return { success: true, data };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+/**
  * Sends a single WhatsApp Image message with optional caption
  */
 export async function sendMetaImageMessage({
@@ -389,6 +452,35 @@ export async function sendMetaCatalogOrShowcase({
       console.warn("[Meta Client] Native product card not available on WABA, falling back to showcase:", nativeRes.error);
     }
 
+    // Showcase fallback: If product image is available, send high-res product photo with full card details!
+    if (prod?.imageUrl && (prod.imageUrl.startsWith("http://") || prod.imageUrl.startsWith("https://"))) {
+      const captionText = `🛍️ *${prod.title || catalog.catalogName || "Product"}*${
+        prod.price ? ` (${prod.price})` : ""
+      }\n\n${prod.description || catalog.bodyText || ""}\n\n_Official WhatsApp Business Product_`;
+
+      const imgRes = await sendMetaImageMessage({
+        phoneNumberId,
+        accessToken,
+        recipientPhone,
+        imageUrl: prod.imageUrl,
+        caption: captionText,
+      });
+
+      // Follow up with interactive action buttons
+      await sendMetaInteractiveButtons({
+        phoneNumberId,
+        accessToken,
+        recipientPhone,
+        bodyText: `Interested in *${prod.title || "this package"}*? Choose an option below:`,
+        buttons: [
+          { id: "btn-pricing", title: "💼 Packages & Pricing" },
+          { id: "btn-agent", title: "👤 Talk to Agent" },
+        ],
+      });
+
+      if (imgRes.success) return { ...imgRes, mode: "showcase_image" };
+    }
+
     // Showcase fallback: Rich interactive button card with product details
     const productCardText = `🛍️ *${prod?.title || catalog.catalogName || "Featured Product"}*${
       prod?.price ? ` (${prod.price})` : ""
@@ -418,14 +510,41 @@ export async function sendMetaCatalogOrShowcase({
     return { ...textRes, mode: "showcase_text" };
   }
 
-  // 3. Full Catalog / Multi-Product Showcase Mode
+  // 3. Multi-Product Section List Mode (product_list)
+  if (catalog.type === "product_list" && catalog.catalogId) {
+    const skus = (catalog.products || [])
+      .map((p) => p.retailerId || p.id)
+      .filter(Boolean);
+
+    if (skus.length > 0) {
+      const listRes = await sendMetaProductListMessage({
+        phoneNumberId,
+        accessToken,
+        recipientPhone,
+        catalogId: catalog.catalogId,
+        headerText: (catalog.catalogName || "Catalog Collection").slice(0, 60),
+        bodyText: catalog.bodyText || "Explore our products directly on WhatsApp:",
+        footerText: catalog.footerText || "Tap 'View items' to open catalog",
+        sections: [
+          {
+            title: (catalog.catalogName || "Featured Items").slice(0, 24),
+            productRetailerIds: skus.slice(0, 30),
+          },
+        ],
+      });
+      if (listRes.success) return { ...listRes, mode: "native_product_list" };
+      console.warn("[Meta Client] Native product_list not delivered, trying in-app catalog_message:", listRes.error);
+    }
+  }
+
+  // 4. Native In-App Store Catalog Mode (catalog_message)
   const sku = catalog.thumbnailProductId || catalog.products?.[0]?.retailerId;
   const nativeRes = await sendMetaCatalogMessage({
     phoneNumberId,
     accessToken,
     recipientPhone,
-    bodyText: catalog.bodyText || "Explore our official product catalogue",
-    footerText: catalog.footerText || "Tap 'View Catalog' to browse",
+    bodyText: catalog.bodyText || "Browse our official product catalog directly within WhatsApp:",
+    footerText: catalog.footerText || "Tap 'View Catalog' to open store",
     thumbnailProductRetailerId: sku,
   });
 
@@ -438,8 +557,21 @@ export async function sendMetaCatalogOrShowcase({
     nativeRes.error
   );
 
-  // Fallback: Rich WhatsApp Showcase (Interactive Buttons deliver 100% reliably)
+  // Fallback: Rich WhatsApp Showcase with Hero Photo & Interactive Buttons
   const itemsList = catalog.products && catalog.products.length > 0 ? catalog.products : [];
+
+  // Send hero photo if available
+  const heroImage = itemsList.find((i) => i.imageUrl && (i.imageUrl.startsWith("http://") || i.imageUrl.startsWith("https://")))?.imageUrl;
+  if (heroImage) {
+    await sendMetaImageMessage({
+      phoneNumberId,
+      accessToken,
+      recipientPhone,
+      imageUrl: heroImage,
+      caption: `🛍️ *${catalog.catalogName || "Official Product Catalog"}*\n${catalog.bodyText || "Explore our featured products and services."}`,
+    });
+  }
+
   let showcaseText = `🛍️ *${catalog.catalogName || "Official Product Catalog"}*\n\n${catalog.bodyText || "Explore our collection of packages and products:"}\n\n`;
 
   if (itemsList.length > 0) {
@@ -460,9 +592,8 @@ export async function sendMetaCatalogOrShowcase({
     recipientPhone,
     bodyText: showcaseText,
     buttons: [
-      { id: "btn-pricing", title: "💼 Packages & Pricing" },
+      { id: "btn-catalog", title: "🛍️ View Full Catalog" },
       { id: "btn-agent", title: "👤 Talk to Agent" },
-      { id: "btn-demo", title: "📅 Request Demo" },
     ],
   });
 

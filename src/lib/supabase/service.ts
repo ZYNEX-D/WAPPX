@@ -1,12 +1,15 @@
 import { supabase } from "./client";
-import { Contact, FlowNode, Message, MetaConfig, FlowNodeType, Client, BusinessCatalog, CatalogItem } from "@/types/whatsapp";
+import { Contact, FlowNode, Message, MetaConfig, FlowNodeType, Client, BusinessCatalog, CatalogItem, SupportTicket, TicketMessage, TicketStatus, BotFlow, CatalogOrder, CatalogOrderStatus, CatalogOrderItem } from "@/types/whatsapp";
+import { initialFlowNodes } from "@/lib/initial-data";
 import { Database, Json } from "./types";
 
 type ContactRow = Database["public"]["Tables"]["contacts"]["Row"];
 type MessageRow = Database["public"]["Tables"]["messages"]["Row"];
 type FlowNodeRow = Database["public"]["Tables"]["flow_nodes"]["Row"];
+type FlowRow = Database["public"]["Tables"]["flows"]["Row"];
 type MetaConfigRow = Database["public"]["Tables"]["meta_config"]["Row"];
 type ClientRow = Database["public"]["Tables"]["clients"]["Row"];
+type CatalogOrderRow = Database["public"]["Tables"]["catalog_orders"]["Row"];
 
 export function mapContactFromRow(row: ContactRow): Contact {
   return {
@@ -43,6 +46,11 @@ export function mapMessageFromRow(row: MessageRow): Message {
     mediaUrl: row.media_url || undefined,
     mediaType: row.media_type || undefined,
     catalog: (row as any).catalog || undefined,
+    order:
+      (row as any).order ||
+      (row.buttons && typeof row.buttons === "object" && !Array.isArray(row.buttons) && (row.buttons as any).order
+        ? (row.buttons as any).order
+        : undefined),
     isInternalNote: row.is_internal_note || false,
     userId: row.user_id,
   };
@@ -87,6 +95,25 @@ export function mapFlowNodeFromRow(row: FlowNodeRow): FlowNode {
     fallbackNodeId: row.fallback_node_id || undefined,
     position: (row.position as any) || { x: 0, y: 0 },
     userId: row.user_id,
+  };
+}
+
+export function mapFlowFromRow(row: FlowRow): BotFlow {
+  let nodes: FlowNode[] = [];
+  if (Array.isArray(row.nodes)) {
+    nodes = row.nodes as any;
+  }
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    description: row.description || "",
+    isActive: row.is_active,
+    isDefault: row.is_default,
+    nodes,
+    triggerKeywords: Array.isArray(row.trigger_keywords) ? row.trigger_keywords : [],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -209,41 +236,61 @@ export async function deleteClientAccount(clientId: string): Promise<boolean> {
 // ==================== DATA FETCHING ====================
 
 export async function fetchContacts(userId: string = "client-1"): Promise<Contact[]> {
-  const { data, error } = await supabase
-    .from("contacts")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+  try {
+    const cleanUserId = (userId && typeof userId === "string" && userId.trim()) ? userId.trim() : "client-1";
+    const { data, error } = await supabase
+      .from("contacts")
+      .select("*")
+      .or(`user_id.eq.${cleanUserId},user_id.eq.default`)
+      .order("created_at", { ascending: false });
 
-  if (error || !Array.isArray(data)) {
-    console.error("Error fetching contacts from Supabase:", error);
+    if (error) {
+      console.warn("Could not fetch contacts from Supabase:", error.message || error.details || error.code || "Network error");
+      return [];
+    }
+
+    if (!Array.isArray(data)) {
+      return [];
+    }
+
+    return data.map(mapContactFromRow);
+  } catch (err: any) {
+    console.warn("fetchContacts network error:", err?.message || "Failed to reach Supabase");
     return [];
   }
-
-  return data.map(mapContactFromRow);
 }
 
 export async function fetchMessages(userId: string = "client-1"): Promise<Record<string, Message[]>> {
-  const { data, error } = await supabase
-    .from("messages")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: true });
+  try {
+    const cleanUserId = (userId && typeof userId === "string" && userId.trim()) ? userId.trim() : "client-1";
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*")
+      .or(`user_id.eq.${cleanUserId},user_id.eq.default`)
+      .order("created_at", { ascending: true });
 
-  if (error || !Array.isArray(data)) {
-    console.error("Error fetching messages from Supabase:", error);
+    if (error) {
+      console.warn("Could not fetch messages from Supabase:", error.message || error.details || error.code || "Network error");
+      return {};
+    }
+
+    if (!Array.isArray(data)) {
+      return {};
+    }
+
+    const grouped: Record<string, Message[]> = {};
+    for (const row of data) {
+      const msg = mapMessageFromRow(row);
+      const cid = row.contact_id;
+      if (!grouped[cid]) grouped[cid] = [];
+      grouped[cid].push(msg);
+    }
+
+    return grouped;
+  } catch (err: any) {
+    console.warn("fetchMessages network error:", err?.message || "Failed to reach Supabase");
     return {};
   }
-
-  const grouped: Record<string, Message[]> = {};
-  for (const row of data) {
-    const msg = mapMessageFromRow(row);
-    const cid = row.contact_id;
-    if (!grouped[cid]) grouped[cid] = [];
-    grouped[cid].push(msg);
-  }
-
-  return grouped;
 }
 
 export async function fetchFlowNodes(userId: string = "client-1"): Promise<FlowNode[]> {
@@ -259,6 +306,44 @@ export async function fetchFlowNodes(userId: string = "client-1"): Promise<FlowN
   }
 
   return data.map(mapFlowNodeFromRow);
+}
+
+export async function fetchFlows(userId: string = "client-1"): Promise<BotFlow[]> {
+  try {
+    const { data, error } = await supabase
+      .from("flows")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true });
+
+    if (!error && Array.isArray(data) && data.length > 0) {
+      return data.map(mapFlowFromRow);
+    }
+
+    // Fallback: If no flows found in 'flows' table yet, check existing flow_nodes
+    const legacyNodes = await fetchFlowNodes(userId);
+    const fallbackNodes = legacyNodes && legacyNodes.length > 0 ? legacyNodes : initialFlowNodes;
+
+    const defaultFlow: BotFlow = {
+      id: `flow-main-${userId}`,
+      userId,
+      name: "Main Welcome & Onboarding Flow",
+      description: "Automated greeting, interactive menu, and customer support routing",
+      isActive: true,
+      isDefault: true,
+      nodes: fallbackNodes,
+      triggerKeywords: ["hi", "hello", "start", "menu", "help"],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Auto-save the default flow into the flows table
+    await saveFlow(defaultFlow, userId);
+    return [defaultFlow];
+  } catch (err) {
+    console.error("fetchFlows exception:", err);
+    return [];
+  }
 }
 
 export async function fetchMetaConfig(userId: string = "client-1"): Promise<MetaConfig | null> {
@@ -476,6 +561,58 @@ export async function saveFlowNodes(nodes: FlowNode[], userId: string = "client-
   }
 }
 
+export async function saveFlow(flow: BotFlow, userId: string = "client-1"): Promise<boolean> {
+  try {
+    const flowId = flow.id || `flow-${Date.now()}`;
+    const row = {
+      id: flowId,
+      user_id: userId,
+      name: flow.name || "Untitled Flow",
+      description: flow.description || "",
+      is_active: flow.isActive ?? true,
+      is_default: flow.isDefault ?? false,
+      nodes: (flow.nodes || []) as any,
+      trigger_keywords: flow.triggerKeywords || [],
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase.from("flows").upsert(row);
+    if (error) {
+      console.error("Error saving flow to Supabase:", error);
+      return false;
+    }
+
+    // If this flow is default or active, also sync its nodes to flow_nodes table for backward compatibility
+    if (flow.isDefault || flow.isActive) {
+      await saveFlowNodes(flow.nodes || [], userId);
+    }
+
+    return true;
+  } catch (err) {
+    console.error("saveFlow exception:", err);
+    return false;
+  }
+}
+
+export async function deleteFlow(flowId: string, userId: string = "client-1"): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("flows")
+      .delete()
+      .eq("id", flowId)
+      .eq("user_id", userId);
+
+    if (error) {
+      console.error("Error deleting flow:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("deleteFlow exception:", err);
+    return false;
+  }
+}
+
 export async function saveMetaConfig(config: MetaConfig, userId: string = "client-1"): Promise<boolean> {
   const configId = config.id || userId;
 
@@ -497,6 +634,20 @@ export async function saveMetaConfig(config: MetaConfig, userId: string = "clien
     return false;
   }
   return true;
+}
+
+export function mapCatalogFromRow(row: any): BusinessCatalog {
+  return {
+    id: row.id,
+    clientId: row.client_id || row.clientId || "client-1",
+    name: row.name,
+    catalogId: row.catalog_id || row.catalogId || undefined,
+    description: row.description || undefined,
+    items: Array.isArray(row.items) ? (row.items as unknown as CatalogItem[]) : [],
+    isDefault: row.is_default ?? row.isDefault ?? false,
+    createdAt: row.created_at || row.createdAt || new Date().toISOString(),
+    updatedAt: row.updated_at || row.updatedAt || new Date().toISOString(),
+  };
 }
 
 export const INITIAL_DEFAULT_CATALOG_ITEMS: CatalogItem[] = [];
@@ -531,17 +682,7 @@ export async function fetchCatalogs(clientId: string): Promise<BusinessCatalog[]
       return [defaultCatalog];
     }
 
-    const mapped: BusinessCatalog[] = data.map((row) => ({
-      id: row.id,
-      clientId: row.client_id,
-      name: row.name,
-      catalogId: row.catalog_id || undefined,
-      description: row.description || undefined,
-      items: Array.isArray(row.items) ? (row.items as unknown as CatalogItem[]) : [],
-      isDefault: row.is_default,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    }));
+    const mapped: BusinessCatalog[] = data.map(mapCatalogFromRow);
 
     if (typeof window !== "undefined") {
       try {
@@ -557,21 +698,29 @@ export async function fetchCatalogs(clientId: string): Promise<BusinessCatalog[]
 }
 
 export async function saveCatalog(catalog: BusinessCatalog): Promise<BusinessCatalog> {
+  const resolvedClientId =
+    catalog.clientId ||
+    (catalog as any).client_id ||
+    "client-1";
+
   const now = new Date().toISOString();
   const catalogToSave: BusinessCatalog = {
     ...catalog,
+    clientId: resolvedClientId,
+    catalogId: catalog.catalogId || (catalog as any).catalog_id || undefined,
+    isDefault: catalog.isDefault ?? (catalog as any).is_default ?? false,
     updatedAt: now,
-    createdAt: catalog.createdAt || now,
+    createdAt: catalog.createdAt || (catalog as any).created_at || now,
   };
 
   try {
     const { error } = await supabase.from("catalogs").upsert({
       id: catalogToSave.id,
-      client_id: catalogToSave.clientId,
+      client_id: resolvedClientId,
       name: catalogToSave.name,
       catalog_id: catalogToSave.catalogId || null,
       description: catalogToSave.description || null,
-      items: catalogToSave.items as unknown as Json,
+      items: (catalogToSave.items || []) as unknown as Json,
       is_default: catalogToSave.isDefault ?? false,
       created_at: catalogToSave.createdAt,
       updated_at: catalogToSave.updatedAt,
@@ -659,5 +808,297 @@ function deleteLocalCatalog(catalogId: string, clientId: string) {
     localStorage.setItem(getLocalKey(clientId), JSON.stringify(list));
   } catch {
     // ignore
+  }
+}
+
+// ============================================================================
+// SUPPORT TICKETS SERVICE
+// ============================================================================
+
+export function mapTicketFromRow(row: any): SupportTicket {
+  return {
+    id: row.id,
+    clientId: row.client_id || row.clientId || "client-1",
+    clientName: row.client_name || row.clientName || "Client",
+    businessName: row.business_name || row.businessName || "",
+    clientEmail: row.client_email || row.clientEmail || "",
+    subject: row.subject || "Support Inquiry",
+    category: row.category || "technical",
+    priority: row.priority || "medium",
+    status: row.status || "open",
+    description: row.description || "",
+    messages: Array.isArray(row.messages) ? (row.messages as TicketMessage[]) : [],
+    assignedAdmin: row.assigned_admin || row.assignedAdmin || "Unassigned",
+    resolutionNotes: row.resolution_notes || row.resolutionNotes || undefined,
+    createdAt: row.created_at || row.createdAt || new Date().toISOString(),
+    updatedAt: row.updated_at || row.updatedAt || new Date().toISOString(),
+  };
+}
+
+export async function fetchTickets(clientId?: string): Promise<SupportTicket[]> {
+  try {
+    let query = supabase.from("support_tickets").select("*").order("created_at", { ascending: false });
+    if (clientId && clientId !== "all" && clientId !== "admin") {
+      query = query.eq("client_id", clientId);
+    }
+    const { data, error } = await query;
+    if (error) {
+      console.warn("fetchTickets warning:", error.message);
+      return [];
+    }
+    return (data || []).map(mapTicketFromRow);
+  } catch (err) {
+    console.error("fetchTickets exception:", err);
+    return [];
+  }
+}
+
+export async function createSupportTicket(
+  ticket: Omit<SupportTicket, "id" | "createdAt" | "updatedAt">
+): Promise<SupportTicket | null> {
+  try {
+    const id = `tick-${Date.now().toString().slice(-6)}`;
+    const now = new Date().toISOString();
+    const newTicket: SupportTicket = {
+      ...ticket,
+      id,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const { error } = await supabase.from("support_tickets").insert({
+      id: newTicket.id,
+      client_id: newTicket.clientId,
+      client_name: newTicket.clientName,
+      business_name: newTicket.businessName || "",
+      client_email: newTicket.clientEmail,
+      subject: newTicket.subject,
+      category: newTicket.category,
+      priority: newTicket.priority,
+      status: newTicket.status,
+      description: newTicket.description,
+      messages: (newTicket.messages || []) as any,
+      assigned_admin: newTicket.assignedAdmin || "Unassigned",
+      created_at: newTicket.createdAt,
+      updated_at: newTicket.updatedAt,
+    });
+
+    if (error) {
+      console.error("createSupportTicket error:", error.message);
+      return null;
+    }
+    return newTicket;
+  } catch (err) {
+    console.error("createSupportTicket exception:", err);
+    return null;
+  }
+}
+
+export async function updateSupportTicket(
+  ticketId: string,
+  updates: Partial<SupportTicket>
+): Promise<boolean> {
+  try {
+    const payload: any = {
+      updated_at: new Date().toISOString(),
+    };
+    if (updates.status) payload.status = updates.status;
+    if (updates.priority) payload.priority = updates.priority;
+    if (updates.category) payload.category = updates.category;
+    if (updates.assignedAdmin !== undefined) payload.assigned_admin = updates.assignedAdmin;
+    if (updates.resolutionNotes !== undefined) payload.resolution_notes = updates.resolutionNotes;
+    if (updates.messages) payload.messages = updates.messages;
+
+    const { error } = await supabase
+      .from("support_tickets")
+      .update(payload)
+      .eq("id", ticketId);
+
+    if (error) {
+      console.error("updateSupportTicket error:", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("updateSupportTicket exception:", err);
+    return false;
+  }
+}
+
+export async function addTicketReply(
+  ticketId: string,
+  message: TicketMessage,
+  newStatus?: TicketStatus
+): Promise<boolean> {
+  try {
+    const { data: ticket } = await supabase
+      .from("support_tickets")
+      .select("messages, status")
+      .eq("id", ticketId)
+      .single();
+
+    if (!ticket) return false;
+    const currentMessages: TicketMessage[] = Array.isArray(ticket.messages)
+      ? (ticket.messages as unknown as TicketMessage[])
+      : [];
+    const updatedMessages = [...currentMessages, message];
+
+    const payload: any = {
+      messages: updatedMessages as any,
+      updated_at: new Date().toISOString(),
+    };
+    if (newStatus) {
+      payload.status = newStatus;
+    }
+
+    const { error } = await supabase
+      .from("support_tickets")
+      .update(payload)
+      .eq("id", ticketId);
+
+    return !error;
+  } catch (err) {
+    console.error("addTicketReply exception:", err);
+    return false;
+  }
+}
+
+// =========================================================================
+// CATALOG ORDERS SERVICE (WhatsApp Commerce Orders)
+// =========================================================================
+
+export function mapOrderFromRow(row: any): CatalogOrder {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    contactId: row.contact_id,
+    contactName: row.contact_name,
+    contactPhone: row.contact_phone,
+    catalogId: row.catalog_id || undefined,
+    catalogName: row.catalog_name || undefined,
+    items: Array.isArray(row.items) ? row.items : [],
+    subtotal: Number(row.subtotal) || 0,
+    currency: row.currency || "LKR",
+    customerNote: row.customer_note || undefined,
+    status: row.status as CatalogOrderStatus,
+    shippingAddress: row.shipping_address || undefined,
+    trackingNumber: row.tracking_number || undefined,
+    whatsappMessageId: row.whatsapp_message_id || undefined,
+    createdAt: row.created_at || new Date().toISOString(),
+    updatedAt: row.updated_at || new Date().toISOString(),
+  };
+}
+
+export async function fetchCatalogOrders(userId?: string): Promise<CatalogOrder[]> {
+  try {
+    let query = supabase
+      .from("catalog_orders")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (userId && userId !== "all") {
+      query = query.or(`user_id.eq.${userId},user_id.eq.default,user_id.eq.client-1`);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.warn("fetchCatalogOrders warning:", error.message);
+      return [];
+    }
+    return (data || []).map(mapOrderFromRow);
+  } catch (err) {
+    console.error("fetchCatalogOrders exception:", err);
+    return [];
+  }
+}
+
+export async function saveCatalogOrder(
+  order: CatalogOrder,
+  userId: string
+): Promise<boolean> {
+  try {
+    const payload = {
+      id: order.id,
+      user_id: userId,
+      contact_id: order.contactId,
+      contact_name: order.contactName,
+      contact_phone: order.contactPhone,
+      catalog_id: order.catalogId || null,
+      catalog_name: order.catalogName || null,
+      items: order.items as any,
+      subtotal: order.subtotal,
+      currency: order.currency,
+      customer_note: order.customerNote || null,
+      status: order.status,
+      shipping_address: order.shippingAddress || null,
+      tracking_number: order.trackingNumber || null,
+      whatsapp_message_id: order.whatsappMessageId || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase.from("catalog_orders").upsert(payload, {
+      onConflict: "id",
+    });
+
+    if (error) {
+      console.error("saveCatalogOrder error:", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("saveCatalogOrder exception:", err);
+    return false;
+  }
+}
+
+export async function updateCatalogOrderStatus(
+  orderId: string,
+  status: CatalogOrderStatus,
+  trackingNumber?: string,
+  shippingAddress?: string
+): Promise<boolean> {
+  try {
+    const payload: any = {
+      status,
+      updated_at: new Date().toISOString(),
+    };
+    if (trackingNumber !== undefined) payload.tracking_number = trackingNumber;
+    if (shippingAddress !== undefined) payload.shipping_address = shippingAddress;
+
+    const { error } = await supabase
+      .from("catalog_orders")
+      .update(payload)
+      .eq("id", orderId);
+
+    if (error) {
+      console.error("updateCatalogOrderStatus error:", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("updateCatalogOrderStatus exception:", err);
+    return false;
+  }
+}
+
+export async function deleteCatalogOrder(
+  orderId: string,
+  userId?: string
+): Promise<boolean> {
+  try {
+    let query = supabase.from("catalog_orders").delete().eq("id", orderId);
+    if (userId) {
+      query = query.eq("user_id", userId);
+    }
+    const { error } = await query;
+
+    if (error) {
+      console.error("deleteCatalogOrder error:", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("deleteCatalogOrder exception:", err);
+    return false;
   }
 }

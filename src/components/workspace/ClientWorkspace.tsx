@@ -6,6 +6,7 @@ import { Sidebar, ActiveTab } from "@/components/navigation/Sidebar";
 import { DashboardView } from "@/components/dashboard/DashboardView";
 import { LiveInbox } from "@/components/inbox/LiveInbox";
 import { FlowBuilder } from "@/components/flow-builder/FlowBuilder";
+import { FlowListView } from "@/components/flow-builder/FlowListView";
 import { WhatsAppSimulator } from "@/components/simulator/WhatsAppSimulator";
 import { MetaSettings } from "@/components/settings/MetaSettings";
 import { ContactsView } from "@/components/contacts/ContactsView";
@@ -15,13 +16,16 @@ import { IntegrationsHub } from "@/components/integrations/IntegrationsHub";
 import { SetupGuideModal } from "@/components/guide/SetupGuideModal";
 import { UserSwitchModal } from "@/components/auth/UserSwitchModal";
 import { CatalogManager } from "@/components/catalog/CatalogManager";
+import { OrdersManager } from "@/components/catalog/OrdersManager";
+import { SupportTicketsView } from "@/components/support/SupportTicketsView";
 import {
+  initialCatalogOrders,
   initialContacts,
   initialFlowNodes,
   initialMessages,
   initialMetaConfig,
 } from "@/lib/initial-data";
-import { Contact, FlowNode, Message, MetaConfig, UserWorkspace, Client, CatalogPayload, BusinessCatalog } from "@/types/whatsapp";
+import { Contact, FlowNode, Message, MetaConfig, UserWorkspace, Client, CatalogPayload, BusinessCatalog, BotFlow, CatalogOrder, CatalogOrderStatus } from "@/types/whatsapp";
 import { supabase } from "@/lib/supabase/client";
 import {
   fetchClients,
@@ -29,6 +33,9 @@ import {
   fetchContacts,
   fetchMessages,
   fetchFlowNodes,
+  fetchFlows,
+  saveFlow,
+  deleteFlow,
   fetchMetaConfig,
   fetchCatalogs,
   saveCatalog,
@@ -40,6 +47,11 @@ import {
   saveMetaConfig,
   mapMessageFromRow,
   mapContactFromRow,
+  mapOrderFromRow,
+  fetchCatalogOrders,
+  saveCatalogOrder,
+  updateCatalogOrderStatus,
+  deleteCatalogOrder,
 } from "@/lib/supabase/service";
 import {
   getStoredSession,
@@ -83,11 +95,15 @@ export function ClientWorkspace({
   // Workspace data
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
+  const [flows, setFlows] = useState<BotFlow[]>([]);
+  const [currentFlowId, setCurrentFlowId] = useState<string>("");
   const [flowNodes, setFlowNodes] = useState<FlowNode[]>(initialFlowNodes);
   const [isFlowsLoaded, setIsFlowsLoaded] = useState(false);
+  const [builderSubView, setBuilderSubView] = useState<"list" | "canvas">("list");
   const [metaConfig, setMetaConfig] = useState<MetaConfig>(initialMetaConfig);
   const [selectedContactId, setSelectedContactId] = useState<string>("");
   const [catalogs, setCatalogs] = useState<BusinessCatalog[]>([]);
+  const [orders, setOrders] = useState<CatalogOrder[]>(initialCatalogOrders);
 
   // Modals state
   const [isGuideOpen, setIsGuideOpen] = useState(false);
@@ -136,18 +152,21 @@ export function ClientWorkspace({
     let isMounted = true;
     setIsFlowsLoaded(false);
 
-    // 1. Fetch flow nodes immediately from database
-    fetchFlowNodes(currentClientId)
+    // 1. Fetch flows immediately from database
+    fetchFlows(currentClientId)
       .then((fetchedFlows) => {
         if (isMounted) {
           if (Array.isArray(fetchedFlows) && fetchedFlows.length > 0) {
-            setFlowNodes(fetchedFlows);
+            setFlows(fetchedFlows);
+            const initialActive = fetchedFlows.find((f) => f.isDefault) || fetchedFlows[0];
+            setCurrentFlowId(initialActive.id);
+            setFlowNodes(initialActive.nodes);
           }
           setIsFlowsLoaded(true);
         }
       })
       .catch((err) => {
-        console.error("Error loading flow nodes:", err);
+        console.error("Error loading flows:", err);
         if (isMounted) setIsFlowsLoaded(true);
       });
 
@@ -200,7 +219,16 @@ export function ClientWorkspace({
       })
       .catch((err) => console.error("Error loading catalogs:", err));
 
-    // Supabase Realtime channel for live messages & contacts
+    // 6. Fetch catalog orders
+    fetchCatalogOrders(currentClientId)
+      .then((fetchedOrders) => {
+        if (isMounted && Array.isArray(fetchedOrders) && fetchedOrders.length > 0) {
+          setOrders(fetchedOrders);
+        }
+      })
+      .catch((err) => console.error("Error loading catalog orders:", err));
+
+    // Supabase Realtime channel for live messages, contacts & catalog orders
     const channel = supabase
       .channel(`wppx-realtime-${currentClientId}`)
       .on(
@@ -209,7 +237,7 @@ export function ClientWorkspace({
         (payload) => {
           const newRow = payload.new as any;
           if (!newRow || !newRow.contact_id) return;
-          if (newRow.user_id && newRow.user_id !== currentClientId) return;
+          if (newRow.user_id && newRow.user_id !== currentClientId && newRow.user_id !== "default") return;
 
           const mappedMsg = mapMessageFromRow(newRow);
           setMessages((prev) => {
@@ -227,7 +255,7 @@ export function ClientWorkspace({
         { event: "*", schema: "public", table: "contacts" },
         (payload) => {
           const row = (payload.new || payload.old) as any;
-          if (row?.user_id && row.user_id !== currentClientId) return;
+          if (row?.user_id && row.user_id !== currentClientId && row.user_id !== "default") return;
 
           if (payload.eventType === "INSERT") {
             const newContact = mapContactFromRow(payload.new as any);
@@ -248,10 +276,96 @@ export function ClientWorkspace({
           }
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "catalog_orders" },
+        (payload) => {
+          const row = (payload.new || payload.old) as any;
+          if (row?.user_id && row.user_id !== currentClientId && row.user_id !== "default") return;
+
+          if (payload.eventType === "INSERT") {
+            const newOrder = mapOrderFromRow(payload.new as any);
+            setOrders((prev) => {
+              if (prev.some((o) => o.id === newOrder.id)) return prev;
+              return [newOrder, ...prev];
+            });
+          } else if (payload.eventType === "UPDATE") {
+            const updatedOrder = mapOrderFromRow(payload.new as any);
+            setOrders((prev) =>
+              prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
+            );
+          } else if (payload.eventType === "DELETE") {
+            const deletedId = (payload.old as any)?.id;
+            if (deletedId) {
+              setOrders((prev) => prev.filter((o) => o.id !== deletedId));
+            }
+          }
+        }
+      )
       .subscribe();
+
+    // Resilient background polling every 3 seconds to guarantee instant message arrival
+    const pollInterval = setInterval(() => {
+      if (!isMounted) return;
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+
+      fetchMessages(currentClientId)
+        .then((latestMsgs) => {
+          if (!isMounted || !latestMsgs) return;
+          setMessages((prev) => {
+            let hasChanged = false;
+            const updated = { ...prev };
+            for (const [cid, msgList] of Object.entries(latestMsgs)) {
+              const currentList = prev[cid] || [];
+              if (
+                currentList.length !== msgList.length ||
+                (msgList.length > 0 && currentList[currentList.length - 1]?.id !== msgList[msgList.length - 1]?.id)
+              ) {
+                updated[cid] = msgList;
+                hasChanged = true;
+              }
+            }
+            return hasChanged ? updated : prev;
+          });
+        })
+        .catch(() => {});
+
+      fetchContacts(currentClientId)
+        .then((latestContacts) => {
+          if (!isMounted || !Array.isArray(latestContacts)) return;
+          setContacts((prev) => {
+            if (prev.length !== latestContacts.length) return latestContacts;
+            const hasSnippetChange = latestContacts.some((lc) => {
+              const match = prev.find((p) => p.id === lc.id);
+              return (
+                !match ||
+                match.lastMessageSnippet !== lc.lastMessageSnippet ||
+                match.lastMessageTime !== lc.lastMessageTime
+              );
+            });
+            return hasSnippetChange ? latestContacts : prev;
+          });
+        })
+        .catch(() => {});
+
+      fetchCatalogOrders(currentClientId)
+        .then((latestOrders) => {
+          if (!isMounted || !Array.isArray(latestOrders)) return;
+          setOrders((prev) => {
+            if (prev.length !== latestOrders.length) return latestOrders;
+            const hasChange = latestOrders.some((lo) => {
+              const match = prev.find((p) => p.id === lo.id);
+              return !match || match.status !== lo.status || match.updatedAt !== lo.updatedAt;
+            });
+            return hasChange ? latestOrders : prev;
+          });
+        })
+        .catch(() => {});
+    }, 3000);
 
     return () => {
       isMounted = false;
+      clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
   }, [currentClientId]);
@@ -282,7 +396,14 @@ export function ClientWorkspace({
     verifyToken: c.verifyToken,
   }));
 
-  const pendingHumanCount = contacts.filter((c) => c.status === "pending_human").length;
+  const pendingHumanCount = contacts.filter((c) => {
+    const isUnassigned =
+      !c.assignedAgent ||
+      c.assignedAgent === "Unassigned" ||
+      c.assignedAgent.toLowerCase().includes("unassigned") ||
+      c.assignedAgent.startsWith("Team");
+    return (c.status === "pending_human" || c.tags?.includes("Team Alert")) && isUnassigned;
+  }).length;
 
   const handleSendMessage = async (
     contactId: string,
@@ -393,13 +514,37 @@ export function ClientWorkspace({
   };
 
   const handleAssignAgent = async (contactId: string, agentName: string) => {
+    const isRealAgent =
+      agentName &&
+      agentName !== "Unassigned" &&
+      !agentName.startsWith("Team") &&
+      agentName !== "WAPPX Bot Engine";
+
     setContacts((prev) =>
-      prev.map((c) =>
-        c.id === contactId ? { ...c, assignedAgent: agentName } : c
-      )
+      prev.map((c) => {
+        if (c.id !== contactId) return c;
+        const newTags = isRealAgent ? (c.tags || []).filter((t) => t !== "Team Alert") : c.tags;
+        return {
+          ...c,
+          assignedAgent: agentName,
+          tags: newTags,
+          status: isRealAgent && c.status === "pending_human" ? "active" : c.status,
+        };
+      })
     );
 
-    await updateContactFields(contactId, { assigned_agent: agentName }, currentClientId);
+    const target = contacts.find((c) => c.id === contactId);
+    const newTags = isRealAgent && target ? (target.tags || []).filter((t) => t !== "Team Alert") : undefined;
+
+    await updateContactFields(
+      contactId,
+      {
+        assigned_agent: agentName,
+        ...(newTags !== undefined ? { tags: newTags } : {}),
+        ...(isRealAgent && target?.status === "pending_human" ? { status: "active" } : {}),
+      },
+      currentClientId
+    );
   };
 
   const handleAddTag = async (contactId: string, tag: string) => {
@@ -464,9 +609,163 @@ export function ClientWorkspace({
     await saveMessage(newContact.id, initMsg, currentClientId);
   };
 
-  const handleUpdateFlowNodes = async (nodes: FlowNode[]): Promise<boolean> => {
+  const handleSelectFlow = (flowId: string) => {
+    setCurrentFlowId(flowId);
+    const targetFlow = flows.find((f) => f.id === flowId);
+    if (targetFlow) {
+      setFlowNodes(targetFlow.nodes || []);
+    }
+  };
+
+  const handleCreateFlow = async (
+    name: string,
+    description?: string,
+    initialNodes?: FlowNode[]
+  ): Promise<BotFlow | null> => {
+    const newId = `flow-${Date.now()}`;
+    const defaultNodes: FlowNode[] =
+      initialNodes && initialNodes.length > 0
+        ? initialNodes
+        : [
+            {
+              id: `node-${Date.now()}-1`,
+              type: "trigger",
+              title: "1. Inbound Welcome Trigger",
+              content: "Activates when user starts chat or says hello.",
+              triggerKeywords: ["hi", "hello", "start", "menu"],
+              position: { x: 100, y: 150 },
+              nextNodeId: `node-${Date.now()}-2`,
+            },
+            {
+              id: `node-${Date.now()}-2`,
+              type: "buttons",
+              title: "2. Main Menu",
+              content: "👋 Ayubowan! How can we help your business today?",
+              buttons: [
+                { id: `btn-${Date.now()}-1`, title: "Option 1" },
+                { id: `btn-${Date.now()}-2`, title: "Option 2" },
+              ],
+              position: { x: 480, y: 150 },
+            },
+          ];
+
+    const newFlow: BotFlow = {
+      id: newId,
+      userId: currentClientId,
+      name: name || `Flow #${flows.length + 1}`,
+      description: description || "Automated WhatsApp bot flow",
+      isActive: true,
+      isDefault: flows.length === 0,
+      nodes: defaultNodes,
+      triggerKeywords: ["hi", "hello"],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await saveFlow(newFlow, currentClientId);
+    setFlows((prev) => [...prev, newFlow]);
+    setCurrentFlowId(newId);
+    setFlowNodes(defaultNodes);
+    return newFlow;
+  };
+
+  const handleDeleteFlow = async (flowId: string): Promise<boolean> => {
+    if (flows.length <= 1) {
+      return false;
+    }
+    await deleteFlow(flowId, currentClientId);
+    const remaining = flows.filter((f) => f.id !== flowId);
+    setFlows(remaining);
+    if (currentFlowId === flowId) {
+      const nextFlow = remaining[0];
+      setCurrentFlowId(nextFlow.id);
+      setFlowNodes(nextFlow.nodes || []);
+    }
+    return true;
+  };
+
+  const handleDuplicateFlow = async (flowId: string): Promise<BotFlow | null> => {
+    const source = flows.find((f) => f.id === flowId);
+    if (!source) return null;
+
+    const idMap = new Map<string, string>();
+    source.nodes.forEach((n) =>
+      idMap.set(n.id, `node-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`)
+    );
+
+    const duplicatedNodes: FlowNode[] = source.nodes.map((n) => {
+      const newId = idMap.get(n.id) || `node-${Date.now()}`;
+      const newNext = n.nextNodeId ? idMap.get(n.nextNodeId) : undefined;
+      const newButtons = n.buttons?.map((b) => ({
+        ...b,
+        id: `btn-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        nextNodeId: b.nextNodeId ? idMap.get(b.nextNodeId) : undefined,
+      }));
+      const newListItems = n.listItems?.map((li) => ({
+        ...li,
+        id: `li-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        nextNodeId: li.nextNodeId ? idMap.get(li.nextNodeId) : undefined,
+      }));
+
+      return {
+        ...n,
+        id: newId,
+        nextNodeId: newNext,
+        buttons: newButtons,
+        listItems: newListItems,
+      };
+    });
+
+    const newFlow: BotFlow = {
+      id: `flow-${Date.now()}`,
+      userId: currentClientId,
+      name: `${source.name} (Copy)`,
+      description: source.description || "",
+      isActive: true,
+      isDefault: false,
+      nodes: duplicatedNodes,
+      triggerKeywords: source.triggerKeywords ? [...source.triggerKeywords] : [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await saveFlow(newFlow, currentClientId);
+    setFlows((prev) => [...prev, newFlow]);
+    setCurrentFlowId(newFlow.id);
+    setFlowNodes(duplicatedNodes);
+    return newFlow;
+  };
+
+  const handleToggleFlowActive = async (flowId: string, isActive: boolean): Promise<boolean> => {
+    const target = flows.find((f) => f.id === flowId);
+    if (!target) return false;
+
+    const updatedFlow: BotFlow = {
+      ...target,
+      isActive,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await saveFlow(updatedFlow, currentClientId);
+    setFlows((prev) => prev.map((f) => (f.id === flowId ? updatedFlow : f)));
+    return true;
+  };
+
+  const handleUpdateFlowNodes = async (nodes: FlowNode[], newFlowName?: string): Promise<boolean> => {
     setFlowNodes(nodes);
-    return await saveFlowNodes(nodes, currentClientId);
+    const activeTarget = flows.find((f) => f.id === currentFlowId) || flows[0];
+    if (activeTarget) {
+      const updatedFlow: BotFlow = {
+        ...activeTarget,
+        name: newFlowName || activeTarget.name,
+        nodes,
+        updatedAt: new Date().toISOString(),
+      };
+      setFlows((prev) => prev.map((f) => (f.id === activeTarget.id ? updatedFlow : f)));
+      return await saveFlow(updatedFlow, currentClientId);
+    } else {
+      return await saveFlowNodes(nodes, currentClientId);
+    }
   };
 
   const handleUpdateMetaConfig = async (config: MetaConfig) => {
@@ -480,7 +779,13 @@ export function ClientWorkspace({
 
   const handleSaveCatalog = async (updated: BusinessCatalog) => {
     try {
-      const saved = await saveCatalog(updated);
+      const sanitized: BusinessCatalog = {
+        ...updated,
+        clientId: updated.clientId || (updated as any).client_id || currentClientId || "client-1",
+        catalogId: updated.catalogId || (updated as any).catalog_id,
+        isDefault: updated.isDefault ?? (updated as any).is_default ?? true,
+      };
+      const saved = await saveCatalog(sanitized);
       setCatalogs((prev) => {
         const idx = prev.findIndex((c) => c.id === saved.id);
         if (idx >= 0) {
@@ -506,6 +811,71 @@ export function ClientWorkspace({
     }
   };
 
+  const handleUpdateOrderStatus = async (
+    orderId: string,
+    status: CatalogOrderStatus,
+    trackingNumber?: string,
+    shippingAddress?: string
+  ): Promise<boolean> => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              status,
+              ...(trackingNumber !== undefined ? { trackingNumber } : {}),
+              ...(shippingAddress !== undefined ? { shippingAddress } : {}),
+              updatedAt: new Date().toISOString(),
+            }
+          : o
+      )
+    );
+    const success = await updateCatalogOrderStatus(orderId, status, trackingNumber, shippingAddress);
+    return success;
+  };
+
+  const handleDeleteOrder = async (orderId: string): Promise<boolean> => {
+    setOrders((prev) => prev.filter((o) => o.id !== orderId));
+    const success = await deleteCatalogOrder(orderId, currentClientId);
+    return success;
+  };
+
+  const handleSendOrderWhatsAppMessage = async (phone: string, text: string) => {
+    const clean = phone.replace(/[^0-9]/g, "");
+    const targetContact = contacts.find((c) => c.phone.replace(/[^0-9]/g, "") === clean);
+
+    if (targetContact) {
+      await handleSendMessage(targetContact.id, text);
+    } else {
+      const newContactId = `c-${Date.now()}`;
+      const newContact: Contact = {
+        id: newContactId,
+        name: phone,
+        phone: phone,
+        status: "active",
+        tags: ["WhatsApp Order"],
+        lastMessageSnippet: text,
+        lastMessageTime: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        isBotActive: false,
+        userId: currentClientId,
+        unreadCount: 0,
+        notes: [],
+      };
+      setContacts((prev) => [newContact, ...prev]);
+      await saveContact(newContact, currentClientId);
+      await handleSendMessage(newContactId, text);
+    }
+  };
+
+  const handleNavigateToChat = (contactPhone: string) => {
+    const clean = contactPhone.replace(/[^0-9]/g, "");
+    const targetContact = contacts.find((c) => c.phone.replace(/[^0-9]/g, "") === clean);
+    if (targetContact) {
+      setSelectedContactId(targetContact.id);
+    }
+    handleTabChange("inbox");
+  };
+
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -529,6 +899,7 @@ export function ClientWorkspace({
         activeTab={activeTab}
         setActiveTab={handleTabChange}
         pendingHumanCount={pendingHumanCount}
+        pendingOrdersCount={orders.filter((o) => o.status === "pending").length}
         currentUser={currentWorkspaceUser}
         onOpenGuide={() => setIsGuideOpen(true)}
         onOpenUserSwitch={() => setIsUserSwitchOpen(true)}
@@ -540,7 +911,7 @@ export function ClientWorkspace({
 
       {/* Main Surface View Container */}
       <div className={`flex-1 flex flex-col min-w-0 h-[calc(100vh-57px)] lg:h-screen ${
-        activeTab === "inbox" || activeTab === "builder" || activeTab === "simulator" || activeTab === "catalog"
+        activeTab === "inbox" || activeTab === "orders" || activeTab === "builder" || activeTab === "simulator" || activeTab === "catalog"
           ? "overflow-hidden"
           : "overflow-y-auto no-scrollbar"
       }`}>
@@ -589,6 +960,8 @@ export function ClientWorkspace({
               messages={messages}
               metaConfig={metaConfig}
               onNavigateTab={handleTabChange}
+              onAssignAgent={handleAssignAgent}
+              onSelectContact={setSelectedContactId}
             />
           )}
 
@@ -605,7 +978,23 @@ export function ClientWorkspace({
               onAddNote={handleAddNote}
               currentUser={currentWorkspaceUser}
               catalogProducts={catalogs.flatMap((c) => c.items)}
+              defaultCatalogId={catalogs.find((c) => c.catalogId)?.catalogId || "2080375866175781"}
+              onNavigateToOrders={() => handleTabChange("orders")}
             />
+          )}
+
+          {activeTab === "orders" && (
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-slate-50">
+              <OrdersManager
+                orders={orders}
+                contacts={contacts}
+                clientId={currentClientId}
+                onUpdateOrderStatus={handleUpdateOrderStatus}
+                onDeleteOrder={handleDeleteOrder}
+                onSendWhatsAppMessage={handleSendOrderWhatsAppMessage}
+                onNavigateToChat={handleNavigateToChat}
+              />
+            </div>
           )}
 
           {activeTab === "catalog" && (
@@ -613,8 +1002,14 @@ export function ClientWorkspace({
               catalogs={catalogs}
               clientId={currentClientId}
               businessName={activeClientObj.businessName || "WAPPX Commerce"}
+              orders={orders}
+              contacts={contacts}
               onSaveCatalog={handleSaveCatalog}
               onDeleteCatalog={handleDeleteCatalog}
+              onUpdateOrderStatus={handleUpdateOrderStatus}
+              onDeleteOrder={handleDeleteOrder}
+              onSendWhatsAppMessage={handleSendOrderWhatsAppMessage}
+              onNavigateToChat={handleNavigateToChat}
               onSelectForChat={() => {
                 handleTabChange("inbox");
               }}
@@ -637,17 +1032,47 @@ export function ClientWorkspace({
           )}
 
           {activeTab === "builder" && (
-            <FlowBuilder
-              key={isFlowsLoaded ? `loaded-${currentClientId}` : `loading-${currentClientId}`}
-              nodes={flowNodes}
-              onUpdateNodes={handleUpdateFlowNodes}
-              onOpenSimulator={() => handleTabChange("simulator")}
-            />
+            builderSubView === "list" ? (
+              <FlowListView
+                flows={flows}
+                currentFlowId={currentFlowId}
+                onSelectFlow={handleSelectFlow}
+                onOpenCanvas={(flowId) => {
+                  handleSelectFlow(flowId);
+                  setBuilderSubView("canvas");
+                }}
+                onCreateFlow={handleCreateFlow}
+                onDeleteFlow={handleDeleteFlow}
+                onDuplicateFlow={handleDuplicateFlow}
+                onToggleFlowActive={handleToggleFlowActive}
+                onOpenSimulator={() => handleTabChange("simulator")}
+              />
+            ) : (
+              <FlowBuilder
+                key={`flow-${currentFlowId || "default"}-${currentClientId}-${isFlowsLoaded}`}
+                nodes={flowNodes}
+                flows={flows}
+                catalogs={catalogs}
+                currentFlowId={currentFlowId}
+                onSelectFlow={handleSelectFlow}
+                onCreateFlow={handleCreateFlow}
+                onDeleteFlow={handleDeleteFlow}
+                onDuplicateFlow={handleDuplicateFlow}
+                onToggleFlowActive={handleToggleFlowActive}
+                onUpdateNodes={handleUpdateFlowNodes}
+                onOpenSimulator={() => handleTabChange("simulator")}
+                onBackToList={() => setBuilderSubView("list")}
+              />
+            )
           )}
 
           {activeTab === "simulator" && (
             <WhatsAppSimulator
-              nodes={flowNodes}
+              nodes={
+                flows.filter((f) => f.isActive).length > 0
+                  ? flows.filter((f) => f.isActive).flatMap((f) => f.nodes)
+                  : flowNodes
+              }
               onHandoffAlert={handleSimulatorHandoffAlert}
             />
           )}
@@ -664,7 +1089,18 @@ export function ClientWorkspace({
           )}
 
           {activeTab === "settings" && (
-            <MetaSettings config={metaConfig} onUpdateConfig={handleUpdateMetaConfig} />
+            <MetaSettings
+              config={metaConfig}
+              clientId={currentClientId}
+              onUpdateConfig={handleUpdateMetaConfig}
+            />
+          )}
+
+          {activeTab === "support" && (
+            <SupportTicketsView
+              currentUser={currentWorkspaceUser}
+              clientId={currentClientId}
+            />
           )}
         </main>
       </div>

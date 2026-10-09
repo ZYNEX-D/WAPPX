@@ -19,14 +19,29 @@ import {
   Layers,
   ChevronRight,
   Zap,
+  Activity,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  ShoppingBag,
+  Database,
+  Globe,
+  Radio,
+  Clock,
+  ArrowRight,
+  CreditCard,
+  HelpCircle,
+  BookOpen,
 } from "lucide-react";
+import { DiagnosticsResponse, DiagnosticCheckItem } from "@/app/api/whatsapp/diagnostics/route";
 
 interface MetaSettingsProps {
   config: MetaConfig;
+  clientId?: string;
   onUpdateConfig: (config: MetaConfig) => void;
 }
 
-export function MetaSettings({ config, onUpdateConfig }: MetaSettingsProps) {
+export function MetaSettings({ config, clientId = "client-1", onUpdateConfig }: MetaSettingsProps) {
   const defaultWebhook =
     process.env.NEXT_PUBLIC_APP_URL
       ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhook`
@@ -43,9 +58,14 @@ export function MetaSettings({ config, onUpdateConfig }: MetaSettingsProps) {
     ...config,
     webhookUrl: activeWebhookUrl,
   });
-  const [activeTab, setActiveTab] = useState<"auto" | "manual" | "test">("auto");
+  const [activeTab, setActiveTab] = useState<"diagnostics" | "auto" | "manual" | "test">("diagnostics");
   const [copiedWebhook, setCopiedWebhook] = useState(false);
   const [copiedToken, setCopiedToken] = useState(false);
+
+  // Full Diagnostics State
+  const [diagnostics, setDiagnostics] = useState<DiagnosticsResponse | null>(null);
+  const [isDiagnosing, setIsDiagnosing] = useState(false);
+  const [diagnosticsError, setDiagnosticsError] = useState<string | null>(null);
 
   // Auto-discovery state
   const [discoverToken, setDiscoverToken] = useState(
@@ -72,15 +92,16 @@ export function MetaSettings({ config, onUpdateConfig }: MetaSettingsProps) {
     message?: string;
   } | null>(null);
 
-  // Fetch live health on mount
+  // Fetch live health & full diagnostics on mount
   useEffect(() => {
     checkLiveHealth();
-  }, [config.phoneNumberId, config.accessToken]);
+    runDiagnostics();
+  }, [config.phoneNumberId, config.accessToken, clientId]);
 
   const checkLiveHealth = async () => {
     setIsCheckingHealth(true);
     try {
-      const res = await fetch("/api/whatsapp/health");
+      const res = await fetch(`/api/whatsapp/health?clientId=${clientId || config.userId || "client-1"}`);
       const data = await res.json();
       if (data.configured && data.phoneDetails) {
         setHealth(data.phoneDetails);
@@ -91,6 +112,24 @@ export function MetaSettings({ config, onUpdateConfig }: MetaSettingsProps) {
       setHealth(null);
     } finally {
       setIsCheckingHealth(false);
+    }
+  };
+
+  const runDiagnostics = async () => {
+    setIsDiagnosing(true);
+    setDiagnosticsError(null);
+    try {
+      const res = await fetch(`/api/whatsapp/diagnostics?clientId=${clientId || config.userId || "client-1"}`);
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.checks)) {
+        setDiagnostics(data);
+      } else {
+        setDiagnosticsError(data.error || "Failed to load system diagnostics.");
+      }
+    } catch (err: any) {
+      setDiagnosticsError(err?.message || "Failed to connect to diagnostic suite.");
+    } finally {
+      setIsDiagnosing(false);
     }
   };
 
@@ -297,8 +336,33 @@ export function MetaSettings({ config, onUpdateConfig }: MetaSettingsProps) {
         {/* Tab Buttons */}
         <div className="flex items-center gap-2 border-b border-[#dee3e9] pb-2 overflow-x-auto">
           <button
+            onClick={() => setActiveTab("diagnostics")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+              activeTab === "diagnostics"
+                ? "bg-[#0A504A] text-white shadow-xs"
+                : "bg-white text-[#444950] border border-[#dee3e9] hover:bg-[#F7F7F2]"
+            }`}
+          >
+            <Activity className="w-4 h-4 text-[#A2E4B8]" />
+            <span>Diagnostics & Health</span>
+            {diagnostics && (
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  diagnostics.overallStatus === "healthy"
+                    ? "bg-[#00A86B] text-white"
+                    : diagnostics.overallStatus === "partial"
+                    ? "bg-amber-500 text-white"
+                    : "bg-red-500 text-white"
+                }`}
+              >
+                {diagnostics.scorePercentage}%
+              </span>
+            )}
+          </button>
+
+          <button
             onClick={() => setActiveTab("auto")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
               activeTab === "auto"
                 ? "bg-[#00A86B] text-white shadow-xs"
                 : "bg-white text-[#444950] border border-[#dee3e9] hover:bg-[#F7F7F2]"
@@ -310,7 +374,7 @@ export function MetaSettings({ config, onUpdateConfig }: MetaSettingsProps) {
 
           <button
             onClick={() => setActiveTab("manual")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
               activeTab === "manual"
                 ? "bg-[#00A86B] text-white shadow-xs"
                 : "bg-white text-[#444950] border border-[#dee3e9] hover:bg-[#F7F7F2]"
@@ -322,7 +386,7 @@ export function MetaSettings({ config, onUpdateConfig }: MetaSettingsProps) {
 
           <button
             onClick={() => setActiveTab("test")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
               activeTab === "test"
                 ? "bg-[#00A86B] text-white shadow-xs"
                 : "bg-white text-[#444950] border border-[#dee3e9] hover:bg-[#F7F7F2]"
@@ -348,6 +412,337 @@ export function MetaSettings({ config, onUpdateConfig }: MetaSettingsProps) {
               <AlertTriangle className="w-4 h-4 shrink-0" />
             )}
             <span>{sendResult.message}</span>
+          </div>
+        )}
+
+        {/* ===================== TAB 0: SYSTEM DIAGNOSTICS & HEALTH ===================== */}
+        {activeTab === "diagnostics" && (
+          <div className="space-y-6">
+            {/* Diagnostics Hero Status Banner */}
+            <div className="bg-gradient-to-r from-[#0A504A] via-[#0d6159] to-[#0A504A] text-white rounded-3xl p-6 sm:p-7 shadow-md relative overflow-hidden border border-[#00A86B]/30">
+              <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-[#00A86B]/20 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-[#A2E4B8]/20 text-[#A2E4B8] border border-[#A2E4B8]/30 flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-[#A2E4B8]" />
+                      Real-time System Audit
+                    </span>
+                    {diagnostics && (
+                      <span className="text-xs text-white/70">
+                        {diagnostics.passedChecks} of {diagnostics.totalChecks} Checks Passed
+                      </span>
+                    )}
+                  </div>
+
+                  <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                    {diagnostics?.overallStatus === "healthy"
+                      ? "100% Fully Configured & Operational"
+                      : diagnostics?.overallStatus === "partial"
+                      ? "Partially Configured"
+                      : isDiagnosing
+                      ? "Running Diagnostics..."
+                      : "Configuration Review Needed"}
+                  </h2>
+
+                  <p className="text-xs text-white/80 max-w-xl leading-relaxed">
+                    Automated end-to-end audit verifying your Meta System User Token, WABA registration, WhatsApp Phone Number, Webhooks, Commerce Catalog, and Database synchronization.
+                  </p>
+
+                  {diagnostics?.timestamp && (
+                    <div className="flex items-center gap-2 text-[11px] text-white/60 pt-1">
+                      <Clock className="w-3 h-3" />
+                      <span>Last checked: {new Date(diagnostics.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-4 shrink-0 w-full md:w-auto">
+                  {diagnostics && (
+                    <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10 w-full sm:w-auto justify-center">
+                      <div className="text-right">
+                        <div className="text-[10px] text-white/70 uppercase font-bold tracking-wider">Health Score</div>
+                        <div className="text-2xl font-black text-[#A2E4B8]">
+                          {diagnostics.scorePercentage}%
+                        </div>
+                      </div>
+                      <div className="w-10 h-10 rounded-full border-3 border-[#00A86B] flex items-center justify-center bg-black/20">
+                        <CheckCircle2 className="w-5 h-5 text-[#A2E4B8]" />
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={runDiagnostics}
+                    disabled={isDiagnosing}
+                    className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-[#00A86B] hover:bg-[#008f5b] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${isDiagnosing ? "animate-spin" : ""}`} />
+                    <span>{isDiagnosing ? "Auditing Systems..." : "Run Full Diagnostic"}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Error notice if diagnostics failed */}
+            {diagnosticsError && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-xs text-red-700 flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 shrink-0 text-red-600" />
+                <div className="flex-1">
+                  <span className="font-bold">Diagnostic test failed: </span>
+                  <span>{diagnosticsError}</span>
+                </div>
+                <button
+                  onClick={runDiagnostics}
+                  className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-xs"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {/* Diagnostics Cards Grid */}
+            {diagnostics && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {diagnostics.checks.map((item) => {
+                  const isSuccess = item.status === "success";
+                  const isWarning = item.status === "warning";
+                  const isError = item.status === "error";
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4 ${
+                        isSuccess
+                          ? "bg-white border-emerald-200/80 shadow-xs hover:border-emerald-300"
+                          : isWarning
+                          ? "bg-amber-50/50 border-amber-200 shadow-xs"
+                          : "bg-red-50/50 border-red-200 shadow-xs"
+                      }`}
+                    >
+                      <div className="space-y-3">
+                        {/* Header: Icon + Category Badge + Status Badge */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                                isSuccess
+                                  ? "bg-emerald-100/70 text-[#00A86B]"
+                                  : isWarning
+                                  ? "bg-amber-100 text-amber-700"
+                                  : "bg-red-100 text-red-600"
+                              }`}
+                            >
+                              {item.category === "auth" && <Key className="w-4 h-4" />}
+                              {item.category === "phone" && <Smartphone className="w-4 h-4" />}
+                              {item.category === "waba" && <ShieldCheck className="w-4 h-4" />}
+                              {item.category === "billing" && <CreditCard className="w-4 h-4" />}
+                              {item.category === "profile" && <Globe className="w-4 h-4" />}
+                              {item.category === "webhook" && <Radio className="w-4 h-4" />}
+                              {item.category === "catalog" && <ShoppingBag className="w-4 h-4" />}
+                              {item.category === "database" && <Database className="w-4 h-4" />}
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                {item.category}
+                              </span>
+                              <h3 className="text-xs font-bold text-slate-800 leading-snug">
+                                {item.name}
+                              </h3>
+                            </div>
+                          </div>
+
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 flex items-center gap-1 ${
+                              isSuccess
+                                ? "bg-emerald-100 text-emerald-800"
+                                : isWarning
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {isSuccess && <CheckCircle className="w-3 h-3 text-emerald-600" />}
+                            {isWarning && <AlertTriangle className="w-3 h-3 text-amber-600" />}
+                            {isError && <XCircle className="w-3 h-3 text-red-600" />}
+                            <span>{isSuccess ? "CONFIGURED" : isWarning ? "NOTICE" : "ACTION NEEDED"}</span>
+                          </span>
+                        </div>
+
+                        {/* Summary description */}
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                          {item.summary}
+                        </p>
+
+                        {/* Details Badges */}
+                        {item.details && Object.keys(item.details).length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {Object.entries(item.details)
+                              .filter(([k, v]) => v !== undefined && v !== null && typeof v !== "object")
+                              .slice(0, 4)
+                              .map(([k, v]) => (
+                                <span
+                                  key={k}
+                                  className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10.5px] font-mono border border-slate-200/60"
+                                >
+                                  <strong className="text-slate-500 font-sans capitalize">{k.replace(/([A-Z])/g, " $1")}:</strong> {String(v)}
+                                </span>
+                              ))}
+                          </div>
+                        )}
+
+                        {/* Recommendation if any */}
+                        {item.recommendation && (
+                          <div className="p-2.5 bg-amber-50 rounded-xl text-[11px] text-amber-900 border border-amber-200/60 flex items-start gap-1.5">
+                            <Info className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                            <span>{item.recommendation}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Card Footer Actions */}
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                        {item.actionUrl ? (
+                          <a
+                            href={item.actionUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[#00A86B] hover:text-[#0A504A] font-bold text-[11px] flex items-center gap-1"
+                          >
+                            <span>{item.actionText || "Manage in Meta"}</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        ) : (
+                          <span className="text-[10px] text-slate-400">Verified by Meta Graph API</span>
+                        )}
+
+                        {item.category === "phone" && (
+                          <button
+                            onClick={() => setActiveTab("test")}
+                            className="text-[11px] font-bold text-[#0A504A] hover:underline flex items-center gap-0.5 cursor-pointer"
+                          >
+                            <span>Send Test Message</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </button>
+                        )}
+                        {item.category === "webhook" && (
+                          <button
+                            onClick={() => setActiveTab("manual")}
+                            className="text-[11px] font-bold text-[#0A504A] hover:underline flex items-center gap-0.5 cursor-pointer"
+                          >
+                            <span>View Webhook Config</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* WhatsApp Billing & Payment Method Explanatory Guide Box */}
+            <div className="p-5 bg-gradient-to-r from-emerald-50/60 via-white to-teal-50/40 border border-emerald-200/80 rounded-2xl space-y-4 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-emerald-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-[#00A86B]/15 text-[#0A504A] flex items-center justify-center shrink-0">
+                    <CreditCard className="w-4 h-4 text-[#00A86B]" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-[#0A504A]">
+                      Meta WhatsApp Payment Method & Conversation Tier Guide
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Why does WhatsApp Manager show &quot;Missing valid payment method&quot; and how to link it?
+                    </p>
+                  </div>
+                </div>
+
+                <a
+                  href={`https://business.facebook.com/latest/whatsapp_manager/overview/?asset_id=${formData.wabaId || ""}&nav_ref=whatsapp_manager`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0A504A] hover:bg-[#00A86B] text-white rounded-xl text-[11px] font-bold transition-colors w-fit shrink-0"
+                >
+                  <span>Open WhatsApp Manager</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <div className="p-3 bg-white rounded-xl border border-slate-100 shadow-2xs space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[11px]">
+                    <span className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] text-slate-600 font-mono">1</span>
+                    Two Different Payment Places
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Meta has <strong>Meta Ad Account Payment</strong> (for Facebook/Instagram Ads) and <strong>WhatsApp WABA Payment</strong>. Adding a card for Ads does <em>not</em> auto-link to WhatsApp.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-slate-100 shadow-2xs space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[11px]">
+                    <span className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] text-slate-600 font-mono">2</span>
+                    Why is it currently working?
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    When customers message you first, Meta opens a <strong>free 24-hr service window</strong>. However, initiating outbound broadcasts or sending templates after 24 hrs requires a card.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-slate-100 shadow-2xs space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[11px]">
+                    <span className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] text-slate-600 font-mono">3</span>
+                    1,000 Free Conversations / Mo
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Adding a card does not charge you upfront. Every WABA receives <strong>1,000 free customer-service conversations</strong> monthly. Only paid template categories incur billing.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-slate-600 border-t border-emerald-50">
+                <div className="flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-[#00A86B]" />
+                  <span>
+                    <strong>Quick Fix:</strong> WhatsApp Manager &gt; Settings &gt; Payment Methods &gt; Select existing Business Card or enter new card.
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href="https://developers.facebook.com/docs/whatsapp/updates-to-pricing"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[#00A86B] hover:underline font-bold flex items-center gap-1"
+                  >
+                    <span>Meta Pricing Docs</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Action Navigation Strip */}
+            <div className="p-4 bg-white border border-[#dee3e9] rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shadow-xs">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-[#00A86B]" />
+                <span className="font-bold text-slate-800">Need to modify or test your setup?</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setActiveTab("test")}
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors cursor-pointer"
+                >
+                  Send Live Test Message
+                </button>
+                <button
+                  onClick={() => setActiveTab("manual")}
+                  className="px-3.5 py-1.5 rounded-xl bg-[#0A504A] hover:bg-[#00A86B] text-white font-bold transition-colors cursor-pointer"
+                >
+                  Edit API Credentials
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

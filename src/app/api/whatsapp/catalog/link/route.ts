@@ -99,11 +99,28 @@ export async function POST(req: NextRequest) {
       savedCat = inserted;
     }
 
+    const mappedCat = savedCat
+      ? {
+          id: savedCat.id,
+          clientId: savedCat.client_id,
+          client_id: savedCat.client_id,
+          name: savedCat.name,
+          catalogId: savedCat.catalog_id,
+          catalog_id: savedCat.catalog_id,
+          description: savedCat.description,
+          items: savedCat.items || [],
+          isDefault: savedCat.is_default,
+          is_default: savedCat.is_default,
+          createdAt: savedCat.created_at,
+          updatedAt: savedCat.updated_at,
+        }
+      : null;
+
     return NextResponse.json({
       success: true,
       catalogId: cleanCatalogId,
       connectedCatalogs: checkData?.data || [],
-      catalog: savedCat,
+      catalog: mappedCat,
       message: `Meta Catalog ID ${cleanCatalogId} successfully linked to your WhatsApp Business Account!`,
     });
   } catch (err: any) {
