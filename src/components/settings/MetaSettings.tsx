@@ -63,7 +63,8 @@ export function MetaSettings({ config, clientId = "client-1", onUpdateConfig }: 
     ...config,
     webhookUrl: activeWebhookUrl,
   });
-  const [activeTab, setActiveTab] = useState<"diagnostics" | "channels" | "auto" | "manual" | "test">("diagnostics");
+  const [activeTab, setActiveTab] = useState<"diagnostics" | "whatsapp" | "social">("diagnostics");
+  const [whatsappSubTab, setWhatsappSubTab] = useState<"auto" | "manual">("auto");
   const [copiedWebhook, setCopiedWebhook] = useState(false);
   const [copiedToken, setCopiedToken] = useState(false);
 
@@ -105,6 +106,44 @@ export function MetaSettings({ config, clientId = "client-1", onUpdateConfig }: 
   const [discoveredPages, setDiscoveredPages] = useState<DiscoveredFacebookPage[] | null>(null);
   const [socialError, setSocialError] = useState<string | null>(null);
   const [connectingSocialPageId, setConnectingSocialPageId] = useState<string | null>(null);
+
+  // Live Webhook Status Check
+  const [webhookStatus, setWebhookStatus] = useState<{
+    loading?: boolean;
+    isSubscribed?: boolean;
+    pageId?: string;
+    pageName?: string;
+    subscribedApps?: any[];
+    error?: string;
+  } | null>(null);
+
+  const checkLiveWebhookSubscription = async () => {
+    setWebhookStatus({ loading: true });
+    try {
+      const res = await fetch(`/api/whatsapp/connect-social?userId=${clientId || config.userId || "client-1"}`);
+      const data = await res.json();
+      if (res.ok && data.configured) {
+        setWebhookStatus({
+          loading: false,
+          isSubscribed: data.isSubscribed,
+          pageId: data.pageId,
+          pageName: data.pageName,
+          subscribedApps: data.subscribedApps,
+        });
+      } else {
+        setWebhookStatus({
+          loading: false,
+          isSubscribed: false,
+          error: data.message || data.error || "No connected Facebook Page found.",
+        });
+      }
+    } catch {
+      setWebhookStatus({
+        loading: false,
+        error: "Failed to connect to verification service.",
+      });
+    }
+  };
 
   const handleDiscoverSocial = async () => {
     if (!socialAccessToken.trim()) {
@@ -428,8 +467,9 @@ export function MetaSettings({ config, clientId = "client-1", onUpdateConfig }: 
           </div>
         </div>
 
-        {/* Tab Buttons */}
+        {/* Tab Buttons: Consolidated into 3 Clean Master Tabs */}
         <div className="flex items-center gap-2 border-b border-[#dee3e9] pb-2 overflow-x-auto">
+          {/* Tab 1: Diagnostics & Health */}
           <button
             onClick={() => setActiveTab("diagnostics")}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
@@ -439,7 +479,7 @@ export function MetaSettings({ config, clientId = "client-1", onUpdateConfig }: 
             }`}
           >
             <Activity className="w-4 h-4 text-[#A2E4B8]" />
-            <span>Diagnostics & Health</span>
+            <span>Diagnostics &amp; Health</span>
             {diagnostics && (
               <span
                 className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
@@ -455,52 +495,44 @@ export function MetaSettings({ config, clientId = "client-1", onUpdateConfig }: 
             )}
           </button>
 
+          {/* Tab 2: WhatsApp Cloud API (Unified) */}
           <button
-            onClick={() => setActiveTab("channels")}
+            onClick={() => setActiveTab("whatsapp")}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
-              activeTab === "channels"
+              activeTab === "whatsapp"
+                ? "bg-[#00A86B] text-white shadow-xs"
+                : "bg-white text-[#444950] border border-[#dee3e9] hover:bg-[#F7F7F2]"
+            }`}
+          >
+            <Smartphone className="w-4 h-4" />
+            <span>WhatsApp Cloud API</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                formData.phoneNumberId
+                  ? "bg-emerald-950/20 text-white"
+                  : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              {formData.phoneNumberId ? "CONNECTED" : "SETUP"}
+            </span>
+          </button>
+
+          {/* Tab 3: Instagram & Messenger */}
+          <button
+            onClick={() => setActiveTab("social")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
+              activeTab === "social"
                 ? "bg-gradient-to-r from-[#0064E0] to-[#E1306C] text-white shadow-xs"
                 : "bg-white text-[#444950] border border-[#dee3e9] hover:bg-[#F7F7F2]"
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>Instagram & Messenger</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("auto")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
-              activeTab === "auto"
-                ? "bg-[#00A86B] text-white shadow-xs"
-                : "bg-white text-[#444950] border border-[#dee3e9] hover:bg-[#F7F7F2]"
-            }`}
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>1-Click Auto Setup (Recommended)</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("manual")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
-              activeTab === "manual"
-                ? "bg-[#00A86B] text-white shadow-xs"
-                : "bg-white text-[#444950] border border-[#dee3e9] hover:bg-[#F7F7F2]"
-            }`}
-          >
-            <Key className="w-4 h-4" />
-            <span>Manual Settings</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("test")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
-              activeTab === "test"
-                ? "bg-[#00A86B] text-white shadow-xs"
-                : "bg-white text-[#444950] border border-[#dee3e9] hover:bg-[#F7F7F2]"
-            }`}
-          >
-            <Send className="w-4 h-4" />
-            <span>Test Messenger</span>
+            <span>Instagram &amp; Messenger</span>
+            {(formData.facebookPageId || formData.instagramAccountId) && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white">
+                ACTIVE
+              </span>
+            )}
           </button>
         </div>
 
@@ -725,7 +757,9 @@ export function MetaSettings({ config, clientId = "client-1", onUpdateConfig }: 
 
                         {item.category === "phone" && (
                           <button
-                            onClick={() => setActiveTab("test")}
+                            onClick={() => {
+                              setActiveTab("whatsapp");
+                            }}
                             className="text-[11px] font-bold text-[#0A504A] hover:underline flex items-center gap-0.5 cursor-pointer"
                           >
                             <span>Send Test Message</span>
@@ -734,7 +768,10 @@ export function MetaSettings({ config, clientId = "client-1", onUpdateConfig }: 
                         )}
                         {item.category === "webhook" && (
                           <button
-                            onClick={() => setActiveTab("manual")}
+                            onClick={() => {
+                              setActiveTab("whatsapp");
+                              setWhatsappSubTab("manual");
+                            }}
                             className="text-[11px] font-bold text-[#0A504A] hover:underline flex items-center gap-0.5 cursor-pointer"
                           >
                             <span>View Webhook Config</span>
@@ -837,13 +874,18 @@ export function MetaSettings({ config, clientId = "client-1", onUpdateConfig }: 
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setActiveTab("test")}
+                  onClick={() => {
+                    setActiveTab("whatsapp");
+                  }}
                   className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors cursor-pointer"
                 >
                   Send Live Test Message
                 </button>
                 <button
-                  onClick={() => setActiveTab("manual")}
+                  onClick={() => {
+                    setActiveTab("whatsapp");
+                    setWhatsappSubTab("manual");
+                  }}
                   className="px-3.5 py-1.5 rounded-xl bg-[#0A504A] hover:bg-[#00A86B] text-white font-bold transition-colors cursor-pointer"
                 >
                   Edit API Credentials
@@ -854,7 +896,7 @@ export function MetaSettings({ config, clientId = "client-1", onUpdateConfig }: 
         )}
 
         {/* ===================== TAB: INSTAGRAM & MESSENGER ===================== */}
-        {activeTab === "channels" && (
+        {activeTab === "social" && (
           <div className="space-y-6">
             {/* Status Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1129,43 +1171,212 @@ export function MetaSettings({ config, clientId = "client-1", onUpdateConfig }: 
               </div>
             </div>
 
-            {/* Step-by-Step Meta Developer Guide */}
+            {/* Step-by-Step Meta Developer Guide & Webhook Verification */}
             <div className="p-5 bg-gradient-to-r from-blue-50/60 via-white to-pink-50/40 border border-slate-200 rounded-2xl space-y-4 shadow-xs text-xs">
-              <div className="flex items-center gap-2 font-bold text-slate-900 pb-2 border-b border-slate-100">
-                <BookOpen className="w-4 h-4 text-[#0064E0]" />
-                <span>Meta Developer Setup Checklist for Messenger & Instagram</span>
+              <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100">
+                <div className="flex items-center gap-2 font-bold text-slate-900">
+                  <BookOpen className="w-4 h-4 text-[#0064E0]" />
+                  <span>Meta Developer Setup Checklist & Webhook Verification</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={checkLiveWebhookSubscription}
+                    disabled={webhookStatus?.loading}
+                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg font-bold text-[11px] transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                  >
+                    {webhookStatus?.loading ? (
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="w-3 h-3 text-blue-600" />
+                    )}
+                    <span>{webhookStatus?.loading ? "Checking..." : "Verify Webhook Status"}</span>
+                  </button>
+                  <a
+                    href="https://developers.facebook.com/apps/1410476257886677/webhooks/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg font-bold text-[11px] transition-colors flex items-center gap-1"
+                  >
+                    <span>Developer Console</span>
+                    <ExternalLink className="w-3 h-3 text-slate-400" />
+                  </a>
+                </div>
               </div>
 
+              {/* Live Webhook Status Result Banner */}
+              {webhookStatus && (
+                <div
+                  className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${
+                    webhookStatus.isSubscribed
+                      ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                      : webhookStatus.error
+                      ? "bg-rose-50 border-rose-200 text-rose-800"
+                      : "bg-amber-50 border-amber-200 text-amber-800"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {webhookStatus.isSubscribed ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                    )}
+                    <div>
+                      <p className="font-bold text-xs">
+                        {webhookStatus.isSubscribed
+                          ? `Facebook Page "${webhookStatus.pageName || webhookStatus.pageId}" is Subscribed! (messages, messaging_postbacks)`
+                          : webhookStatus.error || "Page webhook is not yet subscribed to this app."}
+                      </p>
+                      <p className="text-[11px] opacity-80 mt-0.5">
+                        {webhookStatus.isSubscribed
+                          ? "Meta Cloud API will forward incoming customer Messenger & Instagram messages to your Live Inbox."
+                          : "Click 'Connect Page & Instagram' above or verify your webhook in Meta Developer Portal."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Webhook Endpoint & Verify Token Copy Box */}
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-800 text-[11px]">
+                    Meta Webhook Credentials (for Page & Instagram Products in Developer Portal):
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-medium">Shared across WhatsApp, Messenger & Instagram</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono text-[11px]">
+                  <div className="flex items-center gap-2 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
+                    <span className="text-slate-400 font-sans text-[10px] uppercase font-bold shrink-0">URL:</span>
+                    <span className="truncate flex-1 text-slate-700">https://wappx.zynexdev.com/api/webhook</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText("https://wappx.zynexdev.com/api/webhook");
+                        setSendResult({ success: true, message: "Webhook URL copied!" });
+                      }}
+                      className="text-slate-400 hover:text-slate-700 p-0.5"
+                      title="Copy URL"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
+                    <span className="text-slate-400 font-sans text-[10px] uppercase font-bold shrink-0">Token:</span>
+                    <span className="truncate flex-1 text-slate-700">zynex_meta_webhook_secret_2026</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText("zynex_meta_webhook_secret_2026");
+                        setSendResult({ success: true, message: "Verify Token copied!" });
+                      }}
+                      className="text-slate-400 hover:text-slate-700 p-0.5"
+                      title="Copy Token"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Developer Portal Verification Checklist: Layer 1 vs Layer 2 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-slate-700">
-                <div className="p-3 bg-white rounded-xl border border-slate-100 space-y-1">
-                  <div className="font-bold text-blue-700 flex items-center gap-1.5">
-                    <span className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-[10px]">1</span>
-                    Webhook Subscriptions
+                <div className="p-3.5 bg-white rounded-xl border border-blue-100 space-y-1.5 shadow-2xs">
+                  <div className="font-bold text-[#0064E0] flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold">L1</span>
+                    Layer 1: Page-Level Subscription (Automated ✅)
                   </div>
                   <p className="text-[11px] text-slate-600 leading-relaxed">
-                    In your Meta Developer App $\rightarrow$ Webhooks:
-                    <br />• Select <strong>Page</strong>: subscribe to <code>messages</code> and <code>messaging_postbacks</code>
-                    <br />• Select <strong>Instagram</strong>: subscribe to <code>messages</code>
+                    Auto-configured when you click <strong>&quot;Connect Page &amp; Instagram&quot;</strong>. Click <em>&quot;Verify Webhook Status&quot;</em> above to confirm your Facebook Page is actively subscribed to App <strong>1410476257886677</strong> with <code>messages</code> and <code>messaging_postbacks</code>.
                   </p>
                 </div>
 
-                <div className="p-3 bg-white rounded-xl border border-slate-100 space-y-1">
-                  <div className="font-bold text-[#E1306C] flex items-center gap-1.5">
-                    <span className="w-5 h-5 rounded-full bg-pink-100 flex items-center justify-center text-[10px]">2</span>
-                    Enable Instagram DM Access
+                <div className="p-3.5 bg-white rounded-xl border border-purple-100 space-y-1.5 shadow-2xs">
+                  <div className="font-bold text-purple-700 flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-purple-100 flex items-center justify-center text-[10px] font-bold">L2</span>
+                    Layer 2: App-Level Webhooks (Developer Portal)
                   </div>
                   <p className="text-[11px] text-slate-600 leading-relaxed">
-                    Open Instagram Mobile App $\rightarrow$ Settings & Privacy $\rightarrow$ Messages & story replies $\rightarrow$ Message controls $\rightarrow$ Turn ON <strong>&quot;Allow access to messages&quot;</strong>.
+                    In <a href="https://developers.facebook.com/apps/1410476257886677/webhooks/" target="_blank" rel="noreferrer" className="text-purple-700 underline font-semibold">developers.facebook.com/apps/1410476257886677</a> $\rightarrow$ Webhooks:
+                    <br />• <strong>Page</strong>: verify subscription to <code>messages</code>, <code>messaging_postbacks</code>
+                    <br />• <strong>Instagram</strong>: verify subscription to <code>messages</code>
                   </p>
+                </div>
+              </div>
+
+              {/* Instagram Mobile DM Access Reminder */}
+              <div className="p-3 bg-pink-50/70 border border-pink-200/80 rounded-xl flex items-start gap-2.5">
+                <div className="w-5 h-5 rounded-full bg-pink-100 text-[#E1306C] flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5">
+                  IG
+                </div>
+                <div className="text-[11px] text-slate-700">
+                  <strong className="text-[#E1306C]">Instagram In-App Requirement:</strong> Open Instagram mobile app $\rightarrow$ Settings &amp; Privacy $\rightarrow$ Messages and story replies $\rightarrow$ Message controls $\rightarrow$ Toggle <strong>&quot;Allow access to messages&quot;</strong> to ON (without this, Meta blocks incoming DMs from reaching the Cloud API).
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* ===================== TAB 1: 1-CLICK AUTO SETUP ===================== */}
-        {activeTab === "auto" && (
+        {/* ===================== TAB: UNIFIED WHATSAPP CLOUD API ===================== */}
+        {activeTab === "whatsapp" && (
           <div className="space-y-6">
+            {/* WhatsApp Hub Header with Mode Switcher */}
+            <div className="bg-white border border-[#dee3e9] rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#00A86B] flex items-center justify-center shrink-0">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-bold text-sm text-[#0A504A]">WhatsApp Cloud API Hub</h2>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        formData.phoneNumberId
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      {formData.phoneNumberId ? `PHONE ID: ${formData.phoneNumberId}` : "NOT CONNECTED"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#5d6c7b] mt-0.5">
+                    Connect your Meta WhatsApp Business number via 1-Click Auto Detect or configure manually.
+                  </p>
+                </div>
+              </div>
+
+              {/* Sub-tab Pill Switcher */}
+              <div className="flex items-center gap-1.5 bg-[#F7F7F2] p-1 rounded-xl border border-[#dee3e9] shrink-0 self-stretch sm:self-auto justify-center">
+                <button
+                  type="button"
+                  onClick={() => setWhatsappSubTab("auto")}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    whatsappSubTab === "auto"
+                      ? "bg-[#00A86B] text-white shadow-2xs"
+                      : "text-[#5d6c7b] hover:text-[#0A504A]"
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>1-Click Auto Setup</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWhatsappSubTab("manual")}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    whatsappSubTab === "manual"
+                      ? "bg-[#0A504A] text-white shadow-2xs"
+                      : "text-[#5d6c7b] hover:text-[#0A504A]"
+                  }`}
+                >
+                  <Key className="w-3.5 h-3.5" />
+                  <span>Manual &amp; Webhooks</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Sub-View 1: 1-Click Auto Setup */}
+            {whatsappSubTab === "auto" && (
+              <div className="space-y-6">
             <div className="bg-white border border-[#dee3e9] rounded-2xl p-6 space-y-5 shadow-xs">
               <div className="flex items-center gap-2 pb-3 border-b border-[#dee3e9]">
                 <Zap className="w-5 h-5 text-[#00A86B]" />
@@ -1353,9 +1564,9 @@ export function MetaSettings({ config, clientId = "client-1", onUpdateConfig }: 
           </div>
         )}
 
-        {/* ===================== TAB 2: MANUAL SETTINGS ===================== */}
-        {activeTab === "manual" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Sub-View 2: Manual Settings & Webhooks */}
+            {whatsappSubTab === "manual" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Card 1: API Credentials */}
             <div className="bg-white border border-[#dee3e9] rounded-2xl p-6 space-y-4 shadow-xs">
               <div className="flex items-center gap-2 pb-2 border-b border-[#dee3e9]">
@@ -1492,55 +1703,59 @@ export function MetaSettings({ config, clientId = "client-1", onUpdateConfig }: 
           </div>
         )}
 
-        {/* ===================== TAB 3: TEST MESSENGER ===================== */}
-        {activeTab === "test" && (
-          <div className="bg-white border border-[#dee3e9] rounded-2xl p-6 space-y-4 max-w-xl mx-auto shadow-xs">
-            <div className="flex items-center gap-2 pb-2 border-b border-[#dee3e9]">
-              <Send className="w-4 h-4 text-[#00A86B]" />
-              <h2 className="font-bold text-sm text-[#0A504A]">
-                Send WhatsApp Test Message
-              </h2>
+            {/* Integrated WhatsApp Test Message Card */}
+            <div className="bg-white border border-[#dee3e9] rounded-2xl p-6 space-y-4 shadow-xs">
+              <div className="flex items-center gap-2 pb-2 border-b border-[#dee3e9]">
+                <Send className="w-4 h-4 text-[#00A86B]" />
+                <div>
+                  <h2 className="font-bold text-sm text-[#0A504A]">
+                    Send Live WhatsApp Test Message
+                  </h2>
+                  <p className="text-xs text-[#5d6c7b]">
+                    Verify that Meta Cloud API can send WhatsApp messages to your real phone number using active credentials.
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleSendTestMessage} className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                <div>
+                  <label className="font-bold text-[#0A504A] block mb-1">
+                    Recipient WhatsApp Number
+                  </label>
+                  <input
+                    type="text"
+                    value={testPhone}
+                    onChange={(e) => setTestPhone(e.target.value)}
+                    placeholder="+94771234567"
+                    className="meta-input w-full font-mono text-xs"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">Include country code (e.g. +94)</p>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="font-bold text-[#0A504A] block mb-1">
+                    Message Content
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={testText}
+                      onChange={(e) => setTestText(e.target.value)}
+                      placeholder="Hello from WAPPX WhatsApp Platform! 🚀"
+                      className="meta-input flex-1 text-xs"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isSending}
+                      className="px-5 py-2.5 bg-[#00A86B] text-white rounded-xl font-bold hover:bg-[#0A504A] transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shrink-0 text-xs"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>{isSending ? "Sending..." : "Send Test"}</span>
+                    </button>
+                  </div>
+                </div>
+              </form>
             </div>
-
-            <p className="text-xs text-[#5d6c7b]">
-              Verify that Meta Cloud API can send WhatsApp messages to your real phone number.
-            </p>
-
-            <form onSubmit={handleSendTestMessage} className="space-y-4 text-xs">
-              <div>
-                <label className="font-bold text-[#0A504A] block mb-1">
-                  Recipient WhatsApp Number (with country code)
-                </label>
-                <input
-                  type="text"
-                  value={testPhone}
-                  onChange={(e) => setTestPhone(e.target.value)}
-                  placeholder="+94771234567"
-                  className="meta-input w-full font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-[#0A504A] block mb-1">
-                  Message Content
-                </label>
-                <textarea
-                  rows={3}
-                  value={testText}
-                  onChange={(e) => setTestText(e.target.value)}
-                  className="meta-input w-full resize-none"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSending}
-                className="w-full py-2.5 bg-[#00A86B] text-white rounded-full font-bold hover:bg-[#0A504A] transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>{isSending ? "Sending via Meta Cloud API..." : "Send Test Message"}</span>
-              </button>
-            </form>
           </div>
         )}
       </div>

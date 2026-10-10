@@ -1538,6 +1538,16 @@ export function LandingPage({
                         Architecture
                       </button>
                     </li>
+                    <li>
+                      <a href="/privacy" className="hover:text-[#0A504A] cursor-pointer text-left">
+                        Privacy Policy
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/data-deletion" className="hover:text-[#0A504A] cursor-pointer text-left">
+                        User Data Deletion
+                      </a>
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -1545,7 +1555,13 @@ export function LandingPage({
 
             {/* Bottom Credits Bar */}
             <div className="pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-              <p>&copy; {new Date().getFullYear()} WAPPX Inc. All rights reserved.</p>
+              <div className="flex flex-wrap items-center gap-4">
+                <p>&copy; {new Date().getFullYear()} WAPPX Inc. All rights reserved.</p>
+                <span className="text-slate-300">&bull;</span>
+                <a href="/privacy" className="hover:text-[#0A504A] underline font-medium">Privacy Policy</a>
+                <span className="text-slate-300">&bull;</span>
+                <a href="/data-deletion" className="hover:text-[#0A504A] underline font-medium">Data Deletion</a>
+              </div>
 
               <span>
                 Designed and developed by <strong className="font-bold text-[#0A504A]">ZYNEX Developments</strong>

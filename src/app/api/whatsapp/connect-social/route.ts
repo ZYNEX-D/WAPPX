@@ -64,3 +64,57 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export async function GET(req: NextRequest) {
+  try {
+    const searchParams = req.nextUrl.searchParams;
+    const userId = searchParams.get("userId") || "client-1";
+
+    const { data: cfg } = await supabaseAdmin
+      .from("meta_config")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!cfg || !cfg.facebook_page_id || !cfg.page_access_token) {
+      return NextResponse.json({
+        configured: false,
+        message: "No Facebook Page configured yet.",
+      });
+    }
+
+    // Query Meta Graph API for subscribed apps on this page
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${cfg.facebook_page_id}/subscribed_apps`,
+      {
+        headers: {
+          Authorization: `Bearer ${cfg.page_access_token}`,
+        },
+      }
+    );
+
+    const data = await res.json();
+    const appsList = Array.isArray(data?.data) ? data.data : [];
+    const isSubscribed = appsList.some(
+      (app: any) =>
+        app.subscribed_fields?.includes("messages") ||
+        app.id === "1410476257886677"
+    );
+
+    return NextResponse.json({
+      configured: true,
+      pageId: cfg.facebook_page_id,
+      pageName: cfg.facebook_page_name,
+      instagramAccountId: cfg.instagram_account_id,
+      instagramUsername: cfg.instagram_username,
+      isSubscribed,
+      subscribedApps: appsList,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to check status" },
+      { status: 500 }
+    );
+  }
+}
+

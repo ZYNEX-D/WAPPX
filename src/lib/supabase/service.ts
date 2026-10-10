@@ -188,7 +188,22 @@ export async function createClientAccount(params: {
   businessName: string;
   email: string;
   phone?: string;
+  password?: string;
 }): Promise<Client | null> {
+  try {
+    const res = await fetch("/api/admin/clients", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+    const json = await res.json();
+    if (res.ok && json.success && json.client) {
+      return mapClientFromRow(json.client);
+    }
+  } catch (err) {
+    console.warn("API client creation failed, falling back to direct DB insert:", err);
+  }
+
   const clientId = `client-${Date.now()}`;
   const randomStr = Math.random().toString(36).substring(2, 8);
   const verifyToken = `zynex_vt_${clientId}_${randomStr}`;
@@ -231,6 +246,15 @@ export async function createClientAccount(params: {
 }
 
 export async function deleteClientAccount(clientId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/admin/clients?clientId=${encodeURIComponent(clientId)}`, {
+      method: "DELETE",
+    });
+    if (res.ok) return true;
+  } catch (err) {
+    console.warn("API delete failed, falling back:", err);
+  }
+
   const { error } = await supabase.from("clients").delete().eq("id", clientId);
   if (error) {
     console.error("Error deleting client from Supabase:", error);

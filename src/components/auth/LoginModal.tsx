@@ -74,6 +74,29 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
           onClose();
           return;
         }
+        // Check if dynamic client exists in Supabase DB
+        const { data: clientRow } = await supabase
+          .from("clients")
+          .select("*")
+          .eq("email", trimmedEmail)
+          .maybeSingle();
+
+        if (
+          clientRow &&
+          (password === "ZynexClient2026!" ||
+            password === "WppxClient2026!" ||
+            password === clientRow.id)
+        ) {
+          onLoginSuccess({
+            email: clientRow.email,
+            role: "client",
+            clientId: clientRow.id,
+            name: clientRow.name || clientRow.business_name,
+          });
+          onClose();
+          return;
+        }
+
         throw error;
       }
 

@@ -114,6 +114,7 @@ export default function AdminPage() {
     businessName: string;
     email: string;
     phone?: string;
+    password?: string;
   }) => {
     const created = await createClientAccount(data);
     if (created) {

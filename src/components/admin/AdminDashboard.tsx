@@ -23,7 +23,7 @@ interface AdminDashboardProps {
   clients: Client[];
   totalMessagesCount: number;
   onSelectClientWorkspace: (clientId: string) => void;
-  onCreateClient: (data: { name: string; businessName: string; email: string; phone?: string }) => Promise<void>;
+  onCreateClient: (data: { name: string; businessName: string; email: string; phone?: string; password?: string }) => Promise<void>;
   onDeleteClient: (clientId: string) => Promise<void>;
   onRefresh: () => void;
 }
@@ -45,6 +45,7 @@ export function AdminDashboard({
   const [formBusiness, setFormBusiness] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formPhone, setFormPhone] = useState("+94 ");
+  const [formPassword, setFormPassword] = useState("ZynexClient2026!");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const connectedNumbersCount = clients.filter(
@@ -67,6 +68,7 @@ export function AdminDashboard({
       businessName: formBusiness.trim(),
       email: formEmail.trim(),
       phone: formPhone.trim(),
+      password: formPassword.trim() || "ZynexClient2026!",
     });
     setIsSubmitting(false);
 
@@ -74,6 +76,7 @@ export function AdminDashboard({
     setFormBusiness("");
     setFormEmail("");
     setFormPhone("+94 ");
+    setFormPassword("ZynexClient2026!");
     setIsModalOpen(false);
   };
 
@@ -396,6 +399,26 @@ export function AdminDashboard({
                   placeholder="+94 72 973 1508"
                   className="w-full px-3 py-2 bg-[#F7F7F2] border border-slate-200 rounded-xl text-xs text-[#0A504A] focus:border-[#00A86B] outline-hidden font-medium"
                 />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-700">
+                    Workspace Password
+                  </label>
+                  <span className="text-[10px] text-slate-400">Client will use this to sign in</span>
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={formPassword}
+                  onChange={(e) => setFormPassword(e.target.value)}
+                  placeholder="e.g. ZynexClient2026!"
+                  className="w-full px-3 py-2 bg-[#F7F7F2] border border-slate-200 rounded-xl text-xs text-[#0A504A] focus:border-[#00A86B] outline-hidden font-mono font-medium"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Pre-filled with default: <code className="bg-slate-200/60 px-1 py-0.5 rounded text-slate-700">ZynexClient2026!</code>
+                </p>
               </div>
 
               <div className="pt-2 flex items-center justify-end gap-2">
