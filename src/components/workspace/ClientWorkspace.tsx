@@ -416,6 +416,9 @@ export function ClientWorkspace({
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
+    const targetContact = contacts.find((c) => c.id === contactId);
+    const contactChannel = targetContact?.channel || "whatsapp";
+
     const newMsg: Message = {
       id: `msg-${Date.now()}`,
       sender: "agent",
@@ -423,6 +426,7 @@ export function ClientWorkspace({
       text,
       timestamp: timeStr,
       status: "delivered",
+      channel: contactChannel,
       isInternalNote,
       userId: currentClientId,
       mediaUrl,
@@ -451,10 +455,10 @@ export function ClientWorkspace({
 
     await saveMessage(contactId, newMsg, currentClientId);
 
-    // If not an internal note, dispatch outbound message directly to customer's WhatsApp
-    if (!isInternalNote) {
-      const targetContact = contacts.find((c) => c.id === contactId);
-      if (targetContact?.phone) {
+    // If not an internal note, dispatch outbound message directly to customer via active channel
+    if (!isInternalNote && targetContact) {
+      const recipientTarget = targetContact.externalId || targetContact.phone;
+      if (recipientTarget) {
         fetch("/api/whatsapp/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -462,6 +466,8 @@ export function ClientWorkspace({
             phoneNumberId: metaConfig.phoneNumberId,
             accessToken: metaConfig.accessToken,
             recipientPhone: targetContact.phone,
+            recipientId: recipientTarget,
+            channel: contactChannel,
             text,
             buttons: newMsg.buttons,
             catalog,
@@ -475,11 +481,11 @@ export function ClientWorkspace({
           .then(async (res) => {
             const data = await res.json();
             if (!data.success && data.error) {
-              console.warn("[ClientWorkspace] Outbound WhatsApp dispatch notice:", data.error);
+              console.warn(`[ClientWorkspace] Outbound ${contactChannel} dispatch notice:`, data.error);
             }
           })
           .catch((err) => {
-            console.error("[ClientWorkspace] Failed to send outbound WhatsApp message:", err);
+            console.error(`[ClientWorkspace] Failed to send outbound ${contactChannel} message:`, err);
           });
       }
     }

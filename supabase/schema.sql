@@ -6,7 +6,9 @@
 CREATE TABLE IF NOT EXISTS public.contacts (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
-    phone TEXT NOT NULL UNIQUE,
+    phone TEXT NOT NULL,
+    channel TEXT NOT NULL DEFAULT 'whatsapp' CHECK (channel IN ('whatsapp', 'messenger', 'instagram')),
+    external_id TEXT,
     avatar_url TEXT,
     status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'pending_human', 'resolved')),
     assigned_agent TEXT DEFAULT 'Unassigned',
@@ -30,6 +32,7 @@ CREATE TABLE IF NOT EXISTS public.messages (
     text TEXT NOT NULL,
     timestamp TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'delivered' CHECK (status IN ('sent', 'delivered', 'read', 'failed')),
+    channel TEXT NOT NULL DEFAULT 'whatsapp' CHECK (channel IN ('whatsapp', 'messenger', 'instagram')),
     buttons JSONB,
     selected_button_id TEXT,
     media_url TEXT,
@@ -61,8 +64,28 @@ CREATE TABLE IF NOT EXISTS public.meta_config (
     verify_token TEXT DEFAULT 'zynex_meta_webhook_secret_2026',
     webhook_url TEXT DEFAULT '',
     is_connected BOOLEAN NOT NULL DEFAULT false,
+    -- Facebook Messenger & Instagram Integration
+    facebook_page_id TEXT DEFAULT '',
+    facebook_page_name TEXT DEFAULT '',
+    page_access_token TEXT DEFAULT '',
+    is_messenger_connected BOOLEAN NOT NULL DEFAULT false,
+    instagram_account_id TEXT DEFAULT '',
+    instagram_username TEXT DEFAULT '',
+    is_instagram_connected BOOLEAN NOT NULL DEFAULT false,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Migration helpers for existing databases:
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'whatsapp';
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS external_id TEXT;
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'whatsapp';
+ALTER TABLE public.meta_config ADD COLUMN IF NOT EXISTS facebook_page_id TEXT DEFAULT '';
+ALTER TABLE public.meta_config ADD COLUMN IF NOT EXISTS facebook_page_name TEXT DEFAULT '';
+ALTER TABLE public.meta_config ADD COLUMN IF NOT EXISTS page_access_token TEXT DEFAULT '';
+ALTER TABLE public.meta_config ADD COLUMN IF NOT EXISTS is_messenger_connected BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE public.meta_config ADD COLUMN IF NOT EXISTS instagram_account_id TEXT DEFAULT '';
+ALTER TABLE public.meta_config ADD COLUMN IF NOT EXISTS instagram_username TEXT DEFAULT '';
+ALTER TABLE public.meta_config ADD COLUMN IF NOT EXISTS is_instagram_connected BOOLEAN NOT NULL DEFAULT false;
 
 -- 5. Clients Table
 CREATE TABLE IF NOT EXISTS public.clients (

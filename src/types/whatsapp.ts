@@ -90,6 +90,8 @@ export interface CatalogOrder {
   updatedAt: string;
 }
 
+export type ChannelType = "whatsapp" | "messenger" | "instagram";
+
 export interface Message {
   id: string;
   sender: MessageSenderType;
@@ -98,6 +100,7 @@ export interface Message {
   timestamp: string;
   createdAt?: string;
   status: MessageStatus;
+  channel?: ChannelType;
   buttons?: InteractiveButton[];
   selectedButtonId?: string;
   mediaUrl?: string;
@@ -114,6 +117,8 @@ export interface Contact {
   id: string;
   name: string;
   phone: string;
+  channel?: ChannelType;
+  externalId?: string;
   avatarUrl?: string;
   status: "active" | "pending_human" | "resolved";
   assignedAgent?: string;
@@ -208,6 +213,14 @@ export interface MetaConfig {
   verifyToken: string;
   webhookUrl: string;
   isConnected: boolean;
+  // Facebook Messenger & Instagram Integration
+  facebookPageId?: string;
+  facebookPageName?: string;
+  pageAccessToken?: string;
+  isMessengerConnected?: boolean;
+  instagramAccountId?: string;
+  instagramUsername?: string;
+  isInstagramConnected?: boolean;
 }
 
 export interface Client {

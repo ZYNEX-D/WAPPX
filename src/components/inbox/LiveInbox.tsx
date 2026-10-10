@@ -7,6 +7,7 @@ import {
   UserWorkspace,
   CatalogPayload,
   CatalogItem,
+  ChannelType,
 } from "@/types/whatsapp";
 import {
   Search,
@@ -169,6 +170,7 @@ export function LiveInbox({
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterTab, setFilterTab] = useState<"all" | "human" | "bot" | "mine">("all");
+  const [channelFilter, setChannelFilter] = useState<"all" | "whatsapp" | "messenger" | "instagram">("all");
   const [inputText, setInputText] = useState("");
   const [isNoteMode, setIsNoteMode] = useState(false);
   const [newTagInput, setNewTagInput] = useState("");
@@ -351,6 +353,10 @@ export function LiveInbox({
       c.phone.includes(searchQuery);
 
     if (!matchesSearch) return false;
+
+    if (channelFilter !== "all" && (c.channel || "whatsapp") !== channelFilter) {
+      return false;
+    }
 
     if (filterTab === "human") {
       const isUnassigned =
@@ -635,6 +641,27 @@ export function LiveInbox({
             )}
           </div>
 
+          {/* Channel Tabs */}
+          <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100 rounded-xl">
+            {[
+              { id: "all", label: "All" },
+              { id: "whatsapp", label: "WhatsApp" },
+              { id: "messenger", label: "Messenger" },
+              { id: "instagram", label: "Instagram" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setChannelFilter(tab.id as any)}
+                className={`py-1 text-[11px] font-bold rounded-lg text-center transition-all cursor-pointer truncate ${channelFilter === tab.id
+                  ? "bg-white text-slate-900 shadow-2xs"
+                  : "text-slate-500 hover:text-slate-900"
+                  }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
           {/* Filter Pills */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             <button
@@ -713,24 +740,22 @@ export function LiveInbox({
                 <div
                   key={contact.id}
                   onClick={() => handleSelectContactMobile(contact.id)}
-                  className={`px-3.5 py-3 flex items-start gap-3 cursor-pointer transition-all ${
-                    isSelected
-                      ? isHighlightAlert
-                        ? "bg-amber-50/90 border-l-[3.5px] border-amber-500 ring-1 ring-amber-300/60 shadow-xs"
-                        : "bg-emerald-50/70 border-l-[3px] border-emerald-600"
-                      : isHighlightAlert
+                  className={`px-3.5 py-3 flex items-start gap-3 cursor-pointer transition-all ${isSelected
+                    ? isHighlightAlert
+                      ? "bg-amber-50/90 border-l-[3.5px] border-amber-500 ring-1 ring-amber-300/60 shadow-xs"
+                      : "bg-emerald-50/70 border-l-[3px] border-emerald-600"
+                    : isHighlightAlert
                       ? "bg-amber-50/40 border-l-[3.5px] border-amber-400 hover:bg-amber-100/50 ring-1 ring-amber-200/50"
                       : "hover:bg-slate-50/80"
-                  }`}
+                    }`}
                 >
                   {/* Avatar */}
                   <div className="relative shrink-0 mt-0.5">
                     <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs select-none ${
-                        isHighlightAlert
-                          ? "bg-gradient-to-br from-amber-100 to-amber-200 text-amber-900 border border-amber-300 shadow-2xs"
-                          : "bg-gradient-to-br from-emerald-100/80 to-emerald-200/60 text-emerald-900 border border-emerald-200"
-                      }`}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs select-none ${isHighlightAlert
+                        ? "bg-gradient-to-br from-amber-100 to-amber-200 text-amber-900 border border-amber-300 shadow-2xs"
+                        : "bg-gradient-to-br from-emerald-100/80 to-emerald-200/60 text-emerald-900 border border-emerald-200"
+                        }`}
                     >
                       {contact.name.slice(0, 2).toUpperCase()}
                     </div>
@@ -763,6 +788,19 @@ export function LiveInbox({
                         <h2 className="text-[13.5px] font-medium text-slate-900 truncate">
                           {contact.name}
                         </h2>
+                        {contact.channel === "instagram" ? (
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-pink-50 text-pink-700 border border-pink-200 shrink-0">
+                            Instagram
+                          </span>
+                        ) : contact.channel === "messenger" ? (
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
+                            Messenger
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                            WhatsApp
+                          </span>
+                        )}
                         {isHighlightAlert && (
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-extrabold bg-amber-500 text-white shadow-2xs tracking-wide shrink-0">
                             <Bell className="w-2.5 h-2.5 fill-current" />
@@ -771,9 +809,8 @@ export function LiveInbox({
                         )}
                       </div>
                       <span
-                        className={`text-[11px] shrink-0 font-medium ${
-                          isHighlightAlert ? "text-amber-700 font-bold" : "text-slate-400"
-                        }`}
+                        className={`text-[11px] shrink-0 font-medium ${isHighlightAlert ? "text-amber-700 font-bold" : "text-slate-400"
+                          }`}
                       >
                         {contact.lastMessageTime}
                       </span>
@@ -803,11 +840,10 @@ export function LiveInbox({
                       {contact.tags.slice(0, 2).map((t) => (
                         <span
                           key={t}
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-medium border truncate ${
-                            t === "Team Alert"
-                              ? "bg-amber-100/70 text-amber-800 border-amber-300 font-bold"
-                              : "bg-slate-50 text-slate-500 border-slate-200/60"
-                          }`}
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-medium border truncate ${t === "Team Alert"
+                            ? "bg-amber-100/70 text-amber-800 border-amber-300 font-bold"
+                            : "bg-slate-50 text-slate-500 border-slate-200/60"
+                            }`}
                         >
                           {t}
                         </span>
@@ -858,7 +894,13 @@ export function LiveInbox({
                   </div>
                   <p className="text-xs text-slate-500 truncate flex items-center gap-1.5 mt-0.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                    <span>{selectedContact.phone}</span>
+                    <span className="font-semibold text-slate-700">
+                      {selectedContact.channel === "instagram"
+                        ? `Instagram (${selectedContact.name})`
+                        : selectedContact.channel === "messenger"
+                          ? `Messenger (${selectedContact.name})`
+                          : selectedContact.phone}
+                    </span>
                     <span className="text-slate-300">·</span>
                     <span className="text-emerald-700 font-semibold flex items-center gap-1">
                       <Clock className="w-3 h-3 text-emerald-600" />
@@ -913,33 +955,32 @@ export function LiveInbox({
                 selectedContact.assignedAgent === "Unassigned" ||
                 selectedContact.assignedAgent.toLowerCase().includes("unassigned") ||
                 selectedContact.assignedAgent.startsWith("Team"))) && (
-              <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-orange-500 text-white px-4 py-2.5 flex items-center justify-between text-xs shadow-xs animate-in slide-in-from-top-1 shrink-0 z-20">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-                    <Bell className="w-3.5 h-3.5 text-white animate-pulse" />
-                  </span>
-                  <div className="min-w-0">
-                    <span className="font-bold">Team Alert Active:</span>{" "}
-                    <span className="text-amber-100 truncate">
-                      This conversation triggered a notify team step and needs an assigned agent.
+                <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-orange-500 text-white px-4 py-2.5 flex items-center justify-between text-xs shadow-xs animate-in slide-in-from-top-1 shrink-0 z-20">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                      <Bell className="w-3.5 h-3.5 text-white animate-pulse" />
                     </span>
+                    <div className="min-w-0">
+                      <span className="font-bold">Team Alert Active:</span>{" "}
+                      <span className="text-amber-100 truncate">
+                        This conversation triggered a notify team step and needs an assigned agent.
+                      </span>
+                    </div>
                   </div>
+                  <button
+                    onClick={() => onAssignAgent(selectedContact.id, myAgentName)}
+                    className="ml-3 px-3 py-1.5 bg-white text-amber-900 rounded-lg font-bold hover:bg-amber-50 transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0 text-xs"
+                  >
+                    <UserCheck className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Assign to Me</span>
+                  </button>
                 </div>
-                <button
-                  onClick={() => onAssignAgent(selectedContact.id, myAgentName)}
-                  className="ml-3 px-3 py-1.5 bg-white text-amber-900 rounded-lg font-bold hover:bg-amber-50 transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0 text-xs"
-                >
-                  <UserCheck className="w-3.5 h-3.5 text-amber-700" />
-                  <span>Assign to Me</span>
-                </button>
-              </div>
-            )}
+              )}
 
             {/* Clean Solid Chat Background + Drag-and-Drop Zone */}
             <div
-              className={`flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 relative z-10 bg-[#F8FAFC] transition-colors ${
-                isDraggingOver ? "bg-emerald-50 ring-2 ring-inset ring-emerald-400" : ""
-              }`}
+              className={`flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 relative z-10 bg-[#F8FAFC] transition-colors ${isDraggingOver ? "bg-emerald-50 ring-2 ring-inset ring-emerald-400" : ""
+                }`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
@@ -976,21 +1017,21 @@ export function LiveInbox({
                       />
                     </span>
                     <span className="font-semibold text-slate-900">
-                      24h Service Window Active
+                      {windowSecondsLeft > 0 ? "24h Service Window Active" : "24h Service Window Expired"}
                     </span>
                   </div>
 
                   <span className="text-slate-300">|</span>
 
-                  <div className="flex items-center gap-1.5 font-mono font-bold text-emerald-700">
-                    <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                  <div className={`flex items-center gap-1.5 font-mono font-bold ${windowSecondsLeft > 0 ? "text-emerald-700" : "text-rose-600"}`}>
+                    <Clock className={`w-3.5 h-3.5 ${windowSecondsLeft > 0 ? "text-emerald-600" : "text-rose-500"}`} />
                     <span>{formatWindowTimer(windowSecondsLeft)}</span>
                   </div>
 
                   <span className="text-slate-300 hidden sm:inline">|</span>
 
                   <span className="text-[11px] text-slate-500 hidden sm:inline">
-                    Freeform replies enabled
+                    {windowSecondsLeft > 0 ? "Freeform replies enabled" : "Freeform replies locked"}
                   </span>
                 </div>
               </div>
@@ -1050,15 +1091,14 @@ export function LiveInbox({
                   >
                     <div
                       onContextMenu={(e) => handleOpenContextMenu(e, msg)}
-                      className={`relative w-fit max-w-[85%] sm:max-w-[65%] rounded-2xl shadow-[0_1px_1.5px_rgba(0,0,0,0.06)] transition-all cursor-context-menu overflow-hidden ${
-                        hasMedia && !hasTextContent
-                          ? "p-0"
-                          : isOrder
-                          ? "p-1.5"
-                          : "px-3 py-1.5 sm:px-3.5 sm:py-2"
-                      } ${isIncoming
-                        ? "bg-white text-slate-900 border border-slate-200/70 rounded-tl-xs"
-                        : "bg-[#DCFCE7] text-slate-900 border border-[#86EFAC]/50 rounded-tr-xs"
+                      className={`relative w-fit max-w-[85%] sm:max-w-[65%] rounded-2xl shadow-[0_1px_1.5px_rgba(0,0,0,0.06)] transition-all cursor-context-menu overflow-hidden ${hasMedia && !hasTextContent
+                        ? "p-0"
+                        : isOrder
+                          ? ""
+                          : "py-1.5 sm:py-2"
+                        } ${isIncoming
+                          ? "bg-white text-slate-900 border border-slate-200/70 rounded-tl-xs"
+                          : "bg-[#DCFCE7] text-slate-900 border border-[#86EFAC]/50 rounded-tr-xs"
                         }`}
                     >
                       {/* Media Content (image / audio / document) */}
@@ -1098,7 +1138,7 @@ export function LiveInbox({
 
                       {/* WhatsApp Catalog Order Card — Sleek WhatsApp Web style */}
                       {isOrder && (
-                        <div className="rounded-xl bg-white border border-slate-200/90 overflow-hidden shadow-xs w-full max-w-[280px]">
+                        <div className="rounded-xl bg-white   overflow-hidden  w-full max-w-[280px]">
                           <div className="p-2.5 flex items-center gap-3">
                             <div className="w-12 h-12 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0 overflow-hidden">
                               {msg.order?.items?.[0]?.imageUrl ? (
@@ -1153,15 +1193,14 @@ export function LiveInbox({
 
                       {/* Regular Message Text with WhatsApp-like inline Timestamp */}
                       {!isOrder && !msg.catalog && (
-                        <div className="flex flex-wrap items-baseline justify-end gap-x-2.5 gap-y-0.5">
+                        <div className="flex px-3 flex-wrap items-baseline justify-end gap-x-2.5 gap-y-0.5">
                           {hasTextContent && msg.mediaType !== "document" && (
                             <p className="text-[13.5px] sm:text-[14px] leading-snug whitespace-pre-wrap break-words text-slate-900 flex-1 min-w-[40px]">
                               {msg.text}
                             </p>
                           )}
-                          <div className={`flex items-center gap-1 text-[10.5px] text-slate-400 select-none shrink-0 self-end ml-auto ${
-                            hasMedia && !hasTextContent ? "px-2 py-0.5 bg-black/50 text-white/90 rounded-md absolute bottom-1.5 right-1.5" : "translate-y-0.5"
-                          }`}>
+                          <div className={`flex items-center gap-1 text-[10.5px] text-slate-400 select-none shrink-0 self-end ml-auto ${hasMedia && !hasTextContent ? "px-2 py-0.5 bg-black/50 text-white/90 rounded-md absolute bottom-1.5 right-1.5" : "translate-y-0.5"
+                            }`}>
                             <span>{msg.timestamp}</span>
                             {!isIncoming && (
                               <span>
@@ -1180,9 +1219,9 @@ export function LiveInbox({
 
                       {/* WhatsApp Interactive Catalog / Product Card */}
                       {msg.catalog && (
-                        <div className="rounded-xl bg-white border border-slate-200/90 overflow-hidden shadow-xs">
+                        <div className="  overflow-hidden ">
                           {/* Card Header Badge */}
-                          <div className="px-3.5 py-1.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[11px] font-bold text-[#0A504A]">
+                          {/* <div className="px-3.5 py-1.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[11px] font-bold text-[#0A504A]">
                             <div className="flex items-center gap-1.5">
                               <ShoppingBag className="w-3.5 h-3.5 text-[#00A86B]" />
                               <span>{msg.catalog.catalogName || "WhatsApp Catalog"}</span>
@@ -1190,11 +1229,11 @@ export function LiveInbox({
                             <span className="text-[9.5px] font-mono uppercase font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
                               {msg.catalog.type === "catalog_message" ? "Catalog Card" : "Product Item"}
                             </span>
-                          </div>
+                          </div> */}
 
                           {/* Hero Product Image or Thumbnail */}
                           {msg.catalog.products && msg.catalog.products[0]?.imageUrl && (
-                            <div className="relative h-36 w-full overflow-hidden bg-slate-100">
+                            <div className="relative h-36  w-full overflow-hidden ">
                               <img
                                 src={msg.catalog.products[0].imageUrl}
                                 alt={msg.catalog.products[0].title}
@@ -1221,14 +1260,14 @@ export function LiveInbox({
                           </div>
 
                           {/* Action Button */}
-                          <div className="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                          <div className="  border-t border-slate-900/10 flex items-center justify-between">
                             <button
                               type="button"
                               onClick={() => {
                                 setToastMessage("WhatsApp Catalog opened! (Simulated Meta Commerce viewer)");
                                 setTimeout(() => setToastMessage(null), 3000);
                               }}
-                              className="w-full py-1.5 bg-[#00A86B] hover:bg-[#0A504A] text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                              className="w-full py-1.5  hover:bg-[#0A504A] text-emerald-700 hover:text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                             >
                               <ShoppingBag className="w-3.5 h-3.5" />
                               <span>
@@ -1245,18 +1284,18 @@ export function LiveInbox({
 
                       {/* WhatsApp Interactive Buttons */}
                       {msg.buttons && msg.buttons.length > 0 && (
-                        <div className="pt-2 mt-1 border-t border-slate-900/5 space-y-1.5">
-                          <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">
+                        <div className="pt-2 mt-1  ">
+                          {/* <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">
                             Quick Replies:
-                          </span>
-                          <div className="flex flex-col gap-1.5">
+                          </span> */}
+                          <div className="flex flex-col ">
                             {msg.buttons.map((btn) => (
                               <button
                                 key={btn.id}
                                 onClick={() => onSendMessage(selectedContact.id, btn.title)}
-                                className={`w-full py-1.5 px-3 rounded-lg text-xs font-semibold transition-all border flex items-center justify-center gap-1.5 cursor-pointer ${msg.selectedButtonId === btn.id
-                                  ? "bg-emerald-600 text-white border-emerald-600"
-                                  : "bg-white/90 text-emerald-700 border-emerald-300 hover:bg-emerald-600 hover:text-white"
+                                className={`w-full py-1.5   text-xs font-semibold transition-all border-t flex items-center justify-center cursor-pointer ${msg.selectedButtonId === btn.id
+                                  ? " text-white border-slate-900/5 "
+                                  : " text-emerald-700 border-slate-900/10  hover:bg-emerald-600 hover:text-white"
                                   }`}
                               >
                                 <span>{btn.title}</span>
@@ -1280,7 +1319,7 @@ export function LiveInbox({
             </div>
 
             {/* Professional Quick Snippets — slash-command popover */}
-            {showQuickSnippets && (
+            {showQuickSnippets && windowSecondsLeft > 0 && (
               <div
                 ref={quickSnippetsRef}
                 className="absolute bottom-24 left-4 right-4 z-50 bg-white rounded-2xl shadow-2xl border border-slate-200/80 overflow-hidden animate-in fade-in slide-in-from-bottom-2"
@@ -1309,8 +1348,8 @@ export function LiveInbox({
                       type="button"
                       onClick={() => setSelectedSnippetCategory(cat)}
                       className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition-all shrink-0 cursor-pointer ${selectedSnippetCategory === cat
-                          ? "bg-slate-900 text-white"
-                          : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+                        ? "bg-slate-900 text-white"
+                        : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
                         }`}
                     >
                       {cat === "all" ? "All" : cat}
@@ -1354,7 +1393,7 @@ export function LiveInbox({
             )}
 
             {/* Quoted Message Preview if Replying */}
-            {replyingToMessage && (
+            {replyingToMessage && windowSecondsLeft > 0 && (
               <div className="px-4 py-2 bg-emerald-50/90 border-t border-emerald-200 flex items-center justify-between text-xs z-20 animate-in slide-in-from-bottom-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <CornerDownRight className="w-4 h-4 text-emerald-700 shrink-0" />
@@ -1379,7 +1418,7 @@ export function LiveInbox({
             {/* ========================================================================= */}
             {/* FULL EMOJI PICKER POPOVER                                                 */}
             {/* ========================================================================= */}
-            {showEmojiPicker && (
+            {showEmojiPicker && windowSecondsLeft > 0 && (
               <div
                 ref={emojiPickerRef}
                 className="absolute bottom-24 left-4 z-40 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in zoom-in-95"
@@ -1461,7 +1500,7 @@ export function LiveInbox({
             {/* ========================================================================= */}
             {/* SINHALA BUSINESS PHRASES MODAL / POPOVER                                  */}
             {/* ========================================================================= */}
-            {showSinhalaPhrases && (
+            {showSinhalaPhrases && windowSecondsLeft > 0 && (
               <div className="absolute bottom-24 left-10 z-40 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
                 <div className="p-3 bg-emerald-50/80 border-b border-emerald-100 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -1500,7 +1539,7 @@ export function LiveInbox({
             {/* ========================================================================= */}
             {/* SINHALA TYPING PHONETIC CHEAT SHEET MODAL                                 */}
             {/* ========================================================================= */}
-            {showSinhalaCheatSheet && (
+            {showSinhalaCheatSheet && windowSecondsLeft > 0 && (
               <div className="absolute bottom-24 left-16 z-40 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
                 <div className="p-3 bg-slate-900 text-white flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -1568,227 +1607,301 @@ export function LiveInbox({
                 if (file) handleFileSelected(file);
               }}
             />
-            <form
-              onSubmit={(e) => {
-                if (pendingFile) {
-                  e.preventDefault();
-                  handleUploadAndSend();
-                } else {
-                  handleSend(e);
-                }
-              }}
-              className="p-3.5 bg-white border-t border-slate-200/80 flex flex-col gap-2 shrink-0 z-20"
-            >
-              {/* Toolbar: Mode Switcher + Sinhala Unicode Typing Controls */}
-              <div className="flex items-center justify-between flex-wrap gap-2 px-1">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {/* WhatsApp Reply / Internal Note toggle */}
-                  <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200/60">
-                    <button
-                      type="button"
-                      onClick={() => setIsNoteMode(false)}
-                      className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${!isNoteMode
-                        ? "bg-white text-emerald-800 shadow-xs"
-                        : "text-slate-500 hover:text-slate-800"
-                        }`}
-                    >
-                      <MessageSquare className="w-3 h-3 text-emerald-600" />
-                      <span>WhatsApp Reply</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsNoteMode(true)}
-                      className={`px-3 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${isNoteMode
-                        ? "bg-amber-500 text-white shadow-xs"
-                        : "text-slate-500 hover:text-slate-800"
-                        }`}
-                    >
-                      <Lock className="w-3 h-3" />
-                      <span>Internal Note</span>
-                    </button>
+            {windowSecondsLeft <= 0 && !isNoteMode ? (
+              /* Expired 24h window state: Hide type input and message details */
+              <div className="p-4 bg-slate-50 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 z-20">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-100 border border-rose-200/80 flex items-center justify-center text-rose-600 shrink-0 shadow-2xs">
+                    <Clock className="w-5 h-5" />
                   </div>
-
-                  {/* Feature 3: Sinhala Unicode Typing Switcher */}
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const nextState = !sinhalaTypingEnabled;
-                        setSinhalaTypingEnabled(nextState);
-                        showToast(nextState ? "Sinhala Unicode typing activated! (සිංහල)" : "English typing mode");
-                        inputRef.current?.focus();
-                      }}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer ${sinhalaTypingEnabled
-                        ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
-                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
-                        }`}
-                      title="Toggle real-time Singlish to Sinhala Unicode typing"
-                    >
-                      <span>{sinhalaTypingEnabled ? "සිං" : "En"}</span>
-                    </button>
-
-                    {/* Sinhala Quick Phrases trigger */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowSinhalaPhrases(!showSinhalaPhrases);
-                        setShowEmojiPicker(false);
-                      }}
-                      className="px-2 py-1 rounded-lg text-xs font-medium text-slate-600 hover:text-emerald-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors"
-                      title="Sinhala Business Phrases (වාක්‍ය)"
-                    >
-                      වාක්‍ය
-                    </button>
-
-                    {/* Manual Convert current input to Sinhala */}
-                    {inputText && (
-                      <button
-                        type="button"
-                        onClick={handleConvertCurrentTextToSinhala}
-                        className="px-2 py-1 rounded-lg text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50 border border-emerald-200 transition-colors"
-                        title="Transliterate current text into Sinhala Unicode"
-                      >
-                        → සිංහල
-                      </button>
-                    )}
-
-                    {/* Sinhala Typing Cheat Sheet Guide */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowSinhalaCheatSheet(!showSinhalaCheatSheet);
-                        setShowSinhalaPhrases(false);
-                      }}
-                      className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-                      title="Sinhala phonetic typing guide"
-                    >
-                      <BookOpen className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="hidden sm:flex items-center gap-2 text-[11px] text-slate-400">
-                  <span>Type <kbd className="font-semibold bg-slate-100 border border-slate-200 px-1 rounded text-slate-600 font-mono">/</kbd> for snippets</span>
-                  <span className="text-slate-300">·</span>
-                  <span><kbd className="font-semibold bg-slate-100 border border-slate-200 px-1 rounded text-slate-600">Enter</kbd> to send</span>
-                </div>
-              </div>
-
-              {/* File Preview Bar (shows when a file is staged) */}
-              {pendingFile && (
-                <div className="flex items-center gap-2.5 px-2 py-1.5 bg-slate-50 rounded-xl border border-slate-200 text-xs animate-in fade-in slide-in-from-bottom-2">
-                  {pendingPreview ? (
-                    <img src={pendingPreview} alt="preview" className="w-10 h-10 object-cover rounded-lg shrink-0 border border-slate-200" />
-                  ) : (
-                    <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center shrink-0 border border-slate-200">
-                      <FileIcon className="w-5 h-5 text-slate-400" />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-900">
+                        24-Hour Messaging Window Expired
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                        Input Locked
+                      </span>
                     </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-slate-800 truncate">{pendingFile.name}</p>
-                    <p className="text-slate-400 text-[10px]">{(pendingFile.size / 1024).toFixed(1)} KB · {pendingFile.type || "file"}</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Meta Cloud API policy restricts freeform session replies after 24 hours of customer inactivity. Message input and attachments are hidden until the customer sends a new message.
+                    </p>
                   </div>
-                  {isUploading ? (
-                    <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin shrink-0" />
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={clearPendingFile}
-                      className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200 transition-colors shrink-0"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
                 </div>
-              )}
 
-              {/* Input Row */}
-              <div className="flex items-center gap-2 bg-slate-50 focus-within:bg-white rounded-xl px-3 py-1.5 border border-slate-200/80 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/10 transition-all">
-                {/* Emoji Picker Trigger */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowEmojiPicker(!showEmojiPicker);
-                    setShowSinhalaPhrases(false);
-                    setShowSinhalaCheatSheet(false);
-                  }}
-                  className={`p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 ${showEmojiPicker
-                    ? "text-emerald-700 bg-emerald-50"
-                    : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-                    }`}
-                  title="Choose Emoji (Full Emoji Menu)"
-                >
-                  <Smile className="w-4 h-4" />
-                </button>
-
-                {/* Paperclip / File Attach */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 ${pendingFile
-                    ? "text-emerald-700 bg-emerald-50"
-                    : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-                    }`}
-                  title="Attach image, document, or audio"
-                >
-                  <Paperclip className="w-4 h-4" />
-                </button>
-
-                {/* Send WhatsApp Catalog Button */}
-                <button
-                  type="button"
-                  onClick={() => setShowCatalogModal(true)}
-                  className="p-1.5 text-slate-400 hover:text-[#00A86B] hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer shrink-0"
-                  title="Send WhatsApp Catalog or Products"
-                >
-                  <ShoppingBag className="w-4 h-4" />
-                </button>
-
-                {/* Text Input */}
-                <input
-                  ref={inputRef}
-                  type="text"
-                  placeholder={
-                    pendingFile
-                      ? "Add a caption (optional)..."
-                      : isNoteMode
-                        ? "Write an internal team note..."
-                        : sinhalaTypingEnabled
-                          ? "සිංහලෙන් ලියන්න (Type Singlish e.g. 'ayubowan' for ආයුබෝවන්)..."
-                          : "Type a WhatsApp message to customer..."
-                  }
-                  value={inputText}
-                  onChange={handleInputChange}
-                  className="flex-1 bg-transparent px-2 py-1 text-sm text-slate-800 placeholder-slate-400 outline-none"
-                />
-
-                {/* Send Button */}
-                {(inputText.trim() || pendingFile) ? (
-                  <button
-                    type="submit"
-                    disabled={isUploading}
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs disabled:opacity-60 ${isNoteMode
-                      ? "bg-amber-500 hover:bg-amber-600 text-white"
-                      : "bg-emerald-600 hover:bg-emerald-700 text-white"
-                      }`}
-                    title="Send message"
-                  >
-                    {isUploading
-                      ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      : <Send className="w-3.5 h-3.5" />
-                    }
-                  </button>
-                ) : (
+                <div className="flex items-center gap-2 shrink-0 self-stretch sm:self-auto justify-end">
                   <button
                     type="button"
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
-                    title="Voice note"
+                    onClick={() => {
+                      setIsNoteMode(true);
+                      setTimeout(() => inputRef.current?.focus(), 50);
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 hover:text-slate-900 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                    title="Write an internal note for your team"
                   >
-                    <Mic className="w-4 h-4" />
+                    <Lock className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Add Internal Note</span>
                   </button>
-                )}
+                </div>
               </div>
-            </form>
+            ) : windowSecondsLeft <= 0 && isNoteMode ? (
+              /* Internal Team Note only form when 24h is expired */
+              <form
+                onSubmit={(e) => {
+                  handleSend(e);
+                }}
+                className="p-3.5 bg-amber-50/50 border-t border-amber-200/80 flex flex-col gap-2 shrink-0 z-20"
+              >
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-800">
+                    <Lock className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Internal Team Note</span>
+                    <span className="text-[10px] text-amber-600/80 font-normal">
+                      (Saved to CRM only · Customer will not receive this)
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsNoteMode(false);
+                      setInputText("");
+                    }}
+                    className="text-xs text-slate-500 hover:text-slate-800 hover:underline cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 bg-white rounded-xl px-3 py-1.5 border border-amber-300 focus-within:border-amber-500 focus-within:ring-2 focus-within:ring-amber-500/20 transition-all">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    placeholder="Write an internal note for your team..."
+                    value={inputText}
+                    onChange={handleInputChange}
+                    className="flex-1 bg-transparent px-2 py-1 text-sm text-slate-800 placeholder-slate-400 outline-none"
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    disabled={!inputText.trim()}
+                    className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                  >
+                    <Send className="w-3 h-3" />
+                    <span>Save Note</span>
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* Standard Full-featured Input Form when within 24h window */
+              <form
+                onSubmit={(e) => {
+                  if (pendingFile) {
+                    e.preventDefault();
+                    handleUploadAndSend();
+                  } else {
+                    handleSend(e);
+                  }
+                }}
+                className="p-3.5 bg-white border-t border-slate-200/80 flex flex-col gap-2 shrink-0 z-20"
+              >
+                {/* Toolbar: Mode Switcher + Sinhala Unicode Typing Controls */}
+                <div className="flex items-center justify-between flex-wrap gap-2 px-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* WhatsApp Reply / Internal Note toggle */}
+                    <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200/60">
+                      <button
+                        type="button"
+                        onClick={() => setIsNoteMode(false)}
+                        className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${!isNoteMode
+                          ? "bg-white text-emerald-800 shadow-xs"
+                          : "text-slate-500 hover:text-slate-800"
+                          }`}
+                      >
+                        <MessageSquare className="w-3 h-3 text-emerald-600" />
+                        <span>WhatsApp Reply</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsNoteMode(true)}
+                        className={`px-3 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${isNoteMode
+                          ? "bg-amber-500 text-white shadow-xs"
+                          : "text-slate-500 hover:text-slate-800"
+                          }`}
+                      >
+                        <Lock className="w-3 h-3" />
+                        <span>Internal Note</span>
+                      </button>
+                    </div>
+
+                    {/* Feature 3: Sinhala Unicode Typing Switcher */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextState = !sinhalaTypingEnabled;
+                          setSinhalaTypingEnabled(nextState);
+                          showToast(nextState ? "Sinhala Unicode typing activated! (සිංහල)" : "English typing mode");
+                          inputRef.current?.focus();
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer ${sinhalaTypingEnabled
+                          ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                          : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                          }`}
+                        title="Toggle real-time Singlish to Sinhala Unicode typing"
+                      >
+                        <span>{sinhalaTypingEnabled ? "සිං" : "En"}</span>
+                      </button>
+
+                      {/* Manual Convert current input to Sinhala */}
+                      {inputText && (
+                        <button
+                          type="button"
+                          onClick={handleConvertCurrentTextToSinhala}
+                          className="px-2 py-1 rounded-lg text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50 border border-emerald-200 transition-colors"
+                          title="Transliterate current text into Sinhala Unicode"
+                        >
+                          → සිංහල
+                        </button>
+                      )}
+
+                      {/* Sinhala Typing Cheat Sheet Guide */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowSinhalaCheatSheet(!showSinhalaCheatSheet);
+                          setShowSinhalaPhrases(false);
+                        }}
+                        className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                        title="Sinhala phonetic typing guide"
+                      >
+                        <BookOpen className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="hidden sm:flex items-center gap-2 text-[11px] text-slate-400">
+                    <span>Type <kbd className="font-semibold bg-slate-100 border border-slate-200 px-1 rounded text-slate-600 font-mono">/</kbd> for snippets</span>
+                    <span className="text-slate-300">·</span>
+                  </div>
+                </div>
+
+                {/* File Preview Bar (shows when a file is staged) */}
+                {pendingFile && (
+                  <div className="flex items-center gap-2.5 px-2 py-1.5 bg-slate-50 rounded-xl border border-slate-200 text-xs animate-in fade-in slide-in-from-bottom-2">
+                    {pendingPreview ? (
+                      <img src={pendingPreview} alt="preview" className="w-10 h-10 object-cover rounded-lg shrink-0 border border-slate-200" />
+                    ) : (
+                      <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center shrink-0 border border-slate-200">
+                        <FileIcon className="w-5 h-5 text-slate-400" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-slate-800 truncate">{pendingFile.name}</p>
+                      <p className="text-slate-400 text-[10px]">{(pendingFile.size / 1024).toFixed(1)} KB · {pendingFile.type || "file"}</p>
+                    </div>
+                    {isUploading ? (
+                      <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin shrink-0" />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={clearPendingFile}
+                        className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200 transition-colors shrink-0"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Input Row */}
+                <div className="flex items-center gap-2 bg-slate-50 focus-within:bg-white rounded-xl px-3 py-1.5 border border-slate-200/80 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/10 transition-all">
+                  {/* Emoji Picker Trigger */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEmojiPicker(!showEmojiPicker);
+                      setShowSinhalaPhrases(false);
+                      setShowSinhalaCheatSheet(false);
+                    }}
+                    className={`p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 ${showEmojiPicker
+                      ? "text-emerald-700 bg-emerald-50"
+                      : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                      }`}
+                    title="Choose Emoji (Full Emoji Menu)"
+                  >
+                    <Smile className="w-4 h-4" />
+                  </button>
+
+                  {/* Paperclip / File Attach */}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 ${pendingFile
+                      ? "text-emerald-700 bg-emerald-50"
+                      : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                      }`}
+                    title="Attach image, document, or audio"
+                  >
+                    <Paperclip className="w-4 h-4" />
+                  </button>
+
+                  {/* Send WhatsApp Catalog Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowCatalogModal(true)}
+                    className="p-1.5 text-slate-400 hover:text-[#00A86B] hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer shrink-0"
+                    title="Send WhatsApp Catalog or Products"
+                  >
+                    <ShoppingBag className="w-4 h-4" />
+                  </button>
+
+                  {/* Text Input */}
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    placeholder={
+                      pendingFile
+                        ? "Add a caption (optional)..."
+                        : isNoteMode
+                          ? "Write an internal team note..."
+                          : sinhalaTypingEnabled
+                            ? "සිංහලෙන් ලියන්න (Type Singlish e.g. 'ayubowan' for ආයුබෝවන්)..."
+                            : "Type a WhatsApp message to customer..."
+                    }
+                    value={inputText}
+                    onChange={handleInputChange}
+                    className="flex-1 bg-transparent px-2 py-1 text-sm text-slate-800 placeholder-slate-400 outline-none"
+                  />
+
+                  {/* Send Button */}
+                  {(inputText.trim() || pendingFile) ? (
+                    <button
+                      type="submit"
+                      disabled={isUploading}
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs disabled:opacity-60 ${isNoteMode
+                        ? "bg-amber-500 hover:bg-amber-600 text-white"
+                        : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                        }`}
+                      title="Send message"
+                    >
+                      {isUploading
+                        ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        : <Send className="w-3.5 h-3.5" />
+                      }
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+                      title="Voice note"
+                    >
+                      <Mic className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </form>
+            )}
 
           </>
         ) : (

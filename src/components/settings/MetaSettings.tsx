@@ -2,7 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { MetaConfig } from "@/types/whatsapp";
-import { DiscoveredWaba, DiscoveredPhoneNumber, PhoneNumberHealth } from "@/lib/meta-client";
+import {
+  DiscoveredWaba,
+  DiscoveredPhoneNumber,
+  PhoneNumberHealth,
+  DiscoveredFacebookPage,
+} from "@/lib/meta-client";
 import {
   ShieldCheck,
   Key,
@@ -58,7 +63,7 @@ export function MetaSettings({ config, clientId = "client-1", onUpdateConfig }: 
     ...config,
     webhookUrl: activeWebhookUrl,
   });
-  const [activeTab, setActiveTab] = useState<"diagnostics" | "auto" | "manual" | "test">("diagnostics");
+  const [activeTab, setActiveTab] = useState<"diagnostics" | "channels" | "auto" | "manual" | "test">("diagnostics");
   const [copiedWebhook, setCopiedWebhook] = useState(false);
   const [copiedToken, setCopiedToken] = useState(false);
 
@@ -91,6 +96,96 @@ export function MetaSettings({ config, clientId = "client-1", onUpdateConfig }: 
     success?: boolean;
     message?: string;
   } | null>(null);
+
+  // Multi-Channel (Facebook & Instagram) State
+  const [socialAccessToken, setSocialAccessToken] = useState(
+    config.accessToken && !config.accessToken.startsWith("EAA...") ? config.accessToken : ""
+  );
+  const [isDiscoveringSocial, setIsDiscoveringSocial] = useState(false);
+  const [discoveredPages, setDiscoveredPages] = useState<DiscoveredFacebookPage[] | null>(null);
+  const [socialError, setSocialError] = useState<string | null>(null);
+  const [connectingSocialPageId, setConnectingSocialPageId] = useState<string | null>(null);
+
+  const handleDiscoverSocial = async () => {
+    if (!socialAccessToken.trim()) {
+      setSocialError("Please enter a Meta User or System User Access Token with page permissions.");
+      return;
+    }
+    setIsDiscoveringSocial(true);
+    setSocialError(null);
+    setDiscoveredPages(null);
+
+    try {
+      const res = await fetch("/api/whatsapp/discover-social", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accessToken: socialAccessToken.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setDiscoveredPages(data.pages || []);
+        if ((data.pages || []).length === 0) {
+          setSocialError("No Facebook Pages found. Ensure your Meta account has Admin access to at least one Facebook Page.");
+        }
+      } else {
+        setSocialError(data.error || "Failed to discover Facebook Pages and Instagram accounts.");
+      }
+    } catch {
+      setSocialError("Failed to reach server.");
+    } finally {
+      setIsDiscoveringSocial(false);
+    }
+  };
+
+  const handleConnectSocialPage = async (page: DiscoveredFacebookPage) => {
+    setConnectingSocialPageId(page.id);
+    try {
+      const res = await fetch("/api/whatsapp/connect-social", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pageId: page.id,
+          pageName: page.name,
+          pageAccessToken: page.accessToken,
+          instagramAccountId: page.instagramBusinessAccount?.id || "",
+          instagramUsername: page.instagramBusinessAccount?.username || "",
+          userId: clientId || config.userId || "client-1",
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const updated: MetaConfig = {
+          ...formData,
+          facebookPageId: page.id,
+          facebookPageName: page.name,
+          pageAccessToken: page.accessToken,
+          isMessengerConnected: true,
+          instagramAccountId: page.instagramBusinessAccount?.id || "",
+          instagramUsername: page.instagramBusinessAccount?.username || "",
+          isInstagramConnected: Boolean(page.instagramBusinessAccount?.id),
+        };
+        setFormData(updated);
+        onUpdateConfig(updated);
+        setSendResult({
+          success: true,
+          message: data.message || `Connected Facebook Page "${page.name}"! Webhook subscribed.`,
+        });
+      } else {
+        setSendResult({
+          success: false,
+          message: data.error || "Failed to auto-connect social page.",
+        });
+      }
+    } catch {
+      setSendResult({
+        success: false,
+        message: "Failed to connect to backend server.",
+      });
+    } finally {
+      setConnectingSocialPageId(null);
+    }
+  };
 
   // Fetch live health & full diagnostics on mount
   useEffect(() => {
@@ -358,6 +453,18 @@ export function MetaSettings({ config, clientId = "client-1", onUpdateConfig }: 
                 {diagnostics.scorePercentage}%
               </span>
             )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab("channels")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
+              activeTab === "channels"
+                ? "bg-gradient-to-r from-[#0064E0] to-[#E1306C] text-white shadow-xs"
+                : "bg-white text-[#444950] border border-[#dee3e9] hover:bg-[#F7F7F2]"
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Instagram & Messenger</span>
           </button>
 
           <button
@@ -741,6 +848,316 @@ export function MetaSettings({ config, clientId = "client-1", onUpdateConfig }: 
                 >
                   Edit API Credentials
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===================== TAB: INSTAGRAM & MESSENGER ===================== */}
+        {activeTab === "channels" && (
+          <div className="space-y-6">
+            {/* Status Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* WhatsApp Card */}
+              <div className="p-5 bg-white border border-[#dee3e9] rounded-2xl space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                      <Smartphone className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-xs text-slate-800">WhatsApp Cloud</h3>
+                      <p className="text-[11px] text-slate-500">Business API</p>
+                    </div>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      formData.phoneNumberId
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {formData.phoneNumberId ? "CONNECTED" : "NOT SET"}
+                  </span>
+                </div>
+                <div className="text-xs text-slate-600 font-mono pt-2 border-t border-slate-100 truncate">
+                  Phone ID: {formData.phoneNumberId || "—"}
+                </div>
+              </div>
+
+              {/* Messenger Card */}
+              <div className="p-5 bg-white border border-[#dee3e9] rounded-2xl space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#0064E0] flex items-center justify-center font-bold">
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                        <path d="M12 0C5.373 0 0 4.974 0 11.111c0 3.498 1.744 6.614 4.469 8.654V24l4.088-2.242c1.077.299 2.222.463 3.443.463 6.627 0 12-4.975 12-11.11C24 4.974 18.627 0 12 0zm1.191 14.963l-3.055-3.26-5.963 3.26 6.559-6.963 3.13 3.259 5.889-3.259-6.56 6.963z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-xs text-slate-800">Facebook Messenger</h3>
+                      <p className="text-[11px] text-slate-500">Page Messaging</p>
+                    </div>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      formData.facebookPageId
+                        ? "bg-blue-100 text-[#0064E0]"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {formData.facebookPageId ? "CONNECTED" : "NOT SET"}
+                  </span>
+                </div>
+                <div className="text-xs text-slate-600 font-mono pt-2 border-t border-slate-100 truncate">
+                  Page: {formData.facebookPageName || formData.facebookPageId || "—"}
+                </div>
+              </div>
+
+              {/* Instagram Card */}
+              <div className="p-5 bg-white border border-[#dee3e9] rounded-2xl space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-pink-50 text-[#E1306C] flex items-center justify-center font-bold">
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-xs text-slate-800">Instagram Direct</h3>
+                      <p className="text-[11px] text-slate-500">Professional Account</p>
+                    </div>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      formData.instagramAccountId
+                        ? "bg-pink-100 text-[#E1306C]"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {formData.instagramAccountId ? "CONNECTED" : "NOT SET"}
+                  </span>
+                </div>
+                <div className="text-xs text-slate-600 font-mono pt-2 border-t border-slate-100 truncate">
+                  Account: {formData.instagramUsername ? `@${formData.instagramUsername}` : formData.instagramAccountId || "—"}
+                </div>
+              </div>
+            </div>
+
+            {/* 1-Click Auto Setup Social Box */}
+            <div className="bg-white border border-[#dee3e9] rounded-2xl p-6 space-y-5 shadow-xs">
+              <div className="flex items-center gap-2 pb-3 border-b border-[#dee3e9]">
+                <Sparkles className="w-5 h-5 text-[#0064E0]" />
+                <div>
+                  <h2 className="font-bold text-sm text-[#0A504A]">
+                    1-Click Auto-Detect Facebook Pages & Instagram Accounts
+                  </h2>
+                  <p className="text-xs text-[#5d6c7b]">
+                    Paste your User Access Token (with pages_show_list and instagram_basic permissions) to detect all connected Pages and IG accounts automatically.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="font-bold text-xs text-[#0A504A] block mb-1">
+                    Meta User Access Token
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      value={socialAccessToken}
+                      onChange={(e) => setSocialAccessToken(e.target.value)}
+                      placeholder="EAA..."
+                      className="meta-input flex-1 font-mono text-xs"
+                    />
+                    <button
+                      onClick={handleDiscoverSocial}
+                      disabled={isDiscoveringSocial}
+                      className="px-5 py-2.5 bg-[#0064E0] hover:bg-[#0457cb] text-white rounded-full font-bold text-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isDiscoveringSocial ? "animate-spin" : ""}`} />
+                      <span>{isDiscoveringSocial ? "Discovering..." : "Discover Pages"}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {socialError && (
+                  <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs font-semibold flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{socialError}</span>
+                  </div>
+                )}
+
+                {/* Discovered Pages List */}
+                {discoveredPages && discoveredPages.length > 0 && (
+                  <div className="space-y-3 pt-2">
+                    <h3 className="font-bold text-xs text-slate-800">
+                      Discovered Pages ({discoveredPages.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {discoveredPages.map((page) => (
+                        <div
+                          key={page.id}
+                          className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-xs text-slate-900">{page.name}</span>
+                              <span className="text-[10px] font-mono bg-slate-200/60 px-2 py-0.5 rounded text-slate-600">
+                                Page ID: {page.id}
+                              </span>
+                            </div>
+                            {page.instagramBusinessAccount ? (
+                              <p className="text-[11px] text-[#E1306C] font-semibold flex items-center gap-1">
+                                <span>Connected Instagram: @{page.instagramBusinessAccount.username}</span>
+                                <span className="text-slate-400 font-mono">({page.instagramBusinessAccount.id})</span>
+                              </p>
+                            ) : (
+                              <p className="text-[11px] text-slate-500">
+                                No Instagram account linked to this page.
+                              </p>
+                            )}
+                          </div>
+
+                          <button
+                            onClick={() => handleConnectSocialPage(page)}
+                            disabled={connectingSocialPageId === page.id}
+                            className="px-4 py-2 bg-[#0064E0] hover:bg-[#0457cb] text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+                          >
+                            {connectingSocialPageId === page.id ? "Connecting..." : "Connect Page & Instagram"}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Manual Social Credentials */}
+            <div className="bg-white border border-[#dee3e9] rounded-2xl p-6 space-y-5 shadow-xs">
+              <div className="flex items-center gap-2 pb-3 border-b border-[#dee3e9]">
+                <Key className="w-5 h-5 text-slate-700" />
+                <div>
+                  <h2 className="font-bold text-sm text-[#0A504A]">
+                    Manual Messenger & Instagram Credentials
+                  </h2>
+                  <p className="text-xs text-[#5d6c7b]">
+                    Directly configure or edit your Page Access Token, Facebook Page ID, and Instagram Business Account ID.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Facebook Page ID
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.facebookPageId || ""}
+                    onChange={(e) => setFormData({ ...formData, facebookPageId: e.target.value })}
+                    placeholder="e.g. 10928374650123"
+                    className="meta-input w-full font-mono text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Facebook Page Name
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.facebookPageName || ""}
+                    onChange={(e) => setFormData({ ...formData, facebookPageName: e.target.value })}
+                    placeholder="e.g. My Brand Page"
+                    className="meta-input w-full text-xs"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Page Access Token
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.pageAccessToken || ""}
+                    onChange={(e) => setFormData({ ...formData, pageAccessToken: e.target.value })}
+                    placeholder="EAA..."
+                    className="meta-input w-full font-mono text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Instagram Business Account ID
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.instagramAccountId || ""}
+                    onChange={(e) => setFormData({ ...formData, instagramAccountId: e.target.value })}
+                    placeholder="e.g. 178414001234567"
+                    className="meta-input w-full font-mono text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Instagram Username
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.instagramUsername || ""}
+                    onChange={(e) => setFormData({ ...formData, instagramUsername: e.target.value })}
+                    placeholder="e.g. mybrand.official"
+                    className="meta-input w-full text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  onClick={() => {
+                    onUpdateConfig(formData);
+                    setSendResult({ success: true, message: "Social credentials saved successfully!" });
+                  }}
+                  className="px-6 py-2.5 bg-[#00A86B] hover:bg-[#0A504A] text-white rounded-full font-bold text-xs transition-colors cursor-pointer"
+                >
+                  Save Social Settings
+                </button>
+              </div>
+            </div>
+
+            {/* Step-by-Step Meta Developer Guide */}
+            <div className="p-5 bg-gradient-to-r from-blue-50/60 via-white to-pink-50/40 border border-slate-200 rounded-2xl space-y-4 shadow-xs text-xs">
+              <div className="flex items-center gap-2 font-bold text-slate-900 pb-2 border-b border-slate-100">
+                <BookOpen className="w-4 h-4 text-[#0064E0]" />
+                <span>Meta Developer Setup Checklist for Messenger & Instagram</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-slate-700">
+                <div className="p-3 bg-white rounded-xl border border-slate-100 space-y-1">
+                  <div className="font-bold text-blue-700 flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-[10px]">1</span>
+                    Webhook Subscriptions
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    In your Meta Developer App $\rightarrow$ Webhooks:
+                    <br />• Select <strong>Page</strong>: subscribe to <code>messages</code> and <code>messaging_postbacks</code>
+                    <br />• Select <strong>Instagram</strong>: subscribe to <code>messages</code>
+                  </p>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-slate-100 space-y-1">
+                  <div className="font-bold text-[#E1306C] flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-pink-100 flex items-center justify-center text-[10px]">2</span>
+                    Enable Instagram DM Access
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Open Instagram Mobile App $\rightarrow$ Settings & Privacy $\rightarrow$ Messages & story replies $\rightarrow$ Message controls $\rightarrow$ Turn ON <strong>&quot;Allow access to messages&quot;</strong>.
+                  </p>
+                </div>
               </div>
             </div>
           </div>

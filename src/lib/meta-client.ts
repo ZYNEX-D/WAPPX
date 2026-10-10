@@ -856,3 +856,289 @@ export async function discoverMetaAccounts(
     return { success: false, error: err instanceof Error ? err.message : "Discovery request failed" };
   }
 }
+
+// ====================================================================
+// FACEBOOK MESSENGER & INSTAGRAM MESSAGING EXTENSIONS
+// ====================================================================
+
+export interface DiscoveredFacebookPage {
+  id: string;
+  name: string;
+  accessToken: string;
+  category?: string;
+  instagramBusinessAccount?: {
+    id: string;
+    username?: string;
+    name?: string;
+    profilePictureUrl?: string;
+  };
+}
+
+/**
+ * Discover Facebook Pages and connected Instagram Business Accounts
+ * via User Access Token with pages_show_list and instagram_basic permissions.
+ */
+export async function discoverPagesAndInstagram(userAccessToken: string): Promise<{
+  success: boolean;
+  pages?: DiscoveredFacebookPage[];
+  error?: string;
+}> {
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token,category,instagram_business_account{id,username,name,profile_picture_url}`,
+      { headers: { Authorization: `Bearer ${userAccessToken}` } }
+    );
+    const data = await res.json();
+
+    if (!res.ok) {
+      return {
+        success: false,
+        error: data?.error?.message || "Failed to fetch Facebook Pages & Instagram accounts",
+      };
+    }
+
+    const pages: DiscoveredFacebookPage[] = [];
+    if (data.data && Array.isArray(data.data)) {
+      for (const item of data.data) {
+        pages.push({
+          id: item.id,
+          name: item.name,
+          accessToken: item.access_token,
+          category: item.category,
+          instagramBusinessAccount: item.instagram_business_account
+            ? {
+                id: item.instagram_business_account.id,
+                username: item.instagram_business_account.username,
+                name: item.instagram_business_account.name,
+                profilePictureUrl: item.instagram_business_account.profile_picture_url,
+              }
+            : undefined,
+        });
+      }
+    }
+
+    return { success: true, pages };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+/**
+ * Send Facebook Messenger or Instagram Direct text message
+ * Uses Meta Graph API /me/messages or /{pageId}/messages with Page Access Token
+ */
+export async function sendMessengerOrInstagramTextMessage({
+  pageAccessToken,
+  recipientId,
+  text,
+}: {
+  pageAccessToken: string;
+  recipientId: string;
+  text: string;
+}): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const res = await fetch(`https://graph.facebook.com/v21.0/me/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${pageAccessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        recipient: { id: recipientId },
+        messaging_type: "RESPONSE",
+        message: { text },
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return {
+        success: false,
+        error: data?.error?.message || "Failed to send message via Messenger/Instagram API",
+      };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+/**
+ * Send Messenger / Instagram Quick Replies (Interactive action buttons)
+ */
+export async function sendMessengerOrInstagramQuickReplies({
+  pageAccessToken,
+  recipientId,
+  text,
+  buttons,
+}: {
+  pageAccessToken: string;
+  recipientId: string;
+  text: string;
+  buttons: { id: string; title: string }[];
+}): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const quickReplies = buttons.slice(0, 10).map((b) => ({
+      content_type: "text",
+      title: b.title.slice(0, 20),
+      payload: b.id,
+    }));
+
+    const res = await fetch(`https://graph.facebook.com/v21.0/me/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${pageAccessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        recipient: { id: recipientId },
+        messaging_type: "RESPONSE",
+        message: {
+          text,
+          quick_replies: quickReplies,
+        },
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return {
+        success: false,
+        error: data?.error?.message || "Failed to send quick replies via Messenger/Instagram API",
+      };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+/**
+ * Send Messenger / Instagram Image Attachment
+ */
+export async function sendMessengerOrInstagramImage({
+  pageAccessToken,
+  recipientId,
+  imageUrl,
+}: {
+  pageAccessToken: string;
+  recipientId: string;
+  imageUrl: string;
+}): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const res = await fetch(`https://graph.facebook.com/v21.0/me/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${pageAccessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        recipient: { id: recipientId },
+        messaging_type: "RESPONSE",
+        message: {
+          attachment: {
+            type: "image",
+            payload: {
+              url: imageUrl,
+              is_reusable: true,
+            },
+          },
+        },
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return {
+        success: false,
+        error: data?.error?.message || "Failed to send image via Messenger/Instagram API",
+      };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+/**
+ * Fetch profile details for a Messenger user (PSID)
+ */
+export async function fetchMessengerUserProfile(
+  psid: string,
+  pageAccessToken: string
+): Promise<{ name?: string; profilePic?: string } | null> {
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${psid}?fields=first_name,last_name,profile_pic`,
+      { headers: { Authorization: `Bearer ${pageAccessToken}` } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const fullName = [data.first_name, data.last_name].filter(Boolean).join(" ");
+    return { name: fullName || undefined, profilePic: data.profile_pic };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch profile details for an Instagram user (IGSID)
+ */
+export async function fetchInstagramUserProfile(
+  igsid: string,
+  pageAccessToken: string
+): Promise<{ name?: string; username?: string; profilePic?: string } | null> {
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${igsid}?fields=name,username,profile_pic`,
+      { headers: { Authorization: `Bearer ${pageAccessToken}` } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return {
+      name: data.name || (data.username ? `@${data.username}` : undefined),
+      username: data.username,
+      profilePic: data.profile_pic,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Automatically subscribes a Facebook Page and attached Instagram account
+ * to this app's webhooks (messages, messaging_postbacks) via Meta Graph API
+ */
+export async function subscribePageToApp({
+  pageId,
+  pageAccessToken,
+}: {
+  pageId: string;
+  pageAccessToken: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${pageId}/subscribed_apps?subscribed_fields=messages,messaging_postbacks`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${pageAccessToken}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data?.error?.message || "Failed to auto-subscribe Page webhook" };
+    }
+
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+

@@ -5,6 +5,10 @@ import {
   sendMetaTextMessage,
   sendMetaInteractiveButtons,
   sendMetaCatalogOrShowcase,
+  sendMessengerOrInstagramTextMessage,
+  sendMessengerOrInstagramQuickReplies,
+  fetchMessengerUserProfile,
+  fetchInstagramUserProfile,
 } from "@/lib/meta-client";
 import { mapContactFromRow, mapFlowNodeFromRow } from "@/lib/supabase/service";
 import { FlowNode, CatalogOrder, CatalogOrderItem } from "@/types/whatsapp";
@@ -478,7 +482,284 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "EVENT_RECEIVED" }, { status: 200 });
     }
 
-    return NextResponse.json({ status: "NOT_WHATSAPP_EVENT" }, { status: 404 });
+    // Verify if it is Facebook Messenger or Instagram Direct webhook event
+    if (body.object === "page" || body.object === "instagram") {
+      const channel = body.object === "page" ? "messenger" : "instagram";
+      const entries = Array.isArray(body.entry) ? body.entry : [];
+
+      for (const entry of entries) {
+        const events = Array.isArray(entry.messaging)
+          ? entry.messaging
+          : Array.isArray(entry.standby)
+          ? entry.standby
+          : [];
+
+        for (const messagingEvent of events) {
+          const senderId = messagingEvent.sender?.id; // PSID or IGSID
+          const recipientPageOrIgId = messagingEvent.recipient?.id;
+          const messageObj = messagingEvent.message;
+          const postbackObj = messagingEvent.postback;
+
+          // Skip echo / delivery receipts / read receipts
+          if (messageObj?.is_echo || (!messageObj && !postbackObj) || !senderId) {
+            continue;
+          }
+
+          // 1. Locate specific user/tenant in meta_config
+          let targetUserId = "client-1";
+          let targetConfig: any = null;
+
+          if (recipientPageOrIgId) {
+            const matchField = channel === "messenger" ? "facebook_page_id" : "instagram_account_id";
+            const { data: configs } = await supabaseAdmin
+              .from("meta_config")
+              .select("*")
+              .eq(matchField, recipientPageOrIgId);
+
+            if (configs && configs.length > 0) {
+              targetConfig = configs.find((c) => c.user_id && c.user_id !== "default") || configs[0];
+              targetUserId = targetConfig.user_id || targetConfig.id || "client-1";
+            }
+          }
+
+          if (!targetConfig) {
+            const { data: fallbackConfig } = await supabaseAdmin
+              .from("meta_config")
+              .select("*")
+              .limit(1)
+              .maybeSingle();
+            if (fallbackConfig) {
+              targetConfig = fallbackConfig;
+              targetUserId = fallbackConfig.user_id || fallbackConfig.id || "client-1";
+            }
+          }
+
+          const pageAccessToken = targetConfig?.page_access_token || targetConfig?.access_token;
+
+          // 2. Parse text, attachments, or button payload
+          let incomingText = messageObj?.text || "";
+          let buttonId: string | undefined = undefined;
+          let incomingMediaUrl: string | undefined = undefined;
+          let incomingMediaType: "image" | "audio" | "document" | undefined = undefined;
+
+          if (messageObj?.attachments && messageObj.attachments.length > 0) {
+            const att = messageObj.attachments[0];
+            if (att.type === "image") incomingMediaType = "image";
+            else if (att.type === "audio") incomingMediaType = "audio";
+            else if (att.type === "file") incomingMediaType = "document";
+            else if (att.type === "video") incomingMediaType = "image";
+            incomingMediaUrl = att.payload?.url;
+            if (!incomingText) {
+              incomingText = incomingMediaType === "image" ? "Photo" : incomingMediaType === "audio" ? "Audio message" : "Attachment";
+            }
+          }
+
+          if (messageObj?.quick_reply?.payload) {
+            buttonId = messageObj.quick_reply.payload;
+          } else if (postbackObj?.payload) {
+            buttonId = postbackObj.payload;
+            if (!incomingText) incomingText = postbackObj.title || "";
+          }
+
+          // 3. Resolve Contact record
+          const contactId = `${channel}-${senderId}`;
+          const { data: existingContactRow } = await supabaseAdmin
+            .from("contacts")
+            .select("*")
+            .eq("id", contactId)
+            .maybeSingle();
+
+          let existingContact = existingContactRow ? mapContactFromRow(existingContactRow) : null;
+
+          if (!existingContact) {
+            // Attempt to fetch profile info via Meta Graph API
+            let customerName = channel === "instagram" ? `Instagram User (@${senderId.slice(-4)})` : `Messenger User (${senderId.slice(-4)})`;
+            let avatarUrl: string | undefined = undefined;
+
+            if (pageAccessToken && !pageAccessToken.startsWith("EAA...")) {
+              if (channel === "messenger") {
+                const profile = await fetchMessengerUserProfile(senderId, pageAccessToken);
+                if (profile?.name) customerName = profile.name;
+                if (profile?.profilePic) avatarUrl = profile.profilePic;
+              } else {
+                const profile = await fetchInstagramUserProfile(senderId, pageAccessToken);
+                if (profile?.name) customerName = profile.name;
+                if (profile?.profilePic) avatarUrl = profile.profilePic;
+              }
+            }
+
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+            const newContactPayload = {
+              id: contactId,
+              user_id: targetUserId,
+              name: customerName,
+              phone: senderId,
+              channel,
+              external_id: senderId,
+              avatar_url: avatarUrl || null,
+              status: "active" as const,
+              assigned_agent: "Unassigned",
+              tags: [channel === "messenger" ? "Messenger" : "Instagram"],
+              unread_count: 1,
+              last_message_snippet: incomingText,
+              last_message_time: timeStr,
+              is_bot_active: true,
+              notes: [],
+              created_at: now.toISOString(),
+              updated_at: now.toISOString(),
+            };
+
+            const { data: inserted, error: insertErr } = await supabaseAdmin
+              .from("contacts")
+              .insert(newContactPayload)
+              .select()
+              .single();
+
+            if (!insertErr && inserted) {
+              existingContact = mapContactFromRow(inserted);
+            } else {
+              console.error(`[Meta Webhook] Failed to create ${channel} contact:`, insertErr);
+            }
+          } else {
+            // Increment unread count & update snippet
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+            await supabaseAdmin
+              .from("contacts")
+              .update({
+                unread_count: (existingContact.unreadCount || 0) + 1,
+                last_message_snippet: incomingText,
+                last_message_time: timeStr,
+                updated_at: now.toISOString(),
+              })
+              .eq("id", existingContact.id);
+          }
+
+          // 4. Save Customer Message
+          const now = new Date();
+          const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+          const customerMsgId = messageObj?.mid || `msg-${Date.now()}`;
+
+          await supabaseAdmin.from("messages").insert({
+            id: customerMsgId,
+            contact_id: contactId,
+            user_id: targetUserId,
+            sender: "customer",
+            sender_name: existingContact?.name || `${channel} User`,
+            text: incomingText,
+            timestamp: timeStr,
+            status: "read",
+            channel,
+            selected_button_id: buttonId || null,
+            media_url: incomingMediaUrl || null,
+            media_type: incomingMediaType || null,
+            is_internal_note: false,
+          });
+
+        // 5. Bot Flow Evaluation
+        if (existingContact && existingContact.isBotActive) {
+          let userFlowNodes: FlowNode[] = [];
+          const { data: activeFlow } = await supabaseAdmin
+            .from("flows")
+            .select("*")
+            .eq("user_id", targetUserId)
+            .eq("is_active", true)
+            .order("is_default", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (activeFlow && Array.isArray(activeFlow.nodes) && activeFlow.nodes.length > 0) {
+            userFlowNodes = activeFlow.nodes.map((n: any) =>
+              n.data ? { ...n.data, id: n.id, position: n.position || { x: 0, y: 0 } } : n
+            );
+          }
+
+          if (userFlowNodes.length === 0) {
+            const { data: dbNodes } = await supabaseAdmin
+              .from("flow_nodes")
+              .select("*")
+              .eq("user_id", targetUserId);
+            if (dbNodes && dbNodes.length > 0) {
+              userFlowNodes = dbNodes.map(mapFlowNodeFromRow);
+            }
+          }
+
+          const botResult = processBotInteraction({
+            incomingText,
+            buttonId,
+            contact: existingContact,
+            nodes: userFlowNodes,
+          });
+
+          if (botResult) {
+            const { replyMessage, additionalMessages = [], updatedContact } = botResult;
+            const allMessagesToSend = [replyMessage, ...additionalMessages];
+
+            for (const msgToSend of allMessagesToSend) {
+              await supabaseAdmin.from("messages").insert({
+                id: msgToSend.id,
+                contact_id: contactId,
+                user_id: targetUserId,
+                sender: msgToSend.sender,
+                sender_name: msgToSend.senderName || "Automated Bot",
+                text: msgToSend.text,
+                timestamp: msgToSend.timestamp,
+                status: "delivered",
+                channel,
+                buttons: msgToSend.buttons ? (msgToSend.buttons as any) : null,
+                media_url: msgToSend.mediaUrl || null,
+                media_type: msgToSend.mediaType || null,
+                is_internal_note: msgToSend.isInternalNote || false,
+              });
+
+              if (pageAccessToken && !pageAccessToken.startsWith("EAA...")) {
+                try {
+                  if (msgToSend.buttons && msgToSend.buttons.length > 0) {
+                    await sendMessengerOrInstagramQuickReplies({
+                      pageAccessToken,
+                      recipientId: senderId,
+                      text: msgToSend.text,
+                      buttons: msgToSend.buttons,
+                    });
+                  } else {
+                    await sendMessengerOrInstagramTextMessage({
+                      pageAccessToken,
+                      recipientId: senderId,
+                      text: msgToSend.text,
+                    });
+                  }
+                } catch (dispatchErr) {
+                  console.error(`[Meta Webhook] Error sending ${channel} bot reply:`, dispatchErr);
+                }
+              }
+            }
+
+            const lastMsg = allMessagesToSend.slice(-1)[0];
+            await supabaseAdmin
+              .from("contacts")
+              .update({
+                status: updatedContact.status,
+                is_bot_active: updatedContact.isBotActive,
+                assigned_agent: updatedContact.assignedAgent || null,
+                tags: updatedContact.tags || [],
+                last_message_snippet: lastMsg?.text || "Interactive Flow",
+                last_message_time: lastMsg?.timestamp || replyMessage.timestamp,
+                current_flow_node_id: updatedContact.currentFlowNodeId || null,
+                notes: updatedContact.notes || [],
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", existingContact.id);
+          }
+        }
+      }
+    }
+
+      return NextResponse.json({ status: "EVENT_RECEIVED" }, { status: 200 });
+    }
+
+    return NextResponse.json({ status: "EVENT_IGNORED" }, { status: 200 });
   } catch (error) {
     console.error("[Meta Webhook] Error processing event:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

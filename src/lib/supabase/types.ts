@@ -51,6 +51,8 @@ export interface Database {
           user_id: string;
           name: string;
           phone: string;
+          channel?: string | null;
+          external_id?: string | null;
           avatar_url: string | null;
           status: "active" | "pending_human" | "resolved";
           assigned_agent: string | null;
@@ -69,6 +71,8 @@ export interface Database {
           user_id?: string;
           name: string;
           phone: string;
+          channel?: string | null;
+          external_id?: string | null;
           avatar_url?: string | null;
           status?: "active" | "pending_human" | "resolved";
           assigned_agent?: string | null;
@@ -87,6 +91,8 @@ export interface Database {
           user_id?: string;
           name?: string;
           phone?: string;
+          channel?: string | null;
+          external_id?: string | null;
           avatar_url?: string | null;
           status?: "active" | "pending_human" | "resolved";
           assigned_agent?: string | null;
@@ -112,6 +118,7 @@ export interface Database {
           text: string;
           timestamp: string;
           status: "sent" | "delivered" | "read" | "failed";
+          channel?: string | null;
           buttons: Json | null;
           selected_button_id: string | null;
           media_url: string | null;
@@ -129,6 +136,7 @@ export interface Database {
           text: string;
           timestamp: string;
           status?: "sent" | "delivered" | "read" | "failed";
+          channel?: string | null;
           buttons?: Json | null;
           selected_button_id?: string | null;
           media_url?: string | null;
@@ -146,6 +154,7 @@ export interface Database {
           text?: string;
           timestamp?: string;
           status?: "sent" | "delivered" | "read" | "failed";
+          channel?: string | null;
           buttons?: Json | null;
           selected_button_id?: string | null;
           media_url?: string | null;
@@ -256,6 +265,13 @@ export interface Database {
           verify_token: string;
           webhook_url: string;
           is_connected: boolean;
+          facebook_page_id?: string;
+          facebook_page_name?: string;
+          page_access_token?: string;
+          is_messenger_connected?: boolean;
+          instagram_account_id?: string;
+          instagram_username?: string;
+          is_instagram_connected?: boolean;
           business_category?: string;
           about_text?: string;
           business_email?: string;
@@ -276,6 +292,13 @@ export interface Database {
           verify_token?: string;
           webhook_url?: string;
           is_connected?: boolean;
+          facebook_page_id?: string;
+          facebook_page_name?: string;
+          page_access_token?: string;
+          is_messenger_connected?: boolean;
+          instagram_account_id?: string;
+          instagram_username?: string;
+          is_instagram_connected?: boolean;
           business_category?: string;
           about_text?: string;
           business_email?: string;
@@ -296,6 +319,13 @@ export interface Database {
           verify_token?: string;
           webhook_url?: string;
           is_connected?: boolean;
+          facebook_page_id?: string;
+          facebook_page_name?: string;
+          page_access_token?: string;
+          is_messenger_connected?: boolean;
+          instagram_account_id?: string;
+          instagram_username?: string;
+          is_instagram_connected?: boolean;
           business_category?: string;
           about_text?: string;
           business_email?: string;

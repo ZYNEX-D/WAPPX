@@ -120,6 +120,23 @@ export function SetupGuideModal({
           "දැන් පද්ධතිය 100% සූදානම්! වෙනත් දුරකථනයකින් ඔබගේ WhatsApp අංකයට 'Hi' කියා පණිවිඩයක් යවා පරීක්ෂා කරන්න.",
         ],
       },
+      {
+        step: 6,
+        title: "Instagram සහ Facebook Messenger සම්බන්ධ කිරීම",
+        badge: "සමාජ මාධ්‍ය",
+        desc: "Facebook Messenger සහ Instagram Direct පණිවිඩ WPPX පද්ධතියට සම්බන්ධ කිරීම.",
+        instructions: [
+          "1. Instagram Professional කිරීම: Instagram mobile app එක විවෘත කර Settings & privacy -> Account type and tools -> Switch to professional account තෝරන්න.",
+          "2. Instagram DM Access සක්‍රිය කිරීම: Instagram app එකේ Settings & privacy -> Messages and story replies -> Message controls -> 'Allow access to messages' ON කරන්න (මෙය සක්‍රිය නොකළහොත් Meta මගින් පණිවිඩ API එකට ලබා නොදේ).",
+          "3. Facebook Page එකට Instagram සම්බන්ධ කිරීම: Meta Business Suite (business.facebook.com) වෙත ගොස් Settings -> Instagram Accounts යටතේ ඔබගේ Facebook Page එකට Instagram ගිණුම සම්බන්ධ (Link) කරන්න.",
+          "4. Permissions පරීක්ෂා කිරීම: Meta Developer App එකේ ඔබගේ Token එකට pages_messaging, pages_show_list, සහ instagram_manage_messages permissions ලබා දී ඇති බව තහවුරු කරගන්න.",
+          "5. WPPX වෙතින් සම්බන්ධ කිරීම: WPPX Settings හි 'Instagram & Messenger' වෙත ගොස් Token එක paste කර 'Discover Pages' click කරන්න. ඉන්පසු 'Connect Page & Instagram' ඔබන්න — පද්ධතිය මගින් Webhook subscriptions ස්වයංක්‍රීයව සිදුකරනු ඇත!",
+        ],
+        link: "https://business.facebook.com/latest/settings/instagram_accounts",
+        linkText: "Meta Business Suite: Instagram Accounts වෙත යන්න",
+        secondaryLink: "https://developers.facebook.com/apps/",
+        secondaryLinkText: "Meta Developer Console වෙත යන්න",
+      },
     ],
     en: [
       {
@@ -194,6 +211,23 @@ export function SetupGuideModal({
           "All done! Send 'Hi' from any personal phone to your WhatsApp number to test the real-time bot and live inbox.",
         ],
       },
+      {
+        step: 6,
+        title: "Instagram & Messenger Setup",
+        badge: "Omnichannel",
+        desc: "Connect Facebook Messenger and Instagram Direct Messaging to WPPX.",
+        instructions: [
+          "1. Switch Instagram to Professional: Open Instagram mobile app -> Settings & privacy -> Account type and tools -> Switch to professional account (or Creator).",
+          "2. Enable DM Access on Instagram: In Instagram mobile app -> Settings & privacy -> Messages and story replies -> Message controls -> Toggle 'Allow access to messages' to ON (required by Meta to receive customer DMs).",
+          "3. Link Instagram to Facebook Page: Open Meta Business Suite (business.facebook.com) -> Settings -> Instagram Accounts -> Click 'Add Instagram' and link your Instagram profile to your Facebook Page.",
+          "4. Verify System User Permissions: In Meta Business Settings -> System Users -> Tokens, make sure your token includes 'pages_show_list', 'pages_messaging', and 'instagram_manage_messages'.",
+          "5. Connect on WPPX: Go to Settings -> 'Instagram & Messenger' tab, paste your Access Token, and click 'Discover Pages'. Click 'Connect Page & Instagram' — our system will auto-subscribe webhooks and route chats into your Live Inbox!",
+        ],
+        link: "https://business.facebook.com/latest/settings/instagram_accounts",
+        linkText: "Meta Business Suite: Link Instagram Account",
+        secondaryLink: "https://developers.facebook.com/apps/",
+        secondaryLinkText: "Meta Developer Console",
+      },
     ],
   };
 
@@ -211,10 +245,10 @@ export function SetupGuideModal({
             </div>
             <div>
               <h2 className="text-base font-extrabold text-[#0A504A]">
-                {lang === "si" ? "WhatsApp API සම්බන්ධ කිරීමේ සම්පූර්ණ උපදෙස් මාලාව" : "WhatsApp Cloud API Setup & Integration Guide"}
+                {lang === "si" ? "Meta API සම්බන්ධ කිරීමේ සම්පූර්ණ උපදෙස් මාලාව" : "Meta Cloud API Setup & Integration Guide"}
               </h2>
               <p className="text-xs text-[#5d6c7b]">
-                {lang === "si" ? "පියවර 5 කින් ඔබේ WhatsApp අංකය WPPX පද්ධතියට සම්බන්ධ කරගන්න" : "Connect your official WhatsApp number in 5 easy steps"}
+                {lang === "si" ? "පියවර 6 කින් WhatsApp, Messenger සහ Instagram WPPX පද්ධතියට සම්බන්ධ කරගන්න" : "Connect WhatsApp, Messenger & Instagram in 6 easy steps"}
               </p>
             </div>
           </div>
@@ -371,18 +405,31 @@ export function SetupGuideModal({
             </div>
           )}
 
-          {/* External Action Link */}
-          {activeContent.link && (
-            <div className="pt-2">
-              <a
-                href={activeContent.link}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#F7F7F2] hover:bg-[#A2E4B8]/20 text-[#0A504A] border border-[#dee3e9] hover:border-[#00A86B] rounded-full text-xs font-bold transition-colors"
-              >
-                <span>{activeContent.linkText}</span>
-                <ExternalLink className="w-3.5 h-3.5 text-[#00A86B]" />
-              </a>
+          {/* External Action Links */}
+          {(activeContent.link || (activeContent as any).secondaryLink) && (
+            <div className="pt-2 flex flex-wrap gap-2.5">
+              {activeContent.link && (
+                <a
+                  href={activeContent.link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#F7F7F2] hover:bg-[#A2E4B8]/20 text-[#0A504A] border border-[#dee3e9] hover:border-[#00A86B] rounded-full text-xs font-bold transition-colors"
+                >
+                  <span>{activeContent.linkText}</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-[#00A86B]" />
+                </a>
+              )}
+              {(activeContent as any).secondaryLink && (
+                <a
+                  href={(activeContent as any).secondaryLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-50 text-[#0064E0] border border-[#dee3e9] hover:border-[#0064E0] rounded-full text-xs font-bold transition-colors"
+                >
+                  <span>{(activeContent as any).secondaryLinkText}</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-[#0064E0]" />
+                </a>
+              )}
             </div>
           )}
         </div>
