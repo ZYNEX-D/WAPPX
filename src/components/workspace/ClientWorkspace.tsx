@@ -49,6 +49,8 @@ import {
   mapContactFromRow,
   mapOrderFromRow,
   fetchCatalogOrders,
+  fetchCatalogOrderIds,
+  fetchContactIds,
   saveCatalogOrder,
   updateCatalogOrderStatus,
   deleteCatalogOrder,
@@ -59,6 +61,13 @@ import {
   isSuperAdmin,
   AuthUser,
 } from "@/lib/auth-session";
+import {
+  latestIsoTimestamp,
+  mergeIncomingContacts,
+  mergeIncomingMessages,
+  mergeIncomingOrders,
+  withoutRemovedIds,
+} from "@/lib/inbox-sync";
 import { Bell, ArrowRight, X } from "lucide-react";
 
 interface ClientWorkspaceProps {
@@ -170,33 +179,60 @@ export function ClientWorkspace({
         if (isMounted) setIsFlowsLoaded(true);
       });
 
+    // Cursors for the fallback poll. The first load reads the working set once;
+    // later polls ask only for rows newer than these timestamps.
+    let messageCursor: string | null = null;
+    let contactCursor: string | null = null;
+    let orderCursor: string | null = null;
+
+    const noteMessageCursor = (grouped: Record<string, Message[]>) => {
+      const stamp = latestIsoTimestamp(
+        Object.values(grouped).flatMap((list) => list.map((message) => message.createdAt))
+      );
+      if (stamp && (!messageCursor || stamp > messageCursor)) messageCursor = stamp;
+    };
+
+    const noteContactCursor = (list: Contact[]) => {
+      const stamp = latestIsoTimestamp(list.map((contact) => contact.updatedAt));
+      if (stamp && (!contactCursor || stamp > contactCursor)) contactCursor = stamp;
+    };
+
+    const noteOrderCursor = (list: CatalogOrder[]) => {
+      const stamp = latestIsoTimestamp(list.map((order) => order.updatedAt));
+      if (stamp && (!orderCursor || stamp > orderCursor)) orderCursor = stamp;
+    };
+
+    const emptyCursor = () => new Date(Date.now() - 5000).toISOString();
+
     // 2. Fetch contacts
-    fetchContacts(currentClientId)
+    const hydrateContacts = fetchContacts(currentClientId)
       .then((fetchedContacts) => {
-        if (isMounted) {
-          if (Array.isArray(fetchedContacts) && fetchedContacts.length > 0) {
-            setContacts(fetchedContacts);
-            setSelectedContactId((prev) => {
-              if (prev && fetchedContacts.some((c) => c.id === prev)) return prev;
-              return fetchedContacts[0].id;
-            });
-          } else {
-            setContacts([]);
-            setSelectedContactId("");
-          }
+        if (!isMounted || !fetchedContacts) return;
+        if (fetchedContacts.length > 0) {
+          setContacts(fetchedContacts);
+          setSelectedContactId((prev) => {
+            if (prev && fetchedContacts.some((c) => c.id === prev)) return prev;
+            return fetchedContacts[0].id;
+          });
+          noteContactCursor(fetchedContacts);
+        } else {
+          setContacts([]);
+          setSelectedContactId("");
+          contactCursor = emptyCursor();
         }
       })
       .catch((err) => console.error("Error loading contacts:", err));
 
     // 3. Fetch messages
-    fetchMessages(currentClientId)
+    const hydrateMessages = fetchMessages(currentClientId)
       .then((fetchedMessages) => {
-        if (isMounted) {
-          if (fetchedMessages && Object.keys(fetchedMessages).length > 0) {
-            setMessages(fetchedMessages);
-          } else {
-            setMessages({});
-          }
+        if (!isMounted || !fetchedMessages) return;
+        if (Object.keys(fetchedMessages).length > 0) {
+          setMessages(fetchedMessages);
+          noteMessageCursor(fetchedMessages);
+        } else {
+          setMessages({});
+          messageCursor = emptyCursor();
         }
       })
       .catch((err) => console.error("Error loading messages:", err));
@@ -220,13 +256,24 @@ export function ClientWorkspace({
       .catch((err) => console.error("Error loading catalogs:", err));
 
     // 6. Fetch catalog orders
-    fetchCatalogOrders(currentClientId)
+    const hydrateOrders = fetchCatalogOrders(currentClientId)
       .then((fetchedOrders) => {
-        if (isMounted && Array.isArray(fetchedOrders) && fetchedOrders.length > 0) {
+        if (!isMounted || !fetchedOrders) return;
+        if (fetchedOrders.length > 0) {
           setOrders(fetchedOrders);
+          noteOrderCursor(fetchedOrders);
+        } else {
+          setOrders([]);
+          orderCursor = emptyCursor();
         }
       })
       .catch((err) => console.error("Error loading catalog orders:", err));
+
+    const bumpCursor = (current: string | null, stamp: string | null | undefined) => {
+      if (!stamp) return current;
+      if (!current || stamp > current) return stamp;
+      return current;
+    };
 
     // Supabase Realtime channel for live messages, contacts & catalog orders
     const channel = supabase
@@ -239,6 +286,7 @@ export function ClientWorkspace({
           if (!newRow || !newRow.contact_id) return;
           if (newRow.user_id && newRow.user_id !== currentClientId && newRow.user_id !== "default") return;
 
+          messageCursor = bumpCursor(messageCursor, newRow.created_at);
           const mappedMsg = mapMessageFromRow(newRow);
           setMessages((prev) => {
             const list = prev[newRow.contact_id] || [];
@@ -259,12 +307,14 @@ export function ClientWorkspace({
 
           if (payload.eventType === "INSERT") {
             const newContact = mapContactFromRow(payload.new as any);
+            contactCursor = bumpCursor(contactCursor, newContact.updatedAt);
             setContacts((prev) => {
               if (prev.some((c) => c.id === newContact.id)) return prev;
               return [newContact, ...prev];
             });
           } else if (payload.eventType === "UPDATE") {
             const updatedContact = mapContactFromRow(payload.new as any);
+            contactCursor = bumpCursor(contactCursor, updatedContact.updatedAt);
             setContacts((prev) =>
               prev.map((c) => (c.id === updatedContact.id ? updatedContact : c))
             );
@@ -285,12 +335,14 @@ export function ClientWorkspace({
 
           if (payload.eventType === "INSERT") {
             const newOrder = mapOrderFromRow(payload.new as any);
+            orderCursor = bumpCursor(orderCursor, newOrder.updatedAt);
             setOrders((prev) => {
               if (prev.some((o) => o.id === newOrder.id)) return prev;
               return [newOrder, ...prev];
             });
           } else if (payload.eventType === "UPDATE") {
             const updatedOrder = mapOrderFromRow(payload.new as any);
+            orderCursor = bumpCursor(orderCursor, updatedOrder.updatedAt);
             setOrders((prev) =>
               prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
             );
@@ -304,68 +356,95 @@ export function ClientWorkspace({
       )
       .subscribe();
 
-    // Resilient background polling every 3 seconds to guarantee instant message arrival
-    const pollInterval = setInterval(() => {
+    // Fallback poll. Realtime delivers inserts and updates; this only fetches
+    // rows newer than the cursor so an open workspace does not re-download history.
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+    let pollsSinceIdCheck = 0;
+    void Promise.all([hydrateContacts, hydrateMessages, hydrateOrders]).finally(() => {
       if (!isMounted) return;
-      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      pollInterval = setInterval(() => {
+        if (!isMounted) return;
+        if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
 
-      fetchMessages(currentClientId)
-        .then((latestMsgs) => {
-          if (!isMounted || !latestMsgs) return;
-          setMessages((prev) => {
-            let hasChanged = false;
-            const updated = { ...prev };
-            for (const [cid, msgList] of Object.entries(latestMsgs)) {
-              const currentList = prev[cid] || [];
-              if (
-                currentList.length !== msgList.length ||
-                (msgList.length > 0 && currentList[currentList.length - 1]?.id !== msgList[msgList.length - 1]?.id)
-              ) {
-                updated[cid] = msgList;
-                hasChanged = true;
+        pollsSinceIdCheck += 1;
+        if (pollsSinceIdCheck >= 10) {
+          pollsSinceIdCheck = 0;
+          fetchContactIds(currentClientId)
+            .then((ids) => {
+              if (!isMounted || !ids) return;
+              setContacts((prev) => withoutRemovedIds(prev, ids));
+            })
+            .catch(() => {});
+          fetchCatalogOrderIds(currentClientId)
+            .then((ids) => {
+              if (!isMounted || !ids) return;
+              setOrders((prev) => withoutRemovedIds(prev, ids));
+            })
+            .catch(() => {});
+        }
+
+        const messageSince = messageCursor;
+        const messageRequest = messageSince
+          ? fetchMessages(currentClientId, { since: messageSince })
+          : fetchMessages(currentClientId);
+
+        messageRequest
+          .then((latestMsgs) => {
+            if (!isMounted || !latestMsgs) return;
+            noteMessageCursor(latestMsgs);
+            if (!messageSince) {
+              if (Object.keys(latestMsgs).length > 0) {
+                setMessages(latestMsgs);
+              } else if (!messageCursor) {
+                messageCursor = emptyCursor();
               }
+              return;
             }
-            return hasChanged ? updated : prev;
-          });
-        })
-        .catch(() => {});
+            setMessages((prev) => mergeIncomingMessages(prev, latestMsgs));
+          })
+          .catch(() => {});
 
-      fetchContacts(currentClientId)
-        .then((latestContacts) => {
-          if (!isMounted || !Array.isArray(latestContacts)) return;
-          setContacts((prev) => {
-            if (prev.length !== latestContacts.length) return latestContacts;
-            const hasSnippetChange = latestContacts.some((lc) => {
-              const match = prev.find((p) => p.id === lc.id);
-              return (
-                !match ||
-                match.lastMessageSnippet !== lc.lastMessageSnippet ||
-                match.lastMessageTime !== lc.lastMessageTime
-              );
-            });
-            return hasSnippetChange ? latestContacts : prev;
-          });
-        })
-        .catch(() => {});
+        const contactSince = contactCursor;
+        const contactRequest = contactSince
+          ? fetchContacts(currentClientId, { updatedSince: contactSince })
+          : fetchContacts(currentClientId);
 
-      fetchCatalogOrders(currentClientId)
-        .then((latestOrders) => {
-          if (!isMounted || !Array.isArray(latestOrders)) return;
-          setOrders((prev) => {
-            if (prev.length !== latestOrders.length) return latestOrders;
-            const hasChange = latestOrders.some((lo) => {
-              const match = prev.find((p) => p.id === lo.id);
-              return !match || match.status !== lo.status || match.updatedAt !== lo.updatedAt;
-            });
-            return hasChange ? latestOrders : prev;
-          });
-        })
-        .catch(() => {});
-    }, 3000);
+        contactRequest
+          .then((latestContacts) => {
+            if (!isMounted || !latestContacts) return;
+            noteContactCursor(latestContacts);
+            if (!contactSince) {
+              if (latestContacts.length > 0) setContacts(latestContacts);
+              else if (!contactCursor) contactCursor = emptyCursor();
+              return;
+            }
+            setContacts((prev) => mergeIncomingContacts(prev, latestContacts));
+          })
+          .catch(() => {});
+
+        const orderSince = orderCursor;
+        const orderRequest = orderSince
+          ? fetchCatalogOrders(currentClientId, { updatedSince: orderSince })
+          : fetchCatalogOrders(currentClientId);
+
+        orderRequest
+          .then((latestOrders) => {
+            if (!isMounted || !latestOrders) return;
+            noteOrderCursor(latestOrders);
+            if (!orderSince) {
+              setOrders(latestOrders);
+              if (!latestOrders.length && !orderCursor) orderCursor = emptyCursor();
+              return;
+            }
+            setOrders((prev) => mergeIncomingOrders(prev, latestOrders));
+          })
+          .catch(() => {});
+      }, 3000);
+    });
 
     return () => {
       isMounted = false;
-      clearInterval(pollInterval);
+      if (pollInterval) clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
   }, [currentClientId]);

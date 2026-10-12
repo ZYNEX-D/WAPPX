@@ -269,47 +269,84 @@ export async function deleteClientAccount(clientId: string): Promise<boolean> {
 
 // ==================== DATA FETCHING ====================
 
-export async function fetchContacts(userId: string = "client-1"): Promise<Contact[]> {
+function tenantUserIds(userId: string): string[] {
+  const cleanUserId = (userId && typeof userId === "string" && userId.trim()) ? userId.trim() : "client-1";
+  return Array.from(new Set([cleanUserId, "default"]));
+}
+
+export async function fetchContacts(
+  userId: string = "client-1",
+  options?: { updatedSince?: string }
+): Promise<Contact[] | null> {
   try {
-    const cleanUserId = (userId && typeof userId === "string" && userId.trim()) ? userId.trim() : "client-1";
-    const { data, error } = await supabase
+    let query = supabase
       .from("contacts")
       .select("*")
-      .or(`user_id.eq.${cleanUserId},user_id.eq.default`)
-      .order("created_at", { ascending: false });
+      .in("user_id", tenantUserIds(userId));
+
+    if (options?.updatedSince) {
+      query = query.gt("updated_at", options.updatedSince).order("updated_at", { ascending: true });
+    } else {
+      query = query.order("created_at", { ascending: false });
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.warn("Could not fetch contacts from Supabase:", error.message || error.details || error.code || "Network error");
-      return [];
+      return null;
     }
 
     if (!Array.isArray(data)) {
-      return [];
+      return null;
     }
 
     return data.map(mapContactFromRow);
   } catch (err: any) {
     console.warn("fetchContacts network error:", err?.message || "Failed to reach Supabase");
-    return [];
+    return null;
   }
 }
 
-export async function fetchMessages(userId: string = "client-1"): Promise<Record<string, Message[]>> {
+/** Id-only read used to notice deletes without downloading contact rows. */
+export async function fetchContactIds(userId: string = "client-1"): Promise<string[] | null> {
   try {
-    const cleanUserId = (userId && typeof userId === "string" && userId.trim()) ? userId.trim() : "client-1";
     const { data, error } = await supabase
+      .from("contacts")
+      .select("id")
+      .in("user_id", tenantUserIds(userId));
+
+    if (error || !Array.isArray(data)) return null;
+    return data.map((row) => row.id);
+  } catch (err: any) {
+    console.warn("fetchContactIds network error:", err?.message || "Failed to reach Supabase");
+    return null;
+  }
+}
+
+export async function fetchMessages(
+  userId: string = "client-1",
+  options?: { since?: string }
+): Promise<Record<string, Message[]> | null> {
+  try {
+    let query = supabase
       .from("messages")
       .select("*")
-      .or(`user_id.eq.${cleanUserId},user_id.eq.default`)
-      .order("created_at", { ascending: true });
+      .in("user_id", tenantUserIds(userId));
+
+    if (options?.since) {
+      query = query.gt("created_at", options.since);
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: true });
 
     if (error) {
       console.warn("Could not fetch messages from Supabase:", error.message || error.details || error.code || "Network error");
-      return {};
+      return null;
     }
 
     if (!Array.isArray(data)) {
-      return {};
+      return null;
     }
 
     const grouped: Record<string, Message[]> = {};
@@ -323,7 +360,7 @@ export async function fetchMessages(userId: string = "client-1"): Promise<Record
     return grouped;
   } catch (err: any) {
     console.warn("fetchMessages network error:", err?.message || "Failed to reach Supabase");
-    return {};
+    return null;
   }
 }
 
@@ -1033,26 +1070,50 @@ export function mapOrderFromRow(row: any): CatalogOrder {
   };
 }
 
-export async function fetchCatalogOrders(userId?: string): Promise<CatalogOrder[]> {
+export async function fetchCatalogOrders(
+  userId?: string,
+  options?: { updatedSince?: string }
+): Promise<CatalogOrder[] | null> {
   try {
-    let query = supabase
-      .from("catalog_orders")
-      .select("*")
-      .order("created_at", { ascending: false });
+    let query = supabase.from("catalog_orders").select("*");
 
     if (userId && userId !== "all") {
       query = query.or(`user_id.eq.${userId},user_id.eq.default,user_id.eq.client-1`);
     }
 
+    if (options?.updatedSince) {
+      query = query
+        .gt("updated_at", options.updatedSince)
+        .order("updated_at", { ascending: true });
+    } else {
+      query = query.order("created_at", { ascending: false });
+    }
+
     const { data, error } = await query;
     if (error) {
       console.warn("fetchCatalogOrders warning:", error.message);
-      return [];
+      return null;
     }
     return (data || []).map(mapOrderFromRow);
   } catch (err) {
     console.error("fetchCatalogOrders exception:", err);
-    return [];
+    return null;
+  }
+}
+
+/** Id-only read used to notice deletes without downloading order rows. */
+export async function fetchCatalogOrderIds(userId?: string): Promise<string[] | null> {
+  try {
+    let query = supabase.from("catalog_orders").select("id");
+    if (userId && userId !== "all") {
+      query = query.or(`user_id.eq.${userId},user_id.eq.default,user_id.eq.client-1`);
+    }
+    const { data, error } = await query;
+    if (error || !Array.isArray(data)) return null;
+    return data.map((row) => row.id);
+  } catch (err) {
+    console.error("fetchCatalogOrderIds exception:", err);
+    return null;
   }
 }
 

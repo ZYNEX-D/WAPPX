@@ -135,6 +135,13 @@ CREATE INDEX IF NOT EXISTS idx_contacts_phone ON public.contacts(phone);
 CREATE INDEX IF NOT EXISTS idx_catalogs_client_id ON public.catalogs(client_id);
 CREATE INDEX IF NOT EXISTS idx_flows_user_id ON public.flows(user_id);
 
+-- Workspace sync filters messages and contacts by tenant plus a timestamp cursor.
+-- user_id is part of the app schema; add it when an older database predates the column.
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS user_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_messages_user_id_created_at ON public.messages (user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_contacts_user_id_updated_at ON public.contacts (user_id, updated_at);
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE public.contacts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
@@ -266,3 +273,4 @@ CREATE INDEX IF NOT EXISTS idx_catalog_orders_user_id ON public.catalog_orders(u
 CREATE INDEX IF NOT EXISTS idx_catalog_orders_contact_id ON public.catalog_orders(contact_id);
 CREATE INDEX IF NOT EXISTS idx_catalog_orders_status ON public.catalog_orders(status);
 CREATE INDEX IF NOT EXISTS idx_catalog_orders_created_at ON public.catalog_orders(created_at);
+CREATE INDEX IF NOT EXISTS idx_catalog_orders_user_id_updated_at ON public.catalog_orders (user_id, updated_at);
